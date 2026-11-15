@@ -237,6 +237,7 @@ export const projects: Project[] = [
     status: 'live',
     note: '已於學校帳號正式上線使用',
     building: 'school',
+    model: 'models/hcrs.glb',
     links: {
       demo: 'https://hresnoc-lang.github.io/H.C.R.S-HRES-Classroom-Reservation-System/index.html#calendar',
       repo: 'https://github.com/znxuyz/H.C.R.S-HRES-Classroom-Reservation-System',
