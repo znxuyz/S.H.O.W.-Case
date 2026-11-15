@@ -147,6 +147,34 @@ export const projects: Project[] = [
     theme: 'oriental',
     category: 'personal',
     status: 'live',
+    env: 'models/env_tianmu.glb',
+    hotspots: [
+      {
+        title: '天幕膠囊：靈液彈簧',
+        body: '常駐在螢幕頂端正中的玄黑膠囊——無邊框、置頂、滑鼠穿透。懸停或點擊時以阻尼彈簧物理演算，像果凍般拉伸、回彈、流轉。',
+        at: [0.25, 2.2, 0],
+      },
+      {
+        title: '萬象樂律',
+        body: '接管系統媒體（連瀏覽器裡的 YouTube 也行）：曲名、歌手、封面、同步歌詞、即時音訊頻譜與播放控制，全部收進膠囊裡。',
+        at: [0.95, 3.1, -0.55],
+      },
+      {
+        title: '傳音入密',
+        body: '系統通知化作符紙從天幕滑出；通知裡的驗證碼會自動辨識，一鍵就能複製。',
+        at: [-0.8, 2.4, 0.55],
+      },
+      {
+        title: '玄漆描金・十二時辰',
+        body: '專屬設計語言：玄黑漆面、五色描金、內嵌思源宋體、農曆日期與直書時辰；還會依晝夜自動變色，全螢幕時自動隱身。',
+        at: [1.7, 2.15, 0.05],
+      },
+      {
+        title: '洞府設施',
+        body: '外掛式「法器」架構，每個功能都能獨立載入；設定面板、開機啟動、系統匣圖示，以及附 SHA-256 校驗的自動更新。',
+        at: [-1.05, 0.65, 0.85],
+      },
+    ],
     model: 'models/tianmu.glb',
     links: {
       demo: 'https://github.com/znxuyz/TianMu-Island/releases/latest',

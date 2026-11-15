@@ -133,6 +133,56 @@ for sx in (-1, 1):
         kit.sphere('lantern', 0.06, (PX + sx * 0.6, PY + sy * 0.6, 0.66), 'lantern', seg=12, rings=8, scale=(1, 1, 1.25))
         beam('lantern_cord', (PX + sx * 0.6, PY + sy * 0.6, 0.74), (PX + sx * 0.6, PY + sy * 0.6, 0.8), 0.008, 'gold', round_=True)
 
+# ── 細節：石板路、石燈籠、竹林、梅樹、錦鯉、涼亭欄杆與台階 ──
+material('bamboo', srgb('#7fa65a'), rough=0.6)
+material('bamboo_leaf', srgb('#4f7f3f'), rough=0.85)
+material('plum', srgb('#ffb7cf'), rough=0.7)
+material('plum_core', srgb('#ff7aa8'), rough=0.6)
+material('koi', srgb('#ff7a2a'), rough=0.4)
+material('koi_w', srgb('#fff4e6'), rough=0.4)
+for i in range(9):
+    t = i / 8
+    x, y = -0.35 + t * 0.55 + math.sin(t * 3) * 0.12, -1.75 + t * 1.25
+    cyl('path_stone', 0.12 + 0.02 * (i % 2), 0.035, (x, y, 0.02), 'stone', verts=9, bevel=0.008)
+for (x, y) in [(-0.35, -0.2), (0.2, -1.65)]:
+    box('lantern_base', (0.14, 0.14, 0.05), (x, y, 0.025), 'stone', bevel=0.01)
+    cyl('lantern_post', 0.035, 0.22, (x, y, 0.16), 'stone', verts=8)
+    box('lantern_box', (0.13, 0.13, 0.1), (x, y, 0.32), 'stone', bevel=0.01)
+    box('lantern_light', (0.08, 0.135, 0.06), (x, y, 0.32), 'warm', bevel=0)
+    cone('lantern_cap', 0.13, 0.0, 0.08, (x, y, 0.41), 'stone_dark', verts=4, rot=(0, 0, math.pi / 4))
+for k in range(16):
+    bx, by = -1.7 + (k % 4) * 0.12 + kit.rng.random() * 0.05, 0.05 + (k // 4) * 0.12
+    h = 0.6 + kit.rng.random() * 0.5
+    cyl('bamboo', 0.016, h, (bx, by, h / 2), 'bamboo', verts=6)
+    for j in range(3):
+        kit.ico('bamboo_leaf', 0.06, (bx + (kit.rng.random() - 0.5) * 0.1, by + (kit.rng.random() - 0.5) * 0.1, h * (0.55 + j * 0.2)), 'bamboo_leaf', sub=0, scale=(1.6, 0.6, 0.35))
+# 梅樹
+MX, MY = 1.75, -0.05
+kit.beam('plum_trunk', (MX, MY, 0), (MX - 0.08, MY, 0.45), 0.06, 'bark')
+kit.beam('plum_branch_a', (MX - 0.08, MY, 0.45), (MX - 0.3, MY + 0.1, 0.62), 0.035, 'bark')
+kit.beam('plum_branch_b', (MX - 0.08, MY, 0.45), (MX + 0.1, MY - 0.12, 0.66), 0.03, 'bark')
+for k in range(22):
+    a = k * 2.39996
+    r = 0.08 + (k % 5) * 0.045
+    kit.sphere('plum_flower', 0.03, (MX - 0.1 + math.cos(a) * r * 1.6, MY + math.sin(a) * r, 0.55 + (k % 4) * 0.05), 'plum' if k % 3 else 'plum_core', seg=8, rings=5)
+# 錦鯉
+for k, (fx, fy, ang) in enumerate([(0.6, -0.55, 0.4), (1.25, -1.1, 2.2), (0.9, -1.3, 4.0)]):
+    kit.sphere('koi', 0.06, (fx, fy, 0.03), 'koi' if k % 2 == 0 else 'koi_w', seg=10, rings=6, scale=(2.2, 0.8, 0.5))
+    kit.cone('koi_tail', 0.045, 0.0, 0.08, (fx - math.cos(ang) * 0.14, fy - math.sin(ang) * 0.14, 0.03), 'koi', verts=3, rot=(0, math.pi / 2, ang + math.pi))
+# 涼亭欄杆與台階
+for k in range(3):
+    box('pav_step', (0.42, 0.14, 0.05), (PX, PY - 0.62 - k * 0.12, 0.13 - k * 0.04), 'stone', bevel=0.008)
+for side in ((-1, 0), (1, 0), (0, 1)):
+    for t in range(5):
+        u = -0.4 + t * 0.2
+        x = PX + (side[0] * 0.52 if side[0] else u)
+        y = PY + (side[1] * 0.52 if side[1] else u)
+        cyl('rail_post', 0.012, 0.16, (x, y, 0.24), 'red', verts=6)
+    if side[0]:
+        box('rail_bar', (0.02, 1.04, 0.02), (PX + side[0] * 0.52, PY, 0.31), 'red', bevel=0)
+    else:
+        box('rail_bar', (1.04, 0.02, 0.02), (PX, PY + 0.52, 0.31), 'red', bevel=0)
+
 # ── 主角：天幕膠囊（Bob_0） ──
 CX, CY, CZ = 0.25, 0.0, 2.55
 L, R = 1.9, 0.3
