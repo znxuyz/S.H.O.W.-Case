@@ -195,7 +195,7 @@ function Scenery({ kind }: { kind: WorldStyle['scenery'] }) {
       return (
         <group>
           {items.map((t) => (
-            <group key={t.i} position={[t.x, base + (t.i % 3) * 2.2 - 1, t.z]} scale={1.6 + t.s * 1.4}>
+            <group key={t.i} position={[t.x * 1.3, base - 2.5 + (t.i % 3) * 1.2, t.z * 1.3]} scale={1.1 + t.s * 0.9}>
               <P g="ico1" c="#ffffff" s={[2.8, 1.2, 1.8]} ro={1} />
               <P g="ico1" c="#ffffff" p={[1.3, 0.35, 0]} s={[1.8, 1.3, 1.3]} ro={1} />
               <P g="ico1" c="#f2f5fa" p={[-1.2, 0.2, 0.3]} s={[1.6, 1.1, 1.2]} ro={1} />

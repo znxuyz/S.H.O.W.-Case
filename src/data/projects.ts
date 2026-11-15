@@ -286,6 +286,7 @@ export const projects: Project[] = [
     status: 'live',
     note: '協助校內教師部署',
     building: 'kiosk',
+    model: 'models/passport.glb',
     links: {
       demo: 'https://hresnoc-lang.github.io/115English-Learning-Passport/',
       repo: 'https://github.com/hresnoc-lang/115English-Learning-Passport',
