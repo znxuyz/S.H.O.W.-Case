@@ -21,7 +21,7 @@
   --wm-accent: #22e4ff;
 }
 [data-theme='cyber'] .sc-title { text-shadow: 0 0 28px rgba(34, 228, 255, 0.55), 2px 0 0 rgba(255, 61, 242, 0.35), -2px 0 0 rgba(34, 228, 255, 0.35); }
-[data-theme='cyber'] .sc-copy { padding: clamp(1.2rem, 3vw, 2rem); background: linear-gradient(135deg, rgba(4, 20, 32, 0.65), rgba(4, 12, 24, 0.35)); border: 1px solid var(--line); clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px)); }
+[data-theme='cyber'] .sc-copy { padding: clamp(1.2rem, 3vw, 2rem); }
 [data-theme='cyber'] .sc-btn { clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); text-transform: uppercase; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; }
 [data-theme='cyber'] .sc-btn-primary { box-shadow: none; }
 [data-theme='cyber'] .sc-btn-primary:hover { box-shadow: 0 0 22px #22e4ff; }
@@ -115,3 +115,8 @@
 [data-theme='blueprint'] .sc-btn-primary, [data-theme='blueprint'] .sc-btn-disabled { font-family: 'JetBrains Mono', monospace; }
 
 @keyframes ring-spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+/* ── 3D 舞台上的文字遮罩（無底框，只做淡淡的漸層） ── */
+[data-theme] { --stage-veil: rgba(4, 4, 8, 0.72); --stage-veil-mid: rgba(4, 4, 8, 0.32); }
+[data-theme='campus'] { --stage-veil: rgba(250, 248, 242, 0.86); --stage-veil-mid: rgba(250, 248, 242, 0.45); }
+[data-theme='oriental'] { --stage-veil: rgba(10, 9, 7, 0.78); --stage-veil-mid: rgba(10, 9, 7, 0.35); }

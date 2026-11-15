@@ -1,0 +1,200 @@
+/**
+ * 3D 世界環境：天空穹頂、延伸地面、遠景、漂浮粒子、程序化環境反射與後製。
+ * 介紹頁的全螢幕舞台與首頁群島共用。
+ */
+import { useMemo } from 'react';
+import * as THREE from 'three';
+import { Environment, Lightformer, Sparkles } from '@react-three/drei';
+import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
+import { mulberry32 } from '../lib/useCanvasLoop';
+import { P, Tree } from './kit';
+import type { BuildingKind } from './kinds';
+
+export interface WorldStyle {
+  skyTop: string;
+  skyBottom: string;
+  fog: string;
+  fogNear: number;
+  fogFar: number;
+  ground: string;
+  sparkle: string;
+  bloom: number;
+  ambient: string;
+  ambientI: number;
+  sun: string;
+  sunI: number;
+  hemi: [string, string];
+  /** 環境反射的主色（Lightformer） */
+  env: [string, string];
+  scenery: 'city' | 'rocks' | 'mountains' | 'forest' | 'hills' | 'blueprint';
+}
+
+const CAMPUS: WorldStyle = {
+  skyTop: '#7fb6ef', skyBottom: '#f6efe2', fog: '#e9eef2', fogNear: 22, fogFar: 62, ground: '#9cc97a', sparkle: '#ffffff', bloom: 0.35,
+  ambient: '#ffffff', ambientI: 0.7, sun: '#fff1d6', sunI: 2.6, hemi: ['#cfe6ff', '#8b6b4a'], env: ['#ffffff', '#ffe8c4'], scenery: 'hills',
+};
+
+export const WORLD: Record<BuildingKind, WorldStyle> = {
+  tower: {
+    skyTop: '#02040a', skyBottom: '#0b2a40', fog: '#04101c', fogNear: 18, fogFar: 58, ground: '#06121e', sparkle: '#22e4ff', bloom: 1.1,
+    ambient: '#3a6a8a', ambientI: 0.45, sun: '#bfe9ff', sunI: 1.5, hemi: ['#22e4ff', '#0a141e'], env: ['#22e4ff', '#ff3df2'], scenery: 'city',
+  },
+  altar: {
+    skyTop: '#090418', skyBottom: '#3a1648', fog: '#1d0d33', fogNear: 18, fogFar: 60, ground: '#1d0f33', sparkle: '#ffc76b', bloom: 1.1,
+    ambient: '#6a4a9a', ambientI: 0.5, sun: '#ffe2b0', sunI: 1.5, hemi: ['#b98cff', '#1a0d2e'], env: ['#b98cff', '#ffc76b'], scenery: 'rocks',
+  },
+  pagoda: {
+    skyTop: '#07070b', skyBottom: '#2e2a22', fog: '#17151a', fogNear: 16, fogFar: 54, ground: '#1b1d1a', sparkle: '#ffd98a', bloom: 0.95,
+    ambient: '#6f7690', ambientI: 0.45, sun: '#c9d6ff', sunI: 1.3, hemi: ['#ffe9b0', '#24221d'], env: ['#c9d6ff', '#ff9a4d'], scenery: 'mountains',
+  },
+  treehouse: {
+    skyTop: '#03141a', skyBottom: '#12524a', fog: '#0a2a26', fogNear: 16, fogFar: 52, ground: '#123b2c', sparkle: '#eaff9a', bloom: 1,
+    ambient: '#5a8a7a', ambientI: 0.5, sun: '#d8fff0', sunI: 1.3, hemi: ['#9effc9', '#2a1d12'], env: ['#9effc9', '#ffcf6a'], scenery: 'forest',
+  },
+  school: CAMPUS, hall: CAMPUS, library: CAMPUS, kiosk: CAMPUS,
+  workshop: {
+    skyTop: '#06193a', skyBottom: '#123c72', fog: '#0b2a55', fogNear: 18, fogFar: 60, ground: '#0b2a55', sparkle: '#cfe3ff', bloom: 0.6,
+    ambient: '#8fb4e8', ambientI: 0.6, sun: '#e6f0ff', sunI: 1.7, hemi: ['#cfe3ff', '#0a2244'], env: ['#cfe3ff', '#ffd166'], scenery: 'blueprint',
+  },
+};
+
+/** 漸層天空穹頂（不受霧影響） */
+export function SkyDome({ top, bottom }: { top: string; bottom: string }) {
+  const material = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+        uniforms: { top: { value: new THREE.Color(top) }, bottom: { value: new THREE.Color(bottom) } },
+        vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+        fragmentShader:
+          'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(vP.y * 0.5 + 0.5, 0.0, 1.0); float k = smoothstep(0.35, 0.95, h); gl_FragColor = vec4(mix(bottom, top, k), 1.0); }',
+      }),
+    [top, bottom],
+  );
+  return (
+    <mesh material={material} renderOrder={-1}>
+      <sphereGeometry args={[120, 32, 16]} />
+    </mesh>
+  );
+}
+
+/** 遠景：依主題環繞在舞台外圈 */
+function Scenery({ kind }: { kind: WorldStyle['scenery'] }) {
+  const items = useMemo(() => {
+    const rnd = mulberry32(kind.length * 97 + 3);
+    return Array.from({ length: 30 }, (_, i) => {
+      const a = (i / 30) * Math.PI * 2 + rnd() * 0.15;
+      const r = 20 + rnd() * 14;
+      return { x: Math.cos(a) * r, z: Math.sin(a) * r, s: 0.6 + rnd() * 1.2, h: rnd(), i };
+    });
+  }, [kind]);
+  const base = -4;
+  switch (kind) {
+    case 'city':
+      return (
+        <group>
+          {items.map((t) => (
+            <group key={t.i} position={[t.x, base, t.z]}>
+              <P c="#0a1d2c" p={[0, 2 + t.h * 5, 0]} s={[1.2 * t.s, 4 + t.h * 10, 1.2 * t.s]} m={0.7} ro={0.3} />
+              <P c={t.i % 3 ? '#22e4ff' : '#ff3df2'} e ei={2} p={[0, 4 + t.h * 10, 0]} s={[1.25 * t.s, 0.08, 1.25 * t.s]} />
+            </group>
+          ))}
+        </group>
+      );
+    case 'rocks':
+      return (
+        <group>
+          {items.map((t) => (
+            <group key={t.i} position={[t.x, base + 3 + t.h * 10, t.z]}>
+              <P g="dodeca" c="#3a2160" s={1.4 * t.s} />
+              <P g="pyramid" c="#2b1748" p={[0, -1.4 * t.s, 0]} s={[1.6 * t.s, 2 * t.s, 1.6 * t.s]} r={[Math.PI, 0, 0]} />
+              {t.i % 4 === 0 && <P g="oct" c="#b98cff" e ei={1.6} p={[0, 1 * t.s, 0]} s={0.5 * t.s} />}
+            </group>
+          ))}
+          <P g="sphere" c="#ffd9a0" e ei={1.4} p={[-18, 16, -34]} s={8} />
+        </group>
+      );
+    case 'mountains':
+      return (
+        <group>
+          {items.map((t) => (
+            <group key={t.i} position={[t.x * 1.15, base, t.z * 1.15]}>
+              <P g="cone" c={t.i % 2 ? '#2b2e2a' : '#353832'} p={[0, 3 + t.h * 3, 0]} s={[6 * t.s, 6 + t.h * 6, 6 * t.s]} ro={1} />
+              {t.i % 5 === 0 && <Tree p={[1.8 * t.s, 0, 1.2]} kind="pine" s={1.4} c="#2f4a36" c2="#22382a" />}
+            </group>
+          ))}
+          <P g="sphere" c="#ffe9b0" e ei={1.6} p={[16, 14, -30]} s={7} />
+        </group>
+      );
+    case 'forest':
+      return (
+        <group>
+          {items.map((t) => (
+            <Tree key={t.i} p={[t.x * 0.85, base, t.z * 0.85]} s={2.6 + t.h * 2.4} kind={t.i % 3 ? 'pine' : 'round'} c="#1d6e52" c2="#0f4a3a" />
+          ))}
+          <P g="sphere" c="#e6fff0" e ei={1.4} p={[-14, 15, -30]} s={5} />
+        </group>
+      );
+    case 'hills':
+      return (
+        <group>
+          {items.slice(0, 16).map((t) => (
+            <P key={t.i} g="ico1" c={t.i % 2 ? '#8fc06a' : '#a7d58c'} p={[t.x * 1.2, base - 2, t.z * 1.2]} s={[12 * t.s, 6 + t.h * 4, 12 * t.s]} ro={1} />
+          ))}
+          {items.slice(16).map((t) => (
+            <group key={t.i} position={[t.x * 0.8, 9 + t.h * 6, t.z * 0.8]}>
+              <P g="ico1" c="#ffffff" s={[2.6, 1.2, 1.6]} ro={1} />
+              <P g="ico1" c="#ffffff" p={[1.2, 0.3, 0]} s={[1.6, 1.2, 1.2]} ro={1} />
+              <P g="ico1" c="#f4f6fa" p={[-1.1, 0.2, 0.2]} s={[1.4, 1, 1.1]} ro={1} />
+            </group>
+          ))}
+          {items.filter((t) => t.i % 3 === 0).map((t) => <Tree key={`t${t.i}`} p={[t.x * 0.62, base, t.z * 0.62]} s={2.2} />)}
+        </group>
+      );
+    case 'blueprint':
+      return (
+        <group>
+          <gridHelper args={[120, 60, '#5f8fd0', '#2a5c9e']} position={[0, base + 0.01, 0]} />
+          {items.map((t) => (
+            <P key={t.i} c="#cfe3ff" wire p={[t.x, base + (2 + t.h * 6) / 2, t.z]} s={[2 * t.s, 2 + t.h * 6, 2 * t.s]} />
+          ))}
+        </group>
+      );
+  }
+}
+
+/** 完整的世界：天空、霧、地面、遠景、粒子、環境反射 */
+export function World({ style, sparkles = true }: { style: WorldStyle; sparkles?: boolean }) {
+  return (
+    <>
+      <SkyDome top={style.skyTop} bottom={style.skyBottom} />
+      <fog attach="fog" args={[style.fog, style.fogNear, style.fogFar]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -4, 0]} receiveShadow>
+        <circleGeometry args={[90, 48]} />
+        <meshStandardMaterial color={style.ground} roughness={1} />
+      </mesh>
+      <Scenery kind={style.scenery} />
+      {sparkles && <Sparkles count={70} scale={[16, 9, 16]} position={[0, 2, 0]} size={3} speed={0.35} opacity={0.8} color={style.sparkle} />}
+      <Environment resolution={128} frames={1} environmentIntensity={0.55}>
+        <Lightformer form="rect" intensity={2.4} color={style.env[0]} position={[0, 6, -8]} scale={[12, 4, 1]} />
+        <Lightformer form="rect" intensity={1.6} color={style.env[1]} position={[8, 2, 4]} rotation={[0, -Math.PI / 2, 0]} scale={[6, 3, 1]} />
+        <Lightformer form="circle" intensity={1.2} color="#ffffff" position={[-6, 8, 4]} scale={3} />
+      </Environment>
+    </>
+  );
+}
+
+/** 後製：只讓高亮的發光體（霓虹、燈籠、窗光）產生光暈，加上暗角 */
+export function Effects({ bloom }: { bloom: number }) {
+  return (
+    <EffectComposer multisampling={4}>
+      <Bloom mipmapBlur intensity={bloom} luminanceThreshold={0.85} luminanceSmoothing={0.2} />
+      <Vignette darkness={0.55} offset={0.32} />
+    </EffectComposer>
+  );
+}
+
+/** 手機 / 觸控裝置關閉後製以確保流暢 */
+export const allowEffects = () => typeof window !== 'undefined' && !window.matchMedia('(pointer: coarse)').matches && window.innerWidth > 820;

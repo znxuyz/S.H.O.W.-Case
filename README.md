@@ -2,7 +2,7 @@
 
 **Selected Hub Of Works** — 個人作品集與工具展示網站。
 
-首頁是以 Three.js 渲染的 **3D 浮空微縮群島**：每一件作品都是一座懸浮在星空中的低多邊形箱庭島嶼，可拖曳旋轉、滾輪縮放；懸停時島嶼浮起並顯示名稱，點擊後鏡頭飛向該島，進入作品的全螢幕專屬世界。介紹頁右側是可 360° 旋轉的微縮箱庭（也可切換成網站預覽）；切換作品時，背景特效、字體、配色、UI 邊框與轉場動畫會整個換掉。
+首頁是以 Three.js 渲染的 **3D 浮空微縮群島**：每一件作品都是一座懸浮在星空中的低多邊形箱庭島嶼，可拖曳旋轉、滾輪縮放；懸停時島嶼浮起並顯示名稱，點擊後鏡頭飛向該島，進入作品的全螢幕專屬世界。介紹頁是全螢幕的 3D 舞台，文字懸浮在左側，右側的微縮箱庭可 360° 旋轉（也可展開網站預覽）；切換作品時，背景特效、字體、配色、UI 邊框與轉場動畫會整個換掉。
 
 🔗 https://znxuyz.github.io/S.H.O.W.-Case/
 
@@ -94,7 +94,7 @@ npm run build    # 產出 dist/
 技術：Vite · React · TypeScript · Tailwind CSS v4 · Motion · GSAP（SplitText / ScrambleText）· Three.js · React Three Fiber · drei。
 
 3D 箱庭全部以 Three.js 基礎幾何體（Box / Cylinder / Cone / Sphere…）程序化堆疊，不需要任何外部模型檔，程式在 `src/three/`：
-`kit.tsx`（共用幾何與材質）、`dioramas.tsx`（各主題箱庭）、`MapWorld.tsx`（首頁群島）、`DioramaView.tsx`（介紹頁 360° 箱庭）。
+`kit.tsx`（共用幾何與材質）、`dioramas.tsx`（各主題箱庭）、`world.tsx`（天空、地面、遠景、粒子、環境反射與光暈後製）、`MapWorld.tsx`（首頁群島）、`DomainStage.tsx`（介紹頁全螢幕 3D 舞台）。
 每個作品的全螢幕領域插畫在 `src/themes/<主題>/Background.tsx`，共用零件在 `src/themes/sceneKit.tsx`。
 
 ### 效能原則

@@ -96,14 +96,23 @@
 .bp-cell { padding: 0.5rem 0.2rem; background: #0b2a55; color: #ffd166; opacity: 0; animation: fillcell 0.35s ease-out forwards; }
 @keyframes fillcell { from { opacity: 0; background: #ffd16655; } to { opacity: 1; background: #0e3366; } }
 
-/* ═════════ 右側媒體面板：3D 箱庭 / 網站預覽 ═════════ */
-.media-panel { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
-.media-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--chrome-bg); border: 1px solid var(--line); z-index: 2; }
-.media-tabs button { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.9rem; border-radius: 999px; font-size: 0.75rem; letter-spacing: 0.08em; color: var(--muted); cursor: pointer; transition: background 0.25s, color 0.25s; }
-.media-tabs button.is-on { background: var(--accent); color: var(--btn-fg, #0b0a09); font-weight: 600; }
-.diorama-stage { position: relative; width: 100%; height: min(74vh, 48vw); min-height: 340px; touch-action: none; cursor: grab; }
-.diorama-stage:active { cursor: grabbing; }
-.diorama-loading { position: absolute; inset: 0; display: grid; place-items: center; font-size: 0.8rem; letter-spacing: 0.3em; color: var(--muted); }
-.diorama-hint { position: absolute; left: 50%; bottom: 0.4rem; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; letter-spacing: 0.2em; color: var(--muted); pointer-events: none; white-space: nowrap; }
-.preview-stage { width: 100%; display: flex; justify-content: center; }
-@media (max-width: 1023px) { .diorama-stage { height: 52vh; min-height: 300px; } }
+/* ═════════ 全螢幕 3D 舞台與懸浮文字 ═════════ */
+.scene-stage { position: absolute; inset: 0; z-index: 0; touch-action: none; cursor: grab; }
+.scene-stage:active { cursor: grabbing; }
+.stage-loading { position: absolute; inset: 0; display: grid; place-items: center; font-size: 0.8rem; letter-spacing: 0.3em; color: var(--muted); }
+.canvas-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; text-align: center; padding: 2rem; color: var(--muted, #f3ead6aa); }
+.canvas-fallback p { font-size: 0.95rem; letter-spacing: 0.1em; }
+.canvas-fallback small { font-size: 0.75rem; opacity: 0.75; }
+/* 文字可讀性：只在左側淡淡壓暗（淺色主題提亮），不做底框 */
+.stage-veil { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(90deg, var(--stage-veil) 0%, var(--stage-veil-mid) 34%, transparent 58%); }
+@media (max-width: 1023px) { .stage-veil { background: linear-gradient(180deg, var(--stage-veil) 0%, var(--stage-veil-mid) 45%, transparent 70%); } }
+.scene-over { position: relative; z-index: 1; pointer-events: none; }
+.scene-over .sc-copy, .scene-over .stage-tools, .scene-over .preview-card { pointer-events: auto; }
+.scene-over .sc-media { align-self: stretch; flex-direction: column; justify-content: flex-start; align-items: flex-end; gap: 1rem; }
+@media (max-width: 1023px) { .scene-over .sc-media { min-height: 55vh; align-items: center; justify-content: flex-end; } }
+.stage-tools { display: inline-flex; align-items: center; gap: 0.6rem; }
+.stage-hint { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; letter-spacing: 0.2em; color: var(--muted); white-space: nowrap; }
+.stage-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.95rem; border-radius: 999px; font-size: 0.75rem; letter-spacing: 0.08em; cursor: pointer; color: var(--fg); background: var(--chrome-bg); border: 1px solid var(--line-strong); transition: background 0.25s, color 0.25s; }
+.stage-btn.is-on, .stage-btn:hover { background: var(--accent); color: var(--btn-fg, #0b0a09); }
+.preview-card { width: min(100%, 36rem); animation: preview-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes preview-in { from { opacity: 0; transform: translateY(16px) scale(0.97); } }

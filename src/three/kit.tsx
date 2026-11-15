@@ -89,41 +89,121 @@ export function Hip({ c, p, w, h, ...m }: { c: string; p: V3; w: number; h: numb
   return <P g="pyramid" c={c} p={p} s={[w * 1.414, h, w * 1.414]} r={[0, Math.PI / 4, 0]} {...m} />;
 }
 
-/** 方形地塊底座：草皮/鋪面頂層、土層、岩層，下方倒錐浮島岩底 */
-export function Plinth({ top, soil, rock, size = 4, float = true }: { top: string; soil: string; rock: string; size?: number; float?: boolean }) {
+/** 方形地塊底座：石材收邊的頂層、土層、岩層，下方倒錐浮島岩底與碎石 */
+export function Plinth({ top, soil, rock, rim = '#b9b2a2', size = 4, float = true }: { top: string; soil: string; rock: string; rim?: string; size?: number; float?: boolean }) {
+  const h = size / 2;
   return (
     <group>
-      <P c={top} p={[0, -0.14, 0]} s={[size, 0.28, size]} />
-      <P c={soil} p={[0, -0.52, 0]} s={[size - 0.06, 0.48, size - 0.06]} />
-      <P c={rock} p={[0, -0.96, 0]} s={[size - 0.18, 0.4, size - 0.18]} />
+      <P c={top} p={[0, -0.14, 0]} s={[size - 0.16, 0.28, size - 0.16]} ro={0.95} />
+      {/* 石材收邊 */}
+      <P c={rim} p={[0, -0.13, h - 0.08]} s={[size, 0.3, 0.16]} ro={0.7} />
+      <P c={rim} p={[0, -0.13, -h + 0.08]} s={[size, 0.3, 0.16]} ro={0.7} />
+      <P c={rim} p={[h - 0.08, -0.13, 0]} s={[0.16, 0.3, size - 0.32]} ro={0.7} />
+      <P c={rim} p={[-h + 0.08, -0.13, 0]} s={[0.16, 0.3, size - 0.32]} ro={0.7} />
+      <P c={soil} p={[0, -0.52, 0]} s={[size - 0.06, 0.48, size - 0.06]} ro={1} />
+      <P c={rock} p={[0, -0.96, 0]} s={[size - 0.18, 0.4, size - 0.18]} ro={1} />
       {float && (
         <>
-          <P g="pyramid" c={rock} p={[0, -2.15, 0]} s={[size * 1.3, 2, size * 1.3]} r={[Math.PI, Math.PI / 4, 0]} />
+          <P g="pyramid" c={rock} p={[0, -2.15, 0]} s={[size * 1.3, 2, size * 1.3]} r={[Math.PI, Math.PI / 4, 0]} ro={1} />
           <P g="dodeca" c={soil} p={[size * 0.32, -1.5, size * 0.18]} s={0.7} />
           <P g="dodeca" c={rock} p={[-size * 0.28, -1.8, -size * 0.2]} s={0.55} />
+          <P g="dodeca" c={rock} p={[size * 0.1, -2.6, -size * 0.3]} s={0.35} />
         </>
       )}
     </group>
   );
 }
 
-/** 低多邊形樹（圓冠或松樹） */
-export function Tree({ p, s = 1, kind = 'round', c = '#3fae6a', c2 = '#2f8f5b' }: { p: V3; s?: number; kind?: 'round' | 'pine'; c?: string; c2?: string }) {
+/** 蓬鬆樹冠：多顆細分球體疊成，深淺綠交錯；或分層松樹 */
+export function Tree({ p, s = 1, kind = 'round', c = '#4fbf73', c2 = '#2f8f5b' }: { p: V3; s?: number; kind?: 'round' | 'pine'; c?: string; c2?: string }) {
   return (
     <group position={p} scale={s}>
-      <P g="cyl6" c="#6b4423" p={[0, 0.25, 0]} s={[0.12, 0.5, 0.12]} />
+      <P g="cyl6" c="#6b4423" p={[0, 0.28, 0]} s={[0.12, 0.56, 0.12]} />
       {kind === 'round' ? (
         <>
-          <P g="ico" c={c} p={[0, 0.78, 0]} s={0.75} />
-          <P g="ico" c={c2} p={[0.18, 0.62, 0.12]} s={0.45} />
+          <P g="ico1" c={c2} p={[0, 0.82, 0]} s={0.62} />
+          <P g="ico1" c={c} p={[-0.22, 0.95, 0.1]} s={0.46} />
+          <P g="ico1" c={c} p={[0.22, 0.9, -0.12]} s={0.44} />
+          <P g="ico1" c={c} p={[0.05, 1.18, 0.05]} s={0.4} />
+          <P g="ico1" c={c2} p={[0.12, 0.7, 0.24]} s={0.34} />
+          <P g="ico1" c="#8ee0a0" p={[-0.08, 1.28, -0.06]} s={0.2} />
         </>
       ) : (
         <>
-          <P g="cone" c={c2} p={[0, 0.7, 0]} s={[0.75, 0.7, 0.75]} />
-          <P g="cone" c={c} p={[0, 1.05, 0]} s={[0.56, 0.6, 0.56]} />
-          <P g="cone" c={c2} p={[0, 1.35, 0]} s={[0.36, 0.5, 0.36]} />
+          <P g="cone" c={c2} p={[0, 0.7, 0]} s={[0.78, 0.7, 0.78]} />
+          <P g="cone" c={c} p={[0, 1.02, 0]} s={[0.6, 0.62, 0.6]} />
+          <P g="cone" c={c2} p={[0, 1.32, 0]} s={[0.42, 0.52, 0.42]} />
+          <P g="cone" c={c} p={[0, 1.58, 0]} s={[0.24, 0.42, 0.24]} />
         </>
       )}
+    </group>
+  );
+}
+
+/** 窗：外框 + 玻璃（可發光）+ 十字窗櫺。face 決定朝向（+z 或 +x） */
+export function Win({ p, w = 0.24, h = 0.3, face = 'z', glow, frame = '#ffffff' }: { p: V3; w?: number; h?: number; face?: 'z' | 'x'; glow?: string; frame?: string }) {
+  const rot: V3 = face === 'x' ? [0, Math.PI / 2, 0] : [0, 0, 0];
+  return (
+    <group position={p} rotation={rot}>
+      <P c={frame} s={[w + 0.06, h + 0.06, 0.03]} ro={0.6} />
+      <P c={glow ?? '#7fa9d6'} p={[0, 0, 0.012]} s={[w, h, 0.02]} m={glow ? 0 : 0.6} ro={glow ? 0.6 : 0.15} e={glow ? glow : undefined} ei={glow ? 1.1 : undefined} />
+      <P c={frame} p={[0, 0, 0.026]} s={[0.025, h, 0.01]} />
+      <P c={frame} p={[0, 0, 0.026]} s={[w, 0.025, 0.01]} />
+      <P c={frame} p={[0, -h / 2 - 0.04, 0.03]} s={[w + 0.1, 0.04, 0.06]} />
+    </group>
+  );
+}
+
+/** 路燈：燈桿、燈罩與發光燈泡 */
+export function Lamp({ p, c = '#ffe6a6', pole = '#3a3f4a' }: { p: V3; c?: string; pole?: string }) {
+  return (
+    <group position={p}>
+      <P g="cyl6" c={pole} p={[0, 0.45, 0]} s={[0.05, 0.9, 0.05]} m={0.7} ro={0.35} />
+      <P g="cyl6" c={pole} p={[0, 0.02, 0]} s={[0.14, 0.04, 0.14]} m={0.7} ro={0.35} />
+      <P g="sphere" c={c} e ei={2.4} p={[0, 0.96, 0]} s={0.14} />
+      <P g="pyramid" c={pole} p={[0, 1.07, 0]} s={[0.24, 0.1, 0.24]} r={[0, Math.PI / 4, 0]} m={0.7} ro={0.35} />
+    </group>
+  );
+}
+
+/** 木柵欄 */
+export function Fence({ p, len, rotY = 0, c = '#f4efe6' }: { p: V3; len: number; rotY?: number; c?: string }) {
+  const n = Math.max(2, Math.round(len / 0.28));
+  return (
+    <group position={p} rotation={[0, rotY, 0]}>
+      {Array.from({ length: n }, (_, i) => <P key={i} c={c} p={[-len / 2 + (len / (n - 1)) * i, 0.14, 0]} s={[0.04, 0.28, 0.04]} />)}
+      <P c={c} p={[0, 0.2, 0]} s={[len, 0.03, 0.03]} />
+      <P c={c} p={[0, 0.1, 0]} s={[len, 0.03, 0.03]} />
+    </group>
+  );
+}
+
+/** 長椅 */
+export function Bench({ p, rotY = 0 }: { p: V3; rotY?: number }) {
+  return (
+    <group position={p} rotation={[0, rotY, 0]}>
+      <P c="#a8743f" p={[0, 0.16, 0]} s={[0.5, 0.04, 0.16]} />
+      <P c="#a8743f" p={[0, 0.27, -0.07]} s={[0.5, 0.12, 0.03]} />
+      <P c="#3a3f4a" p={[-0.2, 0.08, 0]} s={[0.04, 0.16, 0.14]} m={0.6} />
+      <P c="#3a3f4a" p={[0.2, 0.08, 0]} s={[0.04, 0.16, 0.14]} m={0.6} />
+    </group>
+  );
+}
+
+/** 人字屋頂瓦片：沿兩側斜面排列的瓦壟條 */
+export function GableTiles({ p, w, d, h, c }: { p: V3; w: number; d: number; h: number; c: string }) {
+  const slope = Math.atan2(h, d / 2);
+  const len = Math.hypot(h, d / 2);
+  const rows = Math.round(w / 0.16);
+  return (
+    <group position={p}>
+      {[1, -1].map((side) => (
+        <group key={side} position={[0, h / 2, (side * d) / 4]} rotation={[side * slope, 0, 0]}>
+          {Array.from({ length: rows }, (_, i) => (
+            <P key={i} g="cyl6" c={c} p={[-w / 2 + (w / rows) * (i + 0.5), 0.02, 0]} s={[0.05, len, 0.05]} r={[Math.PI / 2, 0, 0]} />
+          ))}
+        </group>
+      ))}
     </group>
   );
 }

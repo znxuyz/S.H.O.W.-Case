@@ -1,46 +1,48 @@
 import { lazy, Suspense, useState } from 'react';
-import { Box, MonitorSmartphone, Rotate3d } from 'lucide-react';
+import { MonitorSmartphone, Rotate3d, X } from 'lucide-react';
 import type { Project } from '../data/projects';
 import { ACCENT, DEFAULT_BUILDING } from '../three/kinds';
+import { CanvasBoundary } from './CanvasBoundary';
 import { Showcase } from './Showcase';
 
-const DioramaView = lazy(() => import('../three/DioramaView'));
+const DomainStage = lazy(() => import('../three/DomainStage'));
 
-/**
- * 介紹頁右側：預設為可 360° 旋轉的 3D 微縮箱庭，可切換到「網站預覽」看實際畫面。
- */
-export function MediaPanel({ project, reducedMotion }: { project: Project; reducedMotion: boolean }) {
-  const [tab, setTab] = useState<'3d' | 'preview'>('3d');
+/** 全螢幕 3D 舞台：鋪滿整個視窗，位於文字層之下 */
+export function ProjectStage({ project, reducedMotion }: { project: Project; reducedMotion: boolean }) {
   const kind = project.building ?? DEFAULT_BUILDING[project.theme];
   const accent = project.accent ?? ACCENT[project.theme];
-  const hasPreview = !!project.showcase;
-
   return (
-    <div className="sc-media reveal">
-      <div className="media-panel">
-        {hasPreview && (
-          <div className="media-tabs" role="tablist" aria-label="作品視覺">
-            <button role="tab" aria-selected={tab === '3d'} className={tab === '3d' ? 'is-on' : ''} onClick={() => setTab('3d')}>
-              <Box className="h-3.5 w-3.5" aria-hidden /> 3D 箱庭
-            </button>
-            <button role="tab" aria-selected={tab === 'preview'} className={tab === 'preview' ? 'is-on' : ''} onClick={() => setTab('preview')}>
-              <MonitorSmartphone className="h-3.5 w-3.5" aria-hidden /> 網站預覽
-            </button>
-          </div>
-        )}
-        {tab === '3d' ? (
-          <div className="diorama-stage" data-nav-ignore>
-            <Suspense fallback={<div className="diorama-loading">建構箱庭中…</div>}>
-              <DioramaView kind={kind} accent={accent} reducedMotion={reducedMotion} />
-            </Suspense>
-            <p className="diorama-hint"><Rotate3d className="h-3.5 w-3.5" aria-hidden /> 拖曳旋轉 · 滾輪縮放</p>
-          </div>
-        ) : (
-          <div className="preview-stage">
-            <Showcase project={project} />
-          </div>
+    <div className="scene-stage" data-nav-ignore>
+      <CanvasBoundary>
+        <Suspense fallback={<div className="stage-loading">建構箱庭中…</div>}>
+          <DomainStage kind={kind} accent={accent} reducedMotion={reducedMotion} />
+        </Suspense>
+      </CanvasBoundary>
+    </div>
+  );
+}
+
+/**
+ * 右側留白區：操作提示，以及可展開的「網站預覽」浮動卡片（不遮擋 3D 舞台的其餘部分）。
+ */
+export function MediaPanel({ project }: { project: Project }) {
+  const [preview, setPreview] = useState(false);
+  return (
+    <div className="sc-media">
+      <div className="stage-tools reveal">
+        <span className="stage-hint"><Rotate3d className="h-3.5 w-3.5" aria-hidden /> 拖曳旋轉 · 滾輪縮放</span>
+        {project.showcase && (
+          <button className={`stage-btn ${preview ? 'is-on' : ''}`} onClick={() => setPreview((v) => !v)} aria-expanded={preview}>
+            {preview ? <X className="h-3.5 w-3.5" aria-hidden /> : <MonitorSmartphone className="h-3.5 w-3.5" aria-hidden />}
+            {preview ? '關閉預覽' : '網站預覽'}
+          </button>
         )}
       </div>
+      {preview && (
+        <div className="preview-card">
+          <Showcase project={project} />
+        </div>
+      )}
     </div>
   );
 }

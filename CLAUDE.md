@@ -11,6 +11,8 @@
 - 主題（背景、配色、字體）：`src/themes/`、`src/styles/themes.css`
 - 3D（Three.js + @react-three/fiber + drei）：`src/three/`
   - `kit.tsx`：共用幾何體 / 材質快取與基礎零件（程序化 Low-Poly，不使用外部 .glb 模型）
-  - `dioramas.tsx`：各主題的微縮箱庭；`MapWorld.tsx`：首頁 3D 群島；`DioramaView.tsx`：介紹頁 360° 箱庭
+  - `dioramas.tsx`：各主題的微縮箱庭；`world.tsx`：天空/地面/遠景/粒子/環境反射/後製
+  - `MapWorld.tsx`：首頁 3D 群島；`DomainStage.tsx`：介紹頁全螢幕 3D 舞台（文字懸浮在左側）
+  - R3F `<Canvas>` 一律加 `resize={{ offsetSize: true }}`：轉場會對外層做 CSS scale，用 getBoundingClientRect 量測會讓畫布尺寸錯誤而黑屏
 - 首頁 2D 疊層：`src/map/`；領域背景插畫：`src/themes/<主題>/Background.tsx`
-- 效能：Canvas `dpr={[1, 1.5]}`、幾何與材質共用、群島不使用點光源；2D 部分不用 filter / mix-blend-mode。
+- 效能：Canvas `dpr={[1, 1.5]}`、幾何與材質共用、群島不使用點光源、觸控裝置關閉後製；2D 部分不用 filter / mix-blend-mode。

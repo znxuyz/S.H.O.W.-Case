@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { LayoutGrid, MousePointerClick } from 'lucide-react';
 import type { Project } from '../data/projects';
 import { Wordmark } from '../components/Wordmark';
+import { CanvasBoundary } from '../components/CanvasBoundary';
 import './map.css';
 
 const MapWorld = lazy(() => import('../three/MapWorld'));
@@ -39,9 +40,11 @@ export function MapScene({
   return (
     <div className={`map-scene ${portrait ? 'is-portrait' : ''}`}>
       <div className="map-canvas" data-nav-ignore>
-        <Suspense fallback={<div className="map-loading">正在召喚群島…</div>}>
-          <MapWorld projects={projects} portrait={portrait} reducedMotion={reducedMotion} onEnter={enter} onMeasure={remember} />
-        </Suspense>
+        <CanvasBoundary label="此裝置無法顯示 3D 群島">
+          <Suspense fallback={<div className="map-loading">正在召喚群島…</div>}>
+            <MapWorld projects={projects} portrait={portrait} reducedMotion={reducedMotion} onEnter={enter} onMeasure={remember} />
+          </Suspense>
+        </CanvasBoundary>
       </div>
 
       <div className="map-overlay">

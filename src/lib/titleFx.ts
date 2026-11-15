@@ -4,6 +4,8 @@ import { ScrambleTextPlugin } from 'gsap/ScrambleTextPlugin';
 import type { TitleFx } from '../themes/types';
 
 gsap.registerPlugin(SplitText, ScrambleTextPlugin);
+// 低階裝置或 3D 場景很重時，不要讓文字進場動畫被「延遲平滑」拖慢
+gsap.ticker.lagSmoothing(0);
 
 /**
  * Plays the theme's title reveal and the staggered entrance of `.reveal` elements inside `root`.

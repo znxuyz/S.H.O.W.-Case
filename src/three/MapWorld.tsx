@@ -7,13 +7,14 @@
  */
 import { useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { Html, OrbitControls, Stars } from '@react-three/drei';
+import { Environment, Html, Lightformer, OrbitControls, Sparkles, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import type { Project } from '../data/projects';
 import { themes } from '../themes';
 import { Diorama } from './dioramas';
 import { ACCENT, DEFAULT_BUILDING } from './kinds';
+import { allowEffects, Effects, SkyDome } from './world';
 
 export interface MapWorldProps {
   projects: Project[];
@@ -149,20 +150,28 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
   };
   const cameraRef = useRef<THREE.Camera | null>(null);
 
+  const fx = allowEffects();
   const camPos: [number, number, number] = portrait ? [0, 46, 17] : [1.2, 18, 27];
 
   return (
     <Canvas
+      // 以 offsetWidth/Height 量測：轉場中的 CSS scale 不會把畫布量成數倍大（先前首頁變黑的原因）
+      resize={{ offsetSize: true }}
       shadows={{ type: THREE.PCFShadowMap }}
       dpr={[1, 1.5]}
       camera={{ position: camPos, fov: portrait ? 52 : 40, near: 0.5, far: 220 }}
-      gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
+      gl={{ antialias: !fx, powerPreference: 'high-performance' }}
       onCreated={({ camera }) => { cameraRef.current = camera; }}
       onPointerMissed={() => setHovered(null)}
       style={{ cursor: hovered ? 'pointer' : 'grab' }}
     >
-      <fog attach="fog" args={['#0b0a09', 40, 95]} />
+      <SkyDome top="#05040a" bottom="#1c1424" />
+      <fog attach="fog" args={['#0d0a12', 45, 110]} />
       <ambientLight color="#8a90b8" intensity={0.55} />
+      <Environment resolution={128} frames={1} environmentIntensity={0.5}>
+        <Lightformer form="rect" intensity={2.2} color="#ffe2b0" position={[0, 8, -10]} scale={[14, 4, 1]} />
+        <Lightformer form="rect" intensity={1.4} color="#9fb4ff" position={[10, 3, 6]} rotation={[0, -Math.PI / 2, 0]} scale={[8, 3, 1]} />
+      </Environment>
       <hemisphereLight args={['#ffe9c4', '#1a1430', 0.55]} />
       <directionalLight
         color="#fff1d6"
@@ -179,6 +188,7 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
         shadow-camera-far={70}
       />
       <Stars radius={90} depth={50} count={2600} factor={3.2} saturation={0.3} fade speed={reducedMotion ? 0 : 0.4} />
+      <Sparkles count={120} scale={[44, 14, 30]} position={[0, 2, 0]} size={3.2} speed={0.3} opacity={0.7} color="#f3d79a" />
 
       {projects.map((p, i) => (
         <Island
@@ -210,6 +220,7 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
         autoRotate={!reducedMotion && !hovered && !flying}
         autoRotateSpeed={0.25}
       />
+      {fx && <Effects bloom={0.9} />}
     </Canvas>
   );
 }

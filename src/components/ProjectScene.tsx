@@ -3,7 +3,7 @@ import { ArrowUpRight, Hammer, Wrench, Archive } from 'lucide-react';
 import type { Project } from '../data/projects';
 import { themes } from '../themes';
 import { playSceneIntro } from '../lib/titleFx';
-import { MediaPanel } from './MediaPanel';
+import { MediaPanel, ProjectStage } from './MediaPanel';
 import { GitHubIcon } from './icons';
 
 const STATUS = {
@@ -44,7 +44,11 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
   const StatusIcon = status.icon;
 
   return (
-    <div ref={root} data-scroll className="scene-scroll">
+    <>
+    {/* 全螢幕 3D 舞台（在文字下方） */}
+    <ProjectStage project={project} reducedMotion={reducedMotion} />
+    <div className="stage-veil" aria-hidden />
+    <div ref={root} data-scroll className="scene-scroll scene-over">
       <div className={`scene-grid scene-${project.theme}`}>
         <div className="sc-copy">
           <ThemeOrnament project={project} />
@@ -87,8 +91,9 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
           </div>
           {project.note && <p className="sc-note reveal">※ {project.note}</p>}
         </div>
-        <MediaPanel project={project} reducedMotion={reducedMotion} />
+        <MediaPanel project={project} />
       </div>
     </div>
+    </>
   );
 }
