@@ -1,90 +1,56 @@
-import { useMemo, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
 import type { BackgroundProps } from '../types';
+import { useCanvasLoop } from '../../lib/useCanvasLoop';
 
-const COLS = 140;
-const ROWS = 70;
+const COLS = 120;
+const ROWS = 64;
 const SPACING = 0.42;
+const FOCAL = 520;
 
-/** 資料地形：隨時間起伏的點陣曲面，高處轉為洋紅 */
-function DataTerrain({ animate }: { animate: boolean }) {
-  const points = useRef<THREE.Points>(null);
-  const { positions, colors } = useMemo(() => {
-    const positions = new Float32Array(COLS * ROWS * 3);
-    const colors = new Float32Array(COLS * ROWS * 3);
-    let i = 0;
-    for (let z = 0; z < ROWS; z++) {
-      for (let x = 0; x < COLS; x++) {
-        positions[i * 3] = (x - COLS / 2) * SPACING;
-        positions[i * 3 + 1] = 0;
-        positions[i * 3 + 2] = -z * SPACING;
-        i++;
-      }
-    }
-    return { positions, colors };
-  }, []);
-
-  const cyan = useMemo(() => new THREE.Color('#22e4ff'), []);
-  const magenta = useMemo(() => new THREE.Color('#ff3df2'), []);
-  const tmp = useMemo(() => new THREE.Color(), []);
-
-  const update = (t: number) => {
-    const geo = points.current?.geometry;
-    if (!geo) return;
-    const pos = geo.attributes.position.array as Float32Array;
-    const col = geo.attributes.color.array as Float32Array;
-    for (let i = 0; i < COLS * ROWS; i++) {
-      const x = pos[i * 3];
-      const z = pos[i * 3 + 2] - t * 1.4;
-      const y =
-        Math.sin(x * 0.35 + t * 0.6) * 0.55 +
-        Math.cos(z * 0.28) * 0.75 +
-        Math.sin((x + z) * 0.12 + t * 0.3) * 1.1;
-      pos[i * 3 + 1] = y;
-      const k = THREE.MathUtils.clamp((y + 1.6) / 3.6, 0, 1);
-      tmp.copy(cyan).lerp(magenta, k * k);
-      col[i * 3] = tmp.r;
-      col[i * 3 + 1] = tmp.g;
-      col[i * 3 + 2] = tmp.b;
-    }
-    geo.attributes.position.needsUpdate = true;
-    geo.attributes.color.needsUpdate = true;
-  };
-
-  const started = useRef(false);
-  useFrame(({ clock }) => {
-    if (!animate && started.current) return;
-    started.current = true;
-    update(animate ? clock.getElapsedTime() : 2);
-  });
-
-  return (
-    <points ref={points} position={[0, -2.6, 4]}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
-      </bufferGeometry>
-      <pointsMaterial size={0.06} vertexColors transparent opacity={0.9} sizeAttenuation depthWrite={false} blending={THREE.AdditiveBlending} />
-    </points>
-  );
-}
-
-/** 未來科技：WebGL 資料地形 + 掃描線 + HUD 準星 */
+/**
+ * 未來科技：以 2D Canvas 手動透視投影的「資料地形」點陣曲面
+ * （不使用 WebGL / Three.js），搭配掃描線與 HUD 準星。
+ */
 export default function CyberBackground({ active, reducedMotion }: BackgroundProps) {
+  const canvas = useCanvasLoop(
+    ({ ctx, w, h, t }) => {
+      ctx.clearRect(0, 0, w, h);
+      const time = reducedMotion ? 2 : t;
+      const camY = 1.3;
+      const horizon = h * 0.42;
+      const scale = Math.max(w / 1440, 0.6);
+      ctx.globalCompositeOperation = 'lighter';
+      for (let r = ROWS - 1; r >= 0; r--) {
+        const zWorld = 2 + r * SPACING;
+        const zScroll = r * SPACING + time * 1.4;
+        const persp = (FOCAL * scale) / zWorld;
+        const fade = 1 - r / ROWS;
+        for (let c = 0; c < COLS; c++) {
+          const x = (c - COLS / 2) * SPACING;
+          const y =
+            Math.sin(x * 0.35 + time * 0.6) * 0.55 +
+            Math.cos(zScroll * 0.28) * 0.75 +
+            Math.sin((x - zScroll) * 0.12 + time * 0.3) * 1.1;
+          const sx = w / 2 + x * persp;
+          if (sx < -4 || sx > w + 4) continue;
+          const sy = horizon + (camY + 1.6 - y) * persp * 0.55;
+          const k = Math.min(1, Math.max(0, (y + 1.6) / 3.6));
+          const rr = Math.round(34 + (255 - 34) * k * k);
+          const gg = Math.round(228 + (61 - 228) * k * k);
+          const bb = Math.round(255 + (242 - 255) * k * k);
+          const size = Math.max(0.6, persp * 0.012);
+          ctx.fillStyle = `rgba(${rr},${gg},${bb},${0.85 * fade})`;
+          ctx.fillRect(sx, sy, size, size);
+        }
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    },
+    { active, reducedMotion },
+  );
+
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#03060d]">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_35%,rgba(34,228,255,0.16),transparent_60%)]" />
-      <Canvas
-        className="!absolute inset-0"
-        dpr={[1, 1.75]}
-        camera={{ position: [0, 1.2, 8], fov: 60 }}
-        frameloop={active && !reducedMotion ? 'always' : 'demand'}
-        gl={{ antialias: false, powerPreference: 'high-performance' }}
-      >
-        <fog attach="fog" args={['#03060d', 6, 26]} />
-        <DataTerrain animate={active && !reducedMotion} />
-      </Canvas>
+      <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
       <div className="cyber-scanlines absolute inset-0" />
       <div className="cyber-sweep absolute inset-x-0 h-40" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(0,0,0,0.85)_100%)]" />

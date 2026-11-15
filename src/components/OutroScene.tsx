@@ -13,7 +13,7 @@ export function OutroScene({ count, onTop, onIndex }: { count: number; onTop: ()
           <GitHubIcon /> GitHub @znxuyz
         </a>
         <button className="hero-btn" onClick={onIndex}><LayoutGrid className="h-4 w-4" aria-hidden /> 作品目錄</button>
-        <button className="hero-btn" onClick={onTop}><ArrowUp className="h-4 w-4" aria-hidden /> 回到序章</button>
+        <button className="hero-btn" onClick={onTop}><ArrowUp className="h-4 w-4" aria-hidden /> 返回大地圖</button>
       </div>
       <Wordmark size="nav" className="mt-14 opacity-70" />
       <p className="mt-4 text-xs tracking-[0.2em] opacity-40">© {new Date().getFullYear()} S.H.O.W. Case</p>

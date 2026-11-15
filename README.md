@@ -2,7 +2,7 @@
 
 **Selected Hub Of Works** — 個人作品集與工具展示網站。
 
-每一件作品都有一個專屬的全螢幕世界：切換作品時，背景特效、字體、配色、UI 邊框與轉場動畫會整個換掉。
+首頁是一座以 CSS 3D 打造的**浮空大地圖**：兩座浮島懸在空中，島上的每座微縮建築代表一件作品，沙盤會隨滑鼠立體偏轉。點擊建築，鏡頭會朝它俯衝拉近，進入該作品的全螢幕專屬世界；切換作品時，背景特效、字體、配色、UI 邊框與轉場動畫會整個換掉。
 
 🔗 https://znxuyz.github.io/S.H.O.W.-Case/
 
@@ -10,6 +10,8 @@
 
 | 方式 | 動作 |
 |---|---|
+| 大地圖上點擊建築 | 鏡頭俯衝進入該作品 |
+| 右上「返回大地圖」 | 從作品縮小退回大地圖 |
 | 滾輪 / ↑ ↓ / PageUp PageDown / 空白鍵 | 上一個 / 下一個作品 |
 | 手機上下滑動 | 上一個 / 下一個作品 |
 | 右側圓點 | 直接跳到該作品 |
@@ -39,9 +41,26 @@
     repo: 'https://github.com/znxuyz/my-new-app',  // Source Code
   },
   showcase: { kind: 'image', src: 'media/my-new-app.webp', alt: '畫面說明', shape: 'wide' },
+  building: 'tower',                // 選填：大地圖上的建築造型（預設依 theme）
   hidden: false,                    // true = 暫時不顯示
 }
 ```
+
+作品會依 `category` 自動放到大地圖上：`personal` →「個人創作島」，`campus` →「校園專案島」，依陣列順序排入建築位，不需要填座標。
+
+### 建築造型（`building`）
+
+| 值 | 造型 | 預設對應主題 |
+|---|---|---|
+| `tower` | 發光全息高塔 | cyber |
+| `altar` | 懸浮祭壇、靈晶與光環 | mythic |
+| `pagoda` | 飛簷重樓與燈籠 | oriental |
+| `treehouse` | 巨木樹屋與螢火 | guardian |
+| `school` | 鐘樓學校 | campus |
+| `hall` | 列柱行政大樓 | — |
+| `library` | 圓頂圖書館 | — |
+| `kiosk` | 地球儀郵亭 | — |
+| `workshop` | 施工中線框建築與塔吊 | blueprint |
 
 圖片請放在 `public/media/`（建議 webp、寬 1280px 以內）。
 
@@ -70,7 +89,10 @@ npm run dev      # 本機預覽
 npm run build    # 產出 dist/
 ```
 
-技術：Vite · React · TypeScript · Tailwind CSS v4 · Motion · GSAP（SplitText / ScrambleText）· React Three Fiber。
+技術：Vite · React · TypeScript · Tailwind CSS v4 · Motion · GSAP（SplitText / ScrambleText）。
+3D 效果全部以 CSS 3D（`perspective` / `preserve-3d`）、等距 SVG 與 Canvas 2D 完成，不使用 WebGL 引擎。
+
+大地圖相關程式在 `src/map/`：`layout.ts`（島嶼與建築位）、`buildings.tsx`（等距建築繪製）、`MapScene.tsx`（沙盤、滑鼠傾斜、俯衝轉場）。
 
 ## 部署
 

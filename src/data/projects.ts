@@ -11,9 +11,14 @@
  *  showcase  （選填）作品視覺：圖片或內建的動態示意畫面
  *  status    live 上線中 / dev 開發中 / maintenance 維修中 / archived 已停用
  *  hidden    true = 暫不在網站上顯示（資料保留，日後改回 false 即可）
+ *  building  （選填）大地圖上的微縮建築造型，預設依 theme 決定
+ *            tower 全息高塔 / altar 懸浮祭壇 / pagoda 飛簷重樓 / treehouse 巨木樹屋 /
+ *            school 鐘樓學校 / hall 列柱大樓 / library 圓頂圖書館 / kiosk 地球儀郵亭 / workshop 施工塔吊
+ *  大地圖位置：category 為 personal 的作品放在「個人創作島」，campus 放在「校園專案島」，依順序自動排列
  * ─────────────────────────────────────────────────────────────
  */
 import type { ThemeKey } from '../themes/types';
+import type { BuildingKind } from '../map/buildings';
 
 export type ProjectStatus = 'live' | 'dev' | 'maintenance' | 'archived';
 
@@ -56,6 +61,7 @@ export interface Project {
     repo: string;
   };
   showcase?: Showcase;
+  building?: BuildingKind;
   hidden?: boolean;
 }
 
@@ -171,6 +177,7 @@ export const projects: Project[] = [
     accent: '#0f9b8e',
     category: 'campus',
     status: 'live',
+    building: 'hall',
     links: {
       demo: 'https://znxuyz.github.io/C.A.R.E.-System/',
       repo: 'https://github.com/znxuyz/C.A.R.E.-System',
@@ -195,6 +202,7 @@ export const projects: Project[] = [
     accent: '#d9622b',
     category: 'campus',
     status: 'live',
+    building: 'library',
     links: {
       demo: 'https://znxuyz.github.io/School-Administration/',
       repo: 'https://github.com/znxuyz/School-Administration',
@@ -220,6 +228,7 @@ export const projects: Project[] = [
     category: 'campus',
     status: 'live',
     note: '已於學校帳號正式上線使用',
+    building: 'school',
     links: {
       demo: 'https://hresnoc-lang.github.io/H.C.R.S-HRES-Classroom-Reservation-System/index.html#calendar',
       repo: 'https://github.com/znxuyz/H.C.R.S-HRES-Classroom-Reservation-System',
@@ -266,6 +275,7 @@ export const projects: Project[] = [
     category: 'campus',
     status: 'live',
     note: '協助校內教師部署',
+    building: 'kiosk',
     links: {
       demo: 'https://hresnoc-lang.github.io/115English-Learning-Passport/',
       repo: 'https://github.com/hresnoc-lang/115English-Learning-Passport',
@@ -290,6 +300,7 @@ export const projects: Project[] = [
     category: 'campus',
     status: 'live',
     note: '已於學校帳號正式上線使用',
+    building: 'school',
     links: {
       demo: 'https://hresnoc-lang.github.io/hres-tablet/',
       repo: 'https://github.com/hresnoc-lang/hres-tablet',

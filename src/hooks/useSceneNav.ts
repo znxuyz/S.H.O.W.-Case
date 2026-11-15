@@ -21,8 +21,8 @@ export function useSceneNav(ids: string[], { enabled }: { enabled: boolean }) {
     const i = ids.indexOf(id);
     return i >= 0 ? i : 0;
   };
-  const [index, setIndex] = useState(fromHash);
-  const [dir, setDir] = useState<1 | -1>(1);
+  const [nav, setNav] = useState(() => ({ index: fromHash(), dir: 1 as 1 | -1, from: -1 }));
+  const { index, dir, from } = nav;
   const lockedUntil = useRef(0);
   const indexRef = useRef(index);
   indexRef.current = index;
@@ -35,8 +35,7 @@ export function useSceneNav(ids: string[], { enabled }: { enabled: boolean }) {
       const now = performance.now();
       if (!force && now < lockedUntil.current) return;
       lockedUntil.current = now + LOCK_MS;
-      setDir(clamped > cur ? 1 : -1);
-      setIndex(clamped);
+      setNav({ index: clamped, dir: clamped > cur ? 1 : -1, from: cur });
       const hash = clamped === 0 ? ' ' : `#/${ids[clamped]}`;
       history.replaceState(null, '', hash === ' ' ? window.location.pathname + window.location.search : hash);
     },
@@ -110,5 +109,5 @@ export function useSceneNav(ids: string[], { enabled }: { enabled: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, go, next, prev, ids]);
 
-  return { index, dir, go, next, prev };
+  return { index, dir, from, go, next, prev };
 }
