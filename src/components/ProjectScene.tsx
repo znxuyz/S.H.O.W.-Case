@@ -4,6 +4,7 @@ import type { Project } from '../data/projects';
 import { themes } from '../themes';
 import { playSceneIntro } from '../lib/titleFx';
 import { ProjectStage } from './MediaPanel';
+import type { CardRefs } from '../three/Hotspots';
 import { Showcase } from './Showcase';
 import { GitHubIcon } from './icons';
 
@@ -27,6 +28,8 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
   const [active, setActive] = useState<number | null>(null);
   const [panel, setPanel] = useState<'none' | 'about' | 'preview'>('none');
   const markers = useRef<(HTMLElement | null)[]>([]);
+  const cardRefs = useRef<CardRefs>({ card: null, line: null });
+  const [pulse, setPulse] = useState(0);
   const accent = project.accent ?? 'var(--accent)';
 
   useLayoutEffect(() => {
@@ -34,11 +37,12 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
     return playSceneIntro(root.current, theme.title, reducedMotion);
   }, [theme.title, reducedMotion]);
 
-  const pick = useCallback((i: number | null) => { setActive(i); if (i !== null) setPanel('none'); }, []);
+  const pick = useCallback((i: number | null) => { setActive(i); if (i !== null) { setPanel('none'); setPulse((p) => p + 1); } }, []);
   const step = useCallback((d: number) => {
     if (!hotspots.length) return;
     setActive((a) => (a === null ? (d > 0 ? 0 : hotspots.length - 1) : (a + d + hotspots.length) % hotspots.length));
     setPanel('none');
+    setPulse((p) => p + 1);
   }, [hotspots.length]);
 
   useEffect(() => {
@@ -56,7 +60,7 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
 
   return (
     <>
-      <ProjectStage project={project} reducedMotion={reducedMotion} active={active} onPick={pick} markers={markers} />
+      <ProjectStage project={project} reducedMotion={reducedMotion} active={active} onPick={pick} markers={markers} cardRefs={cardRefs} pulse={pulse} />
       {/* 3D 熱點標記（位置由舞台每幀投影寫入） */}
       <div className="hs-layer" aria-label="模型上的導覽標記">
         {hotspots.map((hs, i) => (
@@ -64,7 +68,7 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
             <button
               className={`hs-dot ${active === i ? 'is-active' : ''} ${active !== null && active !== i ? 'is-dim' : ''}`}
               style={{ ['--c' as string]: accent }}
-              onClick={() => pick(active === i ? null : i)}
+              onClick={() => pick(i)}
               aria-label={`導覽 ${i + 1}：${hs.title}`}
             >
               <span className="hs-num">{i + 1}</span>
@@ -130,8 +134,9 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
         )}
 
         {/* 熱點說明卡 */}
+        {h && <div className="tour-leader" ref={(el) => { cardRefs.current.line = el; }} style={{ visibility: 'hidden', ['--c' as string]: accent }} aria-hidden />}
         {h && (
-          <aside className="tour-card" key={active} role="dialog" aria-label={h.title}>
+          <aside className="tour-card tour-card-float" key={active} ref={(el) => { cardRefs.current.card = el; }} style={{ visibility: typeof window !== 'undefined' && window.innerWidth > 760 ? 'hidden' : undefined }} role="dialog" aria-label={h.title}>
             <div className="tour-card-head">
               <span className="tour-card-num">{String(active! + 1).padStart(2, '0')}<small> / {String(hotspots.length).padStart(2, '0')}</small></span>
               <button onClick={() => pick(null)} aria-label="關閉說明"><X className="h-4 w-4" /></button>

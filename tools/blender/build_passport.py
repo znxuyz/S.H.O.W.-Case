@@ -73,6 +73,7 @@ material('headphone_pad', srgb(PINK), rough=0.6)
 for i in range(6):
     material(f'stamp_{i}', rough=0.7, tex=stamp_texture(i))
     material(f'stamp_glow_{i}', srgb(GRADE_COL[i]), emit=srgb(GRADE_COL[i]), emit_strength=2.2)
+    material(f'cover_{i}', srgb(GRADE_COL[i]), rough=0.55)
 for i, ch in enumerate('ABC'):
     material(f'letter_{i}', rough=0.5, tex=kit.label_texture(f'L{i}', ch, GRADE_COL[[0, 4, 3][i]], size=(160, 160), font_size=110))
 
@@ -99,8 +100,13 @@ for i, (x, y) in enumerate(SPOTS):
     cyl('isle_rock', 0.36, 0.14, (x, y, z + 0.07), 'island_rock', verts=10, bevel=0.02)
     cyl('isle_sand', 0.38, 0.05, (x, y, z + 0.16), 'island_sand', verts=12, bevel=0.015)
     kit.tree((x + 0.22, y + 0.14, z + 0.18), s=0.32, kind='round' if i % 2 else 'pine')
-    cyl('stamp_post', 0.025, 0.28, (x - 0.05, y, z + 0.32), 'gold', verts=8)
-    label_block(f'stamp_disc_{i}', (0.42, 0.02, 0.42), (x - 0.05, y, z + 0.66), f'stamp_{i}', bevel=0.006, face='front', group=f'Billboard{i}')
+    # 每座島上立著一本該年級的小護照（封面蓋著年級章），取代原本的號碼牌
+    g = f'Billboard{i}'
+    box(f'mini_back_{i}', (0.3, 0.03, 0.4), (x - 0.05, y + 0.05, z + 0.42), f'stamp_glow_{i}', rot=(0.12, 0, 0), bevel=0.01, group=g)
+    box(f'mini_pages_{i}', (0.28, 0.035, 0.38), (x - 0.05, y + 0.02, z + 0.42), 'page_edge', rot=(0.06, 0, 0), bevel=0.006, group=g)
+    box(f'mini_cover_{i}', (0.3, 0.025, 0.4), (x - 0.05, y - 0.01, z + 0.42), f'cover_{i}', bevel=0.01, group=g)
+    label_block(f'mini_stamp_{i}', (0.22, 0.008, 0.22), (x - 0.05, y - 0.026, z + 0.45), f'stamp_{i}', bevel=0.004, face='front', group=g)
+    box(f'mini_gold_{i}', (0.24, 0.009, 0.02), (x - 0.05, y - 0.026, z + 0.28), 'gold', bevel=0, group=g)
     cyl(f'stamp_glow_{i}', 0.4, 0.015, (x, y, z + 0.19), f'stamp_glow_{i}', verts=24, group=f'Lit_{i}')
 # 年級之間的虛線航線
 for a, b in zip(SPOTS, SPOTS[1:] + SPOTS[:1]):
@@ -156,10 +162,39 @@ for s in (-1, 1):
     for k in range(3):
         kit.torus('wave', 0.18 + k * 0.1, 0.01, (HX + s * 0.42, HY, HZ - 0.08), 'wave', rot=(0, math.pi / 2, 0), group='Bob3', major=24, minor=4)
 
+# ── 蓋章台：一枚大印章懸在攤開的小護照上方（點擊時重重蓋下） ──
+material('ink_pad', srgb('#3a2f4a'), rough=0.8)
+material('stamp_wood', srgb('#b07a4a'), rough=0.6)
+material('stamp_face', rough=0.6, tex=stamp_texture(0))
+material('passed', rough=0.6, tex=kit.label_texture('passed', 'PASS!', '#fffaf0', fg=(224, 69, 123), size=(220, 160), font_size=70))
+STX, STY = -0.45, 1.0
+box('mini_open_l', (0.34, 0.46, 0.02), (STX - 0.17, STY, 0.03), 'leather', rot=(0, -0.08, 0), bevel=0.006)
+box('mini_open_r', (0.34, 0.46, 0.02), (STX + 0.17, STY, 0.03), 'leather', rot=(0, 0.08, 0), bevel=0.006)
+label_block('mini_open_page', (0.3, 0.42, 0.006), (STX + 0.17, STY, 0.05), 'passed', bevel=0, rot=(0, 0.08, 0))
+box('mini_open_page_l', (0.3, 0.42, 0.012), (STX - 0.17, STY, 0.05), 'page_edge', rot=(0, -0.08, 0), bevel=0)
+box('ink_pad_box', (0.24, 0.18, 0.05), (STX - 0.05, STY - 0.4, 0.03), 'ink_pad', bevel=0.01)
+cyl('big_stamp_base', 0.13, 0.08, (STX + 0.17, STY, 0.44), 'stamp_wood', verts=24, bevel=0.01, group='Fx_stamp')
+label_block('big_stamp_face', (0.19, 0.19, 0.008), (STX + 0.17, STY, 0.396), 'stamp_face', bevel=0, group='Fx_stamp')
+cyl('big_stamp_neck', 0.045, 0.16, (STX + 0.17, STY, 0.56), 'stamp_wood', verts=14, group='Fx_stamp')
+kit.sphere('big_stamp_knob', 0.09, (STX + 0.17, STY, 0.69), 'headphone_pad', seg=16, rings=10, group='Fx_stamp')
+
+# ── 低年級也能自己點：大大的按鈕 ──
+material('go_btn', rough=0.4, tex=kit.label_texture('go', '點我', PINK, size=(200, 200), font_size=84, radius=100))
+BTX, BTY = 0.28, -0.45
+cyl('btn_base', 0.22, 0.06, (BTX, BTY, 0.04), 'page_edge', verts=28, bevel=0.012)
+cyl('btn_ring', 0.2, 0.03, (BTX, BTY, 0.08), 'gold', verts=28)
+cyl('btn_top', 0.16, 0.08, (BTX, BTY, 0.13), 'headphone_pad', verts=28, bevel=0.02, group='Fx_btn')
+label_block('btn_face', (0.22, 0.22, 0.006), (BTX, BTY, 0.172), 'go_btn', bevel=0, group='Fx_btn')
+
+# ── 點擊動畫節點 ──
+kit.fx_node('Fx_stamp', (STX + 0.17, STY, 0.44))
+kit.fx_node('Fx_btn', (BTX, BTY, 0.09))
+kit.fx_around('Fx_house', HX2, HY2, r=0.35, z0=-0.05, z1=0.8)
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'book')
 for i, (x, y) in enumerate(SPOTS):
-    kit.pivot(kit.merge_group(f'Billboard{i}', f'stamp{i}'), f'Billboard{i}', (x - 0.05, y, 0.68))
+    kit.pivot(kit.merge_group(f'Billboard{i}', f'stamp{i}'), f'Billboard{i}', (x - 0.05, y, 0.42))
     kit.pivot(kit.merge_group(f'Lit_{i}', f'glow{i}'), f'Lit_{i}', (x, y, 0.21))
 kit.pivot(kit.merge_group('Spin0', 'planeA'), 'Spin0', (0, 0, 0))
 kit.pivot(kit.merge_group('Bob5', 'ghcloud'), 'Bob5', (GCX, GCY, GCZ))

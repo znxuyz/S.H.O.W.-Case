@@ -592,3 +592,33 @@ def detail_materials():
     material('flower_w', srgb('#ffffff'), rough=0.7)
     if 'flower_y' not in MATS:
         material('flower_y', srgb('#ffd35a'), rough=0.7)
+
+
+# ───────────────────────── 點擊動畫用的節點（網站以 Fx_<名稱> 尋找） ─────────────────────────
+def _center(o):
+    cs = [o.matrix_world @ Vector(c) for c in o.bound_box]
+    return sum(cs, Vector()) / 8, max((max(c[i] for c in cs) - min(c[i] for c in cs)) for i in range(3))
+
+
+def fx_extract(name, lo, hi, src='static', max_size=1.4, exclude=()):
+    """把 src 群組中「包圍盒中心落在 lo..hi 方盒內」的零件搬到 name 群組（太大的地塊類零件跳過）"""
+    keep, moved = [], []
+    for o in GROUPS.get(src, []):
+        c, size = _center(o)
+        inside = all(lo[i] <= c[i] <= hi[i] for i in range(3)) and size <= max_size and not o.name.startswith(tuple(exclude))
+        (moved if inside else keep).append(o)
+    GROUPS[src] = keep
+    GROUPS.setdefault(name, []).extend(moved)
+    return moved
+
+
+def fx_node(name, piv):
+    """把 name 群組合併並放到樞紐下；群組為空時仍建立空節點（網站端找得到即可）"""
+    objs = GROUPS.get(name, [])
+    print(f'fx {name}: {len(objs)} parts', sorted({o.name.split('.')[0] for o in objs})[:8])
+    return pivot(merge_group(name, name.lower()), name, piv)
+
+
+def fx_around(name, x, y, r=0.3, z0=0.0, z1=2.0, src='static', piv=None, max_size=1.2, exclude=('rail', 'ballast', 'sleeper', 'root', 'stock')):
+    fx_extract(name, (x - r, y - r, z0), (x + r, y + r, z1), src=src, max_size=max_size, exclude=exclude)
+    return fx_node(name, piv or (x, y, z0))

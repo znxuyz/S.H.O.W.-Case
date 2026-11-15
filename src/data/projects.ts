@@ -32,6 +32,23 @@ export type Showcase =
   | { kind: 'timetable' }
   | { kind: 'passport' };
 
+/**
+ * 點擊熱點時，模型節點的專屬動畫：
+ * pop 彈跳、stamp 蓋印、float 浮起、spin 旋轉、lid 開蓋（節點樞紐在鉸鏈處）、
+ * press 按下、shake 抖動、swing 搖擺、flash 強制亮起並發光、ripple 只發出光波
+ */
+export type FxKind = 'pop' | 'stamp' | 'float' | 'spin' | 'lid' | 'press' | 'shake' | 'swing' | 'flash' | 'ripple';
+export interface FxStep {
+  /** 模型節點名稱（Blender 物件名；結尾可用 * 萬用字元） */
+  node: string;
+  kind: FxKind;
+  /** 延遲秒數（做出依序觸發的效果） */
+  delay?: number;
+  /** 光波環的最大半徑 */
+  ring?: number;
+  _rung?: boolean;
+}
+
 /** 空間導覽熱點：綁在 3D 模型某個部位上的功能說明（座標為網站場景座標，Y 朝上） */
 export interface Hotspot {
   title: string;
@@ -40,6 +57,8 @@ export interface Hotspot {
   at: [number, number, number];
   /** （選填）聚焦時的鏡頭位置；未指定則自動從場景中心往外退後抬高 */
   cam?: [number, number, number];
+  /** 點擊時觸發的模型動畫 */
+  fx?: FxStep[];
 }
 
 export interface Project {
@@ -105,31 +124,37 @@ export const projects: Project[] = [
         title: '資金流向熱力圖',
         body: '方塊面積＝今日成交額、顏色＝漲跌幅（紅漲綠跌），依產業分組。一眼看出「錢今天流到哪裡」，盤中事件會從角落跳出通知。',
         at: [-0.8, 0.25, -0.6],
+        fx: [{ node: 'Fx_heat', kind: 'pop', ring: 2.0 }],
       },
       {
         title: '拉普拉斯之眼・市場情報',
         body: '產業資金流排行、加權指數與台指期、每 5 分鐘的資金輪動、國內外大事件與重大訊息，以及融資維持率等大盤風險指標。',
         at: [0, 2.2, -0.1],
+        fx: [{ node: 'Pulse0', kind: 'pop', ring: 1.8 }, { node: 'Spin0', kind: 'spin' }, { node: 'SpinR0', kind: 'spin', delay: 0.15 }, { node: 'Billboard0', kind: 'pop', delay: 0.1 }],
       },
       {
         title: 'K 線型態辨識',
         body: '全部上市櫃股票與 ETF：日 K、20 多種型態自動辨識，附多頭／空頭行情下的歷史勝率，再加上技術指標、籌碼與基本面綜合評分。',
         at: [1.25, 0.75, -1.55],
+        fx: [{ node: 'Fx_kline', kind: 'pop', ring: 1.4 }],
       },
       {
         title: '五大選股策略',
         body: '低基期低本益比、動能成長、高股息、特殊事件、籌碼技術——五種策略的條件與篩選結果，一鍵就能在熱力圖上亮出來。',
         at: [-1.45, 0.75, 1.3],
+        fx: [{ node: 'SpinR2', kind: 'spin', ring: 1.2 }, { node: 'Bob9', kind: 'pop', delay: 0.4 }],
       },
       {
         title: 'ETF 透視',
         body: '殖利率、配息、折溢價、規模、受益人數、填息率；主動式 ETF 每天比對投信公告的真實持股，看出加碼與減碼。',
         at: [-1.5, 0.35, -1.45],
+        fx: [{ node: 'Fx_etf', kind: 'pop', ring: 1.2 }],
       },
       {
         title: '回到過去・模擬交易',
         body: '在看不到未來的情況下練習判斷：歷史回放模擬盤讓你回到任一天重新下單，網站也能加到主畫面、離線開啟。',
         at: [1.3, -0.3, 1.3],
+        fx: [{ node: 'SpinR1', kind: 'spin', ring: 2.4 }],
       },
     ],
     model: 'models/lplc.glb',
@@ -162,31 +187,37 @@ export const projects: Project[] = [
         title: '買股票＝召喚契約',
         body: '每買進一檔新股票，就以它為契約從召喚陣中喚出一隻上古神獸；賣出時神獸進入圖鑑，獲利化為修為。',
         at: [0, 0.5, 0.05],
+        fx: [{ node: 'Bob0', kind: 'float', ring: 1.4 }],
       },
       {
         title: '三維養成：等級・境界・魂環',
         body: '等級 Lv.1–999 對應累積投入；魂環境界對應持有時間；魂環特效（暗淡、脈動、旋轉、噴光）對應報酬率——你的投資組合就是神獸的模樣。',
         at: [0, 2.35, 0],
+        fx: [{ node: 'Spin0', kind: 'spin', ring: 2.2 }, { node: 'SpinR0', kind: 'spin', delay: 0.15 }, { node: 'SpinR1', kind: 'spin', delay: 0.3 }, { node: 'Billboard0', kind: 'pop', delay: 0.2 }],
       },
       {
         title: '魂環境界：凡 → 仙',
         body: '持股越久，境界越高：凡、靈、妖、神、聖、仙。六根石柱上的寶珠就是遊戲裡的六種魂環。',
         at: [1.4, 1.05, 0.81],
+        fx: [{ node: 'Fx_pillar', kind: 'pop', ring: 1.0 }],
       },
       {
         title: '真實台股報價',
         body: '上市、上櫃與 ETF 都支援。盤中 9:05–13:30 每 30 秒自動更新，盤後使用最新收盤價。',
         at: [1.5, 0.5, 1.45],
+        fx: [{ node: 'Fx_quote', kind: 'pop', ring: 1.0 }],
       },
       {
         title: '294 隻神祇圖鑑',
         body: '橫跨魔界、冥界、海界、佛界、道界、夢境界……13 大世界觀的原創上古神祇，附進度條、分類篩選與故事解鎖。',
         at: [-1.4, 0.15, 1.45],
+        fx: [{ node: 'Fx_codex', kind: 'pop', ring: 1.0 }],
       },
       {
         title: '修為・簽到・任務',
         body: '升級、突破、解鎖特效、召喚與獲利都會給修為；每日簽到與連登里程碑、每日 3 任務與每週 4 任務，還有 30+ 項成就。',
         at: [-1.6, 0.75, -1.25],
+        fx: [{ node: 'Fx_brazier', kind: 'shake', ring: 1.0 }, { node: 'Pulse1', kind: 'pop' }, { node: 'Pulse2', kind: 'pop', delay: 0.15 }],
       },
     ],
     model: 'models/stockgame.glb',
@@ -219,26 +250,31 @@ export const projects: Project[] = [
         title: '天幕膠囊：靈液彈簧',
         body: '常駐在螢幕頂端正中的玄黑膠囊——無邊框、置頂、滑鼠穿透。懸停或點擊時以阻尼彈簧物理演算，像果凍般拉伸、回彈、流轉。',
         at: [0.25, 2.2, 0],
+        fx: [{ node: 'Bob_0', kind: 'float', ring: 1.6 }],
       },
       {
         title: '萬象樂律',
         body: '接管系統媒體（連瀏覽器裡的 YouTube 也行）：曲名、歌手、封面、同步歌詞、即時音訊頻譜與播放控制，全部收進膠囊裡。',
         at: [0.95, 3.1, -0.55],
+        fx: [{ node: 'SpinR_0', kind: 'spin', ring: 1.8 }],
       },
       {
         title: '傳音入密',
         body: '系統通知化作符紙從天幕滑出；通知裡的驗證碼會自動辨識，一鍵就能複製。',
         at: [-0.8, 2.4, 0.55],
+        fx: [{ node: 'Bob_1', kind: 'pop', ring: 1.2 }],
       },
       {
         title: '玄漆描金・十二時辰',
         body: '專屬設計語言：玄黑漆面、五色描金、內嵌思源宋體、農曆日期與直書時辰；還會依晝夜自動變色，全螢幕時自動隱身。',
         at: [1.7, 2.15, 0.05],
+        fx: [{ node: 'Spin_0', kind: 'spin', ring: 2.4 }],
       },
       {
         title: '洞府設施',
         body: '外掛式「法器」架構，每個功能都能獨立載入；設定面板、開機啟動、系統匣圖示，以及附 SHA-256 校驗的自動更新。',
         at: [-1.05, 0.65, 0.85],
+        fx: [{ node: 'Fx_cave', kind: 'pop', ring: 1.3 }],
       },
     ],
     model: 'models/tianmu.glb',
@@ -272,26 +308,31 @@ export const projects: Project[] = [
         title: '從蛋到守護神獸',
         body: '8 種台灣特有種（台灣黑熊、石虎、帝雉、穿山甲……）各有 4 個成長階段。累積經驗只增不減，讓孩子看著自己的守護獸一步步長大。',
         at: [1.35, 0.9, 1.0],
+        fx: [{ node: 'Billboard0', kind: 'pop', ring: 1.0 }, { node: 'Billboard1', kind: 'pop', delay: 0.25 }, { node: 'Billboard2', kind: 'pop', delay: 0.5 }, { node: 'Billboard3', kind: 'pop', delay: 0.75 }, { node: 'Bob_0', kind: 'float', delay: 0.6 }, { node: 'Spin_0', kind: 'spin', delay: 0.6 }],
       },
       {
         title: '樹屋教室・課堂工具',
         body: '點名出席、抽籤機（可以優先抽到「需要關心」的孩子）、計時器、聯絡簿自動匯整——老師上課需要的工具都在這裡。',
         at: [-0.2, 1.45, -0.35],
+        fx: [{ node: 'Fx_class', kind: 'shake', ring: 1.4 }, { node: 'Spin_1', kind: 'spin' }],
       },
       {
         title: '照護站：需要關心的孩子',
         body: '超過 3 天沒被關注，寵物會「微恙」；超過 7 天會「生病」。系統自動把這些孩子列進需要關心清單，提醒老師多看一眼。',
         at: [0.95, 0.15, -0.0],
+        fx: [{ node: 'Billboard8', kind: 'pop', ring: 1.0 }, { node: 'Bob1', kind: 'float', delay: 0.2 }],
       },
       {
         title: '獎品商店・積分雙軌',
         body: '累積經驗用來進化、可用積分用來兌換。老師自訂獎品與點數，學生自行兌換、老師確認發放。',
         at: [-1.35, 0.35, 0.35],
+        fx: [{ node: 'Fx_shop', kind: 'pop', ring: 1.1 }, { node: 'Spin2', kind: 'spin', delay: 0.2 }],
       },
       {
         title: '領地佔領戰',
         body: '分組對抗的即時佔領遊戲，搭配線上測驗（可一鍵從 Excel 匯入題庫）與教室大屏投影模式，全班一起見證成長。',
         at: [0.2, 0.25, -0.5],
+        fx: [{ node: 'Fx_flags', kind: 'swing', ring: 1.0 }],
       },
     ],
     model: 'models/guardian.glb',
@@ -326,31 +367,37 @@ export const projects: Project[] = [
         title: '違規登錄',
         body: '學號一輸入，立刻帶出姓名、班級與「15 天內已幾次」；選類型、地點、節次就完成登錄，並提示該發哪一張紙本反思卡。',
         at: [-0.62, 0.1, 1.5],
+        fx: [{ node: 'Fx_desk', kind: 'pop', ring: 1.0 }],
       },
       {
         title: '15 天再犯偵測・三次門檻',
         body: '每筆登錄自動回溯 15 天（含當天）；累計達 3 次立即警示，並自動排入安全觀察員追蹤。視窗天數與門檻都能在後台調整。',
         at: [1.41, -0.3, 0.2],
+        fx: [{ node: 'Lit_0', kind: 'flash' }, { node: 'Lit_1', kind: 'flash', delay: 0.07 }, { node: 'Lit_2', kind: 'flash', delay: 0.14 }, { node: 'Lit_3', kind: 'flash', delay: 0.21 }, { node: 'Lit_4', kind: 'flash', delay: 0.28 }, { node: 'Lit_5', kind: 'flash', delay: 0.35 }, { node: 'Lit_6', kind: 'flash', delay: 0.42 }, { node: 'Lit_7', kind: 'flash', delay: 0.49 }, { node: 'Lit_8', kind: 'flash', delay: 0.56 }, { node: 'Lit_9', kind: 'flash', delay: 0.63 }, { node: 'Lit_10', kind: 'flash', delay: 0.7 }, { node: 'Lit_11', kind: 'flash', delay: 0.77 }, { node: 'Lit_12', kind: 'flash', delay: 0.84 }, { node: 'Lit_13', kind: 'flash', delay: 0.91 }, { node: 'Lit_14', kind: 'flash', delay: 0.98 }, { node: 'Bob3', kind: 'swing', delay: 1.1, ring: 1.0 }, { node: 'Bob4', kind: 'swing', delay: 1.2 }, { node: 'Bob5', kind: 'swing', delay: 1.3 }],
       },
       {
         title: '紙本反思卡回收',
         body: '紙本反思卡照舊。學生繳回後按「已回收」，當日就解除下課管制；未回收的由排程每日自動續管制。',
         at: [0, 0.65, 0.05],
+        fx: [{ node: 'Fx_lid', kind: 'lid', ring: 1.2 }, { node: 'Fx_cards', kind: 'pop', delay: 0.35 }, { node: 'Bob0', kind: 'pop', delay: 0.5 }, { node: 'Bob1', kind: 'pop', delay: 0.65 }, { node: 'Bob2', kind: 'pop', delay: 0.8 }],
       },
       {
         title: '安全觀察員值勤',
         body: '一日 5 節下課到學務處值勤，逐節打卡並記錄勸導人數；繳回行為檢討書後，下一個上課日自動解鎖。所有動作都寫入稽核軌跡。',
         at: [1.25, 0.25, -1.2],
+        fx: [{ node: 'Fx_kiosk', kind: 'pop', ring: 1.3 }],
       },
       {
         title: '公開唯讀看板',
         body: '其他老師不需帳號就能查看每日概況——預設只顯示統計數字，不含姓名、學號與個別明細。',
         at: [-1.3, 0.35, -1.25],
+        fx: [{ node: 'Fx_board', kind: 'shake', ring: 1.2 }],
       },
       {
         title: '正向管教保障',
         body: '管制期間仍可正常飲水與如廁（介面常駐提示）；免記或撤銷都必須填寫事由，保障每位學生。',
         at: [1.35, 0.2, 1.25],
+        fx: [{ node: 'Fx_fountain', kind: 'pop', ring: 0.9 }, { node: 'Fx_fountain', kind: 'ripple', delay: 0.3, ring: 1.4 }],
       },
     ],
     model: 'models/care.glb',
@@ -385,31 +432,37 @@ export const projects: Project[] = [
         title: '四階段公文鐵道',
         body: '每個計畫拆成步驟，分屬「計畫 → 核定 → 執行 → 結案」四站；卡片上的節點軌道一眼看出計畫走到哪一段，還能登記公文流向。',
         at: [0.55, 0.3, 1.5],
+        fx: [{ node: 'Spin0', kind: 'spin', ring: 2.2 }],
       },
       {
         title: '逾期與公文卡關提醒',
         body: '逾期、久未更新、公文卡關的工作會被自動標示，並出現在統計磚與本週待辦裡，避免行政工作被遺忘。',
         at: [0.03, 0.25, 0.86],
+        fx: [{ node: 'Pulse0', kind: 'shake', ring: 0.9 }],
       },
       {
         title: '處室總覽',
         body: '主任看得到同處室本學年度「還要辦」的進度看板：進行中 / 逾期 / 待更新 / 已完成 / 公文卡關，一打開就是現在該看的東西。',
         at: [0, 1.05, 0],
+        fx: [{ node: 'Billboard0', kind: 'pop', ring: 1.4 }],
       },
       {
         title: '行事曆與記事',
         body: '月曆標出各計畫的開始、結束與結算期限；任一天都能寫記事，預設只有自己看得到，也能改成同處室或全校可見。',
         at: [1.5, 0.05, -1.5],
+        fx: [{ node: 'Fx_cal', kind: 'pop', ring: 1.0 }],
       },
       {
         title: '搜尋與結案歸檔',
         body: '關鍵字加上學年度、處室、負責人、階段、公文所在、狀態等篩選；全部步驟完成的計畫自動歸入「已結案」。',
         at: [0.55, -0.2, -0.55],
+        fx: [{ node: 'Fx_search', kind: 'spin', ring: 1.0 }],
       },
       {
         title: '成員與權限',
         body: '管理員維護可登入的 Email 白名單、處室、職稱與權限；老師用自己的 Google 帳號登入，加到手機主畫面離線也打得開。',
         at: [-0.6, -0.05, 0.6],
+        fx: [{ node: 'Fx_badges', kind: 'pop', ring: 1.0 }],
       },
     ],
     model: 'models/admin.glb',
@@ -446,26 +499,31 @@ export const projects: Project[] = [
         title: '公開借用月曆',
         body: '不用登入就能查看「借用狀況」月曆，只顯示已核准的借用。可依教室篩選，點一下日期就能看到當天各教室 × 節次的使用表。',
         at: [-0.1, -0.3, 0.85],
+        fx: [{ node: 'Fx_tiles', kind: 'pop', ring: 2.0 }],
       },
       {
         title: '教室借用燈號與衝突檢查',
         body: '電腦、視聽、自然、禮堂……每間專科教室的借用狀態即時亮燈。送出申請時若和已核准的時段衝突，會直接擋下並列出衝突日期。',
         at: [-0.45, 0.35, -0.3],
+        fx: [{ node: 'Lit_0', kind: 'flash', ring: 1.8 }, { node: 'Lit_1', kind: 'flash', delay: 0.12 }, { node: 'Lit_2', kind: 'flash', delay: 0.24 }, { node: 'Lit_3', kind: 'flash', delay: 0.36 }, { node: 'Lit_4', kind: 'flash', delay: 0.48 }, { node: 'Lit_5', kind: 'flash', delay: 0.6 }, { node: 'Lit_6', kind: 'flash', delay: 0.72 }, { node: 'Lit_7', kind: 'flash', delay: 0.84 }],
       },
       {
         title: '三種借用方式',
         body: '只借一次、每週固定、每月固定——整學期的固定借用一次設定完成；管理員也能把舊 Excel 上的固定借用直接核准匯入。',
-        at: [0.85, 0.95, -0.3],
+        at: [1.5, 0.65, 0.55],
+        fx: [{ node: 'Fx_sign', kind: 'spin', ring: 1.0 }],
       },
       {
         title: '主管一鍵審核',
         body: '主管在後台同意／不同意，也能切換成「自動同意」；核准時會再檢查一次衝突。所有借用可依狀態、教室、月份篩選並匯出 CSV。',
         at: [1.0, 0.8, 0.75],
+        fx: [{ node: 'Bob0', kind: 'stamp', ring: 1.4 }, { node: 'Fx_desk', kind: 'press', delay: 0.42 }],
       },
       {
         title: '自動寄信通知',
         body: '教師送出申請 → 寄信給所有主管；審核完成 → 寄信通知申請人。只接受學校網域的 Google 帳號登入，前端與資料庫規則雙重把關。',
-        at: [0, 1.65, -0.75],
+        at: [-1.6, 0.55, 0.6],
+        fx: [{ node: 'Fx_mlid', kind: 'lid', ring: 1.0 }, { node: 'Fx_letter', kind: 'float', delay: 0.35 }, { node: 'Spin0', kind: 'spin', delay: 0.5 }],
       },
     ],
     links: {
@@ -497,31 +555,37 @@ export const projects: Project[] = [
         title: '零衝突的立體課表',
         body: '同一間教室不會同時上兩門課、同一位老師不會同時教兩個班、同一個班不會同時排兩門課——大型國小 48 班、75 位老師、1312 個單元，31.7 秒求得最佳解，硬衝突 0 件。',
         at: [0.15, -0.15, 0.08],
+        fx: [{ node: 'Drop_0', kind: 'pop', ring: 2.0 }, { node: 'Drop_1', kind: 'pop', delay: 0.18 }, { node: 'Drop_2', kind: 'pop', delay: 0.36 }, { node: 'Drop_3', kind: 'pop', delay: 0.54 }],
       },
       {
         title: '約束：老師的個別需求',
         body: '哪幾天不排課、只能排哪些時段、一天不超過幾節、不要連上太多節……所有需求都寫成約束，發光的線把同一位老師的課連在一起。',
         at: [-0.4, 0.2, -0.4],
+        fx: [{ node: 'Fx_thread', kind: 'pop', ring: 1.6 }],
       },
       {
         title: 'CP-SAT 求解器',
         body: '以 Google OR-Tools CP-SAT 求解。需求彼此打架時，不會只丟一句「無解」，而是給出「違反最少」的課表，並說明犧牲了什麼。',
         at: [0, 1.1, -0.3],
+        fx: [{ node: 'GantryHead', kind: 'press', ring: 1.4 }, { node: 'GantryHead', kind: 'press', delay: 0.9 }],
       },
       {
         title: '手動微調・連帶挪動',
         body: '排完還能拖拉微調；系統會自動連帶挪動受影響的課（同一位科任老師在別班的課、被共用的專科教室），全程不產生撞堂。',
         at: [0.15, 0.2, 0.71],
+        fx: [{ node: 'Drop_0', kind: 'shake' }, { node: 'Drop_1', kind: 'shake', delay: 0.12 }, { node: 'Drop_2', kind: 'shake', delay: 0.24 }, { node: 'Drop_3', kind: 'shake', delay: 0.36 }],
       },
       {
         title: '配課與鐘點檢查',
         body: '先設定每位老師要上哪些課，鐘點有沒有超載會即時檢查並標示出來。',
         at: [-0.75, -0.05, 1.68],
+        fx: [{ node: 'Fx_pieces', kind: 'pop', ring: 1.1 }],
       },
       {
         title: '兩階段排課',
         body: 'Phase 1 先排科任與兼行政教師，並刻意為導師保留可用空格；Phase 2 導師各班獨立排。實測不保留空格時 6 次有 6 次失敗，保留後 0 次。',
         at: [0.9, -0.1, 1.75],
+        fx: [{ node: 'Fx_trays', kind: 'pop', ring: 1.2 }, { node: 'Pulse0', kind: 'pop', delay: 0.4 }],
       },
     ],
     model: 'models/scheduling.glb',
@@ -554,27 +618,32 @@ export const projects: Project[] = [
       {
         title: '六個年級入口',
         body: '一到六年級各有一座小島與一枚年級章；孩子點自己的年級就能直接進入對應的英聽練習頁面。',
-        at: [-1.35, 0.3, -1.05],
+        at: [-0.28, 0.45, -1.0],
+        fx: [{ node: 'Fx_stamp', kind: 'stamp', ring: 1.6 }, { node: 'Billboard0', kind: 'pop', delay: 0.6 }, { node: 'Billboard1', kind: 'pop', delay: 0.72 }, { node: 'Billboard2', kind: 'pop', delay: 0.84 }, { node: 'Billboard3', kind: 'pop', delay: 0.96 }, { node: 'Billboard4', kind: 'pop', delay: 1.08 }, { node: 'Billboard5', kind: 'pop', delay: 1.2 }, { node: 'Lit_0', kind: 'flash', delay: 0.6 }, { node: 'Lit_1', kind: 'flash', delay: 0.72 }, { node: 'Lit_2', kind: 'flash', delay: 0.84 }, { node: 'Lit_3', kind: 'flash', delay: 0.96 }, { node: 'Lit_4', kind: 'flash', delay: 1.08 }, { node: 'Lit_5', kind: 'flash', delay: 1.2 }],
       },
       {
         title: '英聽練習',
         body: '每個年級的英聽題目都整理成網頁，戴上耳機就能練習聽力與跟讀。',
         at: [0, 1.4, -0.2],
+        fx: [{ node: 'Bob3', kind: 'float', ring: 1.6 }, { node: 'Bob3', kind: 'float', delay: 0.6, ring: 2.0 }],
       },
       {
         title: '低年級也能自己點',
         body: '大大的按鈕、清楚的年級分類，不需要帳號或安裝任何東西，低年級孩子也能自己操作。',
-        at: [-0.6, 0.8, -0.25],
+        at: [0.28, 0.1, 0.45],
+        fx: [{ node: 'Fx_btn', kind: 'press', ring: 1.0 }, { node: 'Bob0', kind: 'pop', delay: 0.3 }, { node: 'Bob1', kind: 'pop', delay: 0.42 }, { node: 'Bob2', kind: 'pop', delay: 0.54 }],
       },
       {
         title: '在家也能練習',
         body: '網頁 24 小時都能開啟，孩子回家用平板或電腦就能繼續練習，不受上課時間限制。',
         at: [1.5, 0.0, -1.32],
+        fx: [{ node: 'Fx_house', kind: 'pop', ring: 1.0 }],
       },
       {
         title: '協助部署上線',
         body: '老師做好了網頁，卻不知道怎麼發布到學校網站——我協助整理架構並部署到 GitHub Pages：純靜態、零伺服器成本，也交接了後續維護方式。',
         at: [-1.35, 1.0, -1.45],
+        fx: [{ node: 'Bob5', kind: 'float', ring: 1.4 }, { node: 'Spin0', kind: 'spin', delay: 0.2 }, { node: 'SpinR0', kind: 'spin', delay: 0.4 }],
       },
     ],
     model: 'models/passport.glb',
@@ -609,21 +678,25 @@ export const projects: Project[] = [
         title: '文件下載專區',
         body: '學校平板載具計畫的所有文件集中在一個頁面：校務規範、導師必備、表單下載、學生宣導，一處就能找到。',
         at: [0.05, 0.2, 0.35],
+        fx: [{ node: 'Pulse0', kind: 'float', ring: 1.4 }],
       },
       {
         title: '分類卡片',
         body: '文件依類別整理成卡片，每類的文件數量自動統計；新增分類只要在設定裡加一筆。',
         at: [0.25, 2.1, -0.45],
+        fx: [{ node: 'Bob0', kind: 'pop', ring: 1.6 }, { node: 'Bob1', kind: 'pop', delay: 0.15 }, { node: 'Bob2', kind: 'pop', delay: 0.3 }, { node: 'Bob3', kind: 'pop', delay: 0.45 }, { node: 'Bob4', kind: 'pop', delay: 0.6 }],
       },
       {
         title: 'PDF ＋ Word 雙格式',
         body: '每份文件都提供 PDF 與可編輯的 Word 兩種格式下載，老師能直接修改表單再使用。',
         at: [-1.1, 1.35, -0.9],
+        fx: [{ node: 'Bob0', kind: 'spin', ring: 1.2 }],
       },
       {
         title: '改一行就上線',
         body: '不需要工程背景：把檔案上傳到 files 資料夾、在設定裡複製一行改成新文件，1～2 分鐘後網頁就會更新，並附完整維護說明。',
         at: [1.55, 0.35, 1.45],
+        fx: [{ node: 'Fx_manual', kind: 'pop', ring: 1.0 }],
       },
     ],
     model: 'models/tablet.glb',

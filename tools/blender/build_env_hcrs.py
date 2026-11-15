@@ -35,33 +35,36 @@ G = 'env'
 terr_floor = -7.6
 
 
+TY = 10.5   # 操場移到主島後方（正下方留給底座岩丘）
+
+
 def flat(X, Y):
     # 操場區域壓平
-    return ((X / 7.5) ** 2 + (Y / 4.8) ** 2 < 1).astype(float)
+    return ((X / 7.5) ** 2 + ((Y - TY) / 4.8) ** 2 < 1).astype(float)
 
 
 _, grid = env.terrain('valley', radius=72, res=88, floor_z=terr_floor, rim_h=9, valley_r=13, rough=2.6, seed=4,
                       palette=((0.0, '#5a9a4c'), (0.4, '#79b158'), (0.7, '#97c46a'), (1.0, '#b8c98a')), flatten=flat,
                       patches=[('#d8c27a', 0.66), ('#3f7a3c', 0.68)])
 
-# ── 谷底操場（主島正下方） ──
+# ── 谷底操場（主島後方） ──
 z0 = terr_floor - 0.15
-bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=1, depth=0.06, location=(0, 0, z0))
+bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=1, depth=0.06, location=(0, TY, z0))
 o = bpy.context.active_object
 o.scale = (7.0, 4.4, 1)
 bpy.ops.object.transform_apply(scale=True)
 kit.finalize(o, 'track', G)
-bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=1, depth=0.08, location=(0, 0, z0 + 0.01))
+bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=1, depth=0.08, location=(0, TY, z0 + 0.01))
 o = bpy.context.active_object
 o.scale = (5.6, 3.0, 1)
 bpy.ops.object.transform_apply(scale=True)
 kit.finalize(o, 'field', G)
 for k in (6.0, 6.5):
-    kit.torus('lane', 1, 0.012, (0, 0, z0 + 0.04), 'lane', group=G, major=64, minor=4).scale = (k, k * 0.68, 1)
-box('stage', (2.4, 1.0, 0.5), (0, 6.0, z0 + 0.25), 'wall', group=G, bevel=0.03)
-cone('stage_roof', 1.6, 0.0, 0.5, (0, 6.0, z0 + 0.8), 'roof_b', verts=4, rot=(0, 0, math.pi / 4), group=G)
+    kit.torus('lane', 1, 0.012, (0, TY, z0 + 0.04), 'lane', group=G, major=64, minor=4).scale = (k, k * 0.68, 1)
+box('stage', (2.4, 1.0, 0.5), (0, TY + 6.0, z0 + 0.25), 'wall', group=G, bevel=0.03)
+cone('stage_roof', 1.6, 0.0, 0.5, (0, TY + 6.0, z0 + 0.8), 'roof_b', verts=4, rot=(0, 0, math.pi / 4), group=G)
 for x in (-4.5, 4.5):
-    cyl('goal', 0.04, 1.0, (x, 0, z0 + 0.5), 'lane', group=G, verts=6)
+    cyl('goal', 0.04, 1.0, (x, TY, z0 + 0.5), 'lane', group=G, verts=6)
 
 # ── 山丘小鎮 ──
 ROOFS = ['roof_r', 'roof_b', 'roof_o']
@@ -93,6 +96,8 @@ for k in range(4):
 box('basket', (0.5, 0.5, 0.4), (BX, BY, BZ - 2.0), 'basket', group='Bob0', bevel=0.04)
 kit.torus('balloon_band', 0.95, 0.06, (BX, BY, BZ - 0.1), 'balloon_b', group='Bob0', major=32, minor=6)
 
+# ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
+env.cradle(terr_floor, 'mound', mats=('rock', 'grass'), stair_mat='concrete')
 kit.merge_group('env', 'env')
 kit.pivot(kit.merge_group('Bob0', 'balloon'), 'Bob0', (BX, BY, BZ))
 kit.export(OUT)

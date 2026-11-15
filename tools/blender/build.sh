@@ -5,6 +5,6 @@ set -euo pipefail
 NAME="$1"
 PY="${BLENDER_PY:-.blender-venv/bin/python}"
 RAW="$(mktemp -d)/${NAME}-raw.glb"
-"$PY" "tools/blender/build_${NAME}.py" "$RAW" | grep -E "^(objects=|exported)"
+"$PY" "tools/blender/build_${NAME}.py" "$RAW" | grep -E "^(objects=|exported|fx )"
 ./node_modules/.bin/gltf-transform optimize "$RAW" "public/models/${NAME}.glb" \
   --compress meshopt --texture-compress webp --texture-size 512 --simplify false --join false --flatten false | tail -1

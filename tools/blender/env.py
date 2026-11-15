@@ -157,3 +157,95 @@ def finish(path):
     """合併環境物件（依材質）並匯出"""
     kit.merge_group('env', 'env')
     kit.export(path)
+
+
+# ───────────────────────── 主島底座：把箱庭「嵌」進環境 ─────────────────────────
+def _ring_r(z, top, floor, r_top, r_base):
+    t = (top - z) / max(0.01, top - floor)
+    return r_top + (r_base - r_top) * t
+
+
+def stairs(floor, top, r_top, r_base, mat, angle=-0.25, width=1.0, rise=0.28, group='env', rail=None):
+    """沿底座外側往下的階梯（朝鏡頭側偏一點，讓主島與地面有路相連）"""
+    n = max(3, int((top - floor) / rise))
+    ca, sa = math.cos(angle), math.sin(angle)
+    for k in range(n):
+        z = top - k * rise
+        r = _ring_r(z, top, floor, r_top, r_base) + 0.25
+        x, y = ca * r, sa * r
+        kit.box('stair', (0.5, width, rise), (x, y, z - rise / 2), mat, rot=(0, 0, angle), group=group, bevel=0.02)
+        if rail and k % 3 == 0:
+            for s in (-1, 1):
+                kit.cyl('stair_post', 0.04, 0.5, (x - sa * s * width / 2, y + ca * s * width / 2, z + 0.25), rail, verts=6, group=group)
+
+
+def cradle(floor, style='mound', top=-1.25, r_top=3.2, mats=('rock', 'grass'), accent=None, stair_mat='concrete', angle=-0.25, seed=3, group='env'):
+    """
+    主島正下方的底座，從環境地面升起、接住浮島的倒錐岩底：
+      mound：岩丘＋草頂（校園、森林）    tiers：層層石台（仙境、古風）
+      tower：科技塔柱＋發光環（科技、演算法）  books：巨書堆（文件、行政）
+      cloud：雲墩（雲海上的主題）
+    """
+    rnd = kit.random.Random(seed)
+    rock, cap = mats[0], mats[1]
+    r_base = r_top * 1.8
+    if style == 'mound':
+        layers = 6
+        for k in range(layers):
+            z1 = top - (top - floor) * k / layers
+            z0 = top - (top - floor) * (k + 1) / layers
+            r = _ring_r((z0 + z1) / 2, top, floor, r_top, r_base)
+            kit.cyl('cradle_rock', r, z1 - z0 + 0.05, (rnd.uniform(-0.1, 0.1), rnd.uniform(-0.1, 0.1), (z0 + z1) / 2), rock, verts=11 + k, group=group)
+        kit.cyl('cradle_cap', r_top + 0.12, 0.22, (0, 0, top - 0.08), cap, verts=16, group=group)
+        for i in range(14):
+            a = rnd.random() * math.tau
+            r = r_base * rnd.uniform(0.9, 1.15)
+            kit.ico('cradle_boulder', rnd.uniform(0.35, 0.8), (math.cos(a) * r, math.sin(a) * r, floor + 0.15), rock, sub=1, scale=(1.2, 1, 0.7), group=group)
+        stairs(floor, top, r_top, r_base, stair_mat, angle=angle, group=group)
+    elif style == 'tiers':
+        n = 4
+        for k in range(n):
+            z1 = top - (top - floor) * k / n
+            z0 = top - (top - floor) * (k + 1) / n
+            r = r_top + k * (r_base - r_top) / (n - 1)
+            kit.cyl('tier', r, z1 - z0, (0, 0, (z0 + z1) / 2), rock, verts=8, group=group, bevel=0.04)
+            if accent:
+                kit.torus('tier_trim', r + 0.02, 0.05, (0, 0, z1 - 0.06), accent, group=group, major=8, minor=4)
+            # 每層邊緣的小石燈／柱
+            for j in range(8):
+                a = j * math.tau / 8 + math.pi / 8
+                kit.cyl('tier_post', 0.08, 0.5, (math.cos(a) * (r - 0.25), math.sin(a) * (r - 0.25), z1 + 0.25), cap, verts=6, group=group)
+        stairs(floor, top, r_top, r_base, stair_mat, angle=angle, width=1.2, group=group, rail=cap)
+    elif style == 'tower':
+        bpy.ops.mesh.primitive_cone_add(vertices=6, radius1=r_top * 1.05, radius2=r_top * 0.7, depth=top - floor, location=(0, 0, (top + floor) / 2))
+        kit.finalize(bpy.context.active_object, rock, group)
+        kit.cyl('tower_top', r_top + 0.1, 0.3, (0, 0, top - 0.15), rock, verts=6, group=group, bevel=0.04)
+        if accent:
+            z = top - 1.2
+            while z > floor + 0.5:
+                rr = _ring_r(z, top, floor, r_top * 0.7, r_top * 1.05)
+                kit.torus('tower_ring', rr + 0.12, 0.05, (0, 0, z), accent, group=group, major=6, minor=4)
+                z -= 1.6
+            for j in range(6):
+                a = j * math.tau / 6
+                kit.beam('tower_strut', (math.cos(a) * r_top * 1.1, math.sin(a) * r_top * 1.1, top - 0.2), (math.cos(a) * r_top * 1.9, math.sin(a) * r_top * 1.9, floor), 0.12, cap, group=group)
+    elif style == 'books':
+        cols = mats[2:] if len(mats) > 2 else (rock, cap)
+        z = floor
+        k = 0
+        h = (top - floor) / 5
+        while z < top - 0.01:
+            w = r_base * 1.2 - (r_base * 1.2 - r_top * 1.7) * (k / 4)
+            kit.box('giant_book', (w, w * 0.72, h * 0.92), (rnd.uniform(-0.2, 0.2), rnd.uniform(-0.2, 0.2), z + h / 2), cols[k % len(cols)], rot=(0, 0, rnd.uniform(-0.25, 0.25)), group=group, bevel=0.06)
+            kit.box('giant_pages', (w - 0.2, w * 0.72 + 0.04, h * 0.7), (rnd.uniform(-0.1, 0.1), 0, z + h / 2), 'white', rot=(0, 0, rnd.uniform(-0.1, 0.1)), group=group, bevel=0.02)
+            z += h
+            k += 1
+    elif style == 'cloud':
+        for i in range(16):
+            a = i / 16 * math.tau
+            r = r_top * rnd.uniform(0.35, 0.95)
+            kit.ico('cradle_cloud', rnd.uniform(0.9, 1.5), (math.cos(a) * r, math.sin(a) * r, top + rnd.uniform(-0.6, 0.2)), rock, sub=2, scale=(1.3, 1.1, 0.6), group=group)
+        for i in range(10):
+            a = i / 10 * math.tau + 0.3
+            r = r_top * 1.25
+            kit.ico('cradle_cloud', rnd.uniform(0.7, 1.1), (math.cos(a) * r, math.sin(a) * r, top - 0.9 + rnd.uniform(-0.3, 0.3)), rock, sub=2, scale=(1.4, 1.1, 0.55), group=group)

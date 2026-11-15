@@ -92,6 +92,9 @@ for i in range(40):
     r = 4.2 + (i % 5) * 0.8
     kit.sphere('firefly', 0.045, (math.cos(a) * r, math.sin(a) * r, -3 + (i * 7 % 11) * 0.7), 'firefly', seg=6, rings=4, group='Spin0')
 
+# ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
+material('cr_moss', srgb('#3d7a50'), rough=1.0)
+env.cradle(FLOOR, 'mound', mats=('rock', 'cr_moss'), stair_mat='wood', seed=7)
 kit.merge_group('env', 'env')
 kit.pivot(kit.merge_group('Spin0', 'fireflies'), 'Spin0', (0, 0, 0))
 kit.export(OUT)

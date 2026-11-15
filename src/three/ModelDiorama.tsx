@@ -8,8 +8,13 @@
  *     Drop_N       依序升起、落回格子  Spin* / Bob*            通用旋轉 / 上下浮動
  *     Billboard*   永遠面向鏡頭        Lit_N                   依序點亮（N 由 0 起）
  *     SpinR*       反向旋轉            Pulse*                  呼吸縮放
+ *
+ * 點擊熱點的專屬動畫（fx）：熱點指定節點名稱與動作（見 FxKind），
+ * 動作以「增量」疊加在上述常駐動畫之上（每幀先撤銷上一幀的增量），結束後自動復原；
+ * 同時讓節點發光，並從節點位置擴散一圈光波。
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import type { FxKind, FxStep } from '../data/projects';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -19,6 +24,42 @@ const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
 
 interface Rig { node: THREE.Object3D; base: THREE.Vector3; kind: string; index: number }
+
+export interface FxTrigger { steps: FxStep[]; key: number; color: string }
+
+// QA：網址加 ?fxslow 會把點擊動畫放慢（預設 12 倍，?fxslow=40 可自訂），方便在慢速的軟體渲染器截圖
+const FX_SLOW = typeof location !== 'undefined' ? Number(/fxslow=?(\d*)/.exec(location.search)?.[1] || (location.search.includes('fxslow') ? 12 : 1)) : 1;
+const DUR: Record<FxKind, number> = { pop: 1.1, stamp: 1.3, float: 2.6, spin: 1.4, lid: 2.4, press: 0.9, shake: 1.0, swing: 1.6, flash: 2.2, ripple: 1.6 };
+
+interface Delta { px: number; py: number; pz: number; rx: number; ry: number; rz: number; s: number; show: boolean }
+const ZERO: Delta = { px: 0, py: 0, pz: 0, rx: 0, ry: 0, rz: 0, s: 1, show: false };
+const bell = (x: number) => Math.sin(Math.min(1, Math.max(0, x)) * Math.PI);
+const easeOut = (x: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+
+/** 每種動作在時間 u（0..1）時的增量 */
+function delta(kind: FxKind, u: number, dur: number): Delta {
+  const t = u * dur;
+  const d = { ...ZERO };
+  switch (kind) {
+    case 'pop': d.py = bell(u) * 0.28; d.s = 1 + Math.sin(u * Math.PI * 3) * 0.08 * (1 - u); break;
+    case 'stamp': {
+      // 抬起 → 重重蓋下 → 停留 → 回位
+      d.py = u < 0.25 ? easeOut(u / 0.25) * 0.25 : u < 0.35 ? 0.25 - ((u - 0.25) / 0.1) * 0.45 : u < 0.6 ? -0.2 : -0.2 + easeOut((u - 0.6) / 0.4) * 0.2;
+      break;
+    }
+    case 'float': d.py = Math.min(1, t / 0.5) * 0.35 * (u > 0.8 ? 1 - (u - 0.8) / 0.2 : 1) + Math.sin(t * 3) * 0.04; break;
+    case 'spin': d.ry = easeOut(u) * Math.PI * 2; d.py = bell(u) * 0.15; break;
+    case 'lid': d.rx = -(u < 0.2 ? easeOut(u / 0.2) : u > 0.8 ? 1 - easeOut((u - 0.8) / 0.2) : 1) * 1.15; break;
+    case 'press': d.py = -bell(Math.min(1, u * 2.2)) * 0.1; d.s = 1 + bell(u) * 0.05; break;
+    case 'shake': d.rz = Math.sin(t * 28) * 0.12 * (1 - u); d.py = bell(u) * 0.06; break;
+    case 'swing': d.rx = Math.sin(t * 11) * 0.45 * (1 - u); break;
+    case 'flash': d.show = true; d.s = 1 + bell(u) * 0.04; break;
+    case 'ripple': break;
+  }
+  return d;
+}
+
+const ringGeo = new THREE.RingGeometry(0.88, 1, 56).rotateX(-Math.PI / 2);
 
 /** 釋放一個 GLTF 的 GPU 資源（幾何、材質、貼圖）並移出快取 */
 function release(url: string, scene: THREE.Object3D) {
@@ -40,14 +81,14 @@ function release(url: string, scene: THREE.Object3D) {
 /**
  * release：離開頁面時釋放資源（介紹頁的精細模型與環境用；首頁輕量版保留快取，返回時秒開）
  */
-export default function ModelDiorama({ url, release: shouldRelease = false }: { url: string; release?: boolean }) {
+export default function ModelDiorama({ url, release: shouldRelease = false, fx = null }: { url: string; release?: boolean; fx?: FxTrigger | null }) {
   const gltf = useGLTF(modelUrl(url), false, true);
   useEffect(() => {
     if (!shouldRelease) return;
     const src = gltf.scene;
     return () => { release(url, src); };
   }, [gltf.scene, url, shouldRelease]);
-  const { scene, rigs } = useMemo(() => {
+  const { scene, rigs, named, rings } = useMemo(() => {
     const root = gltf.scene.clone(true);
     const rigs: Rig[] = [];
     root.traverse((o) => {
@@ -70,12 +111,91 @@ export default function ModelDiorama({ url, release: shouldRelease = false }: { 
       const m = /^(Gear|ClockHandH|ClockHand|GantryBridge|GantryHead|Drop_|SpinR|Spin|Bob|Crane|Hook|Billboard|Lit_|Pulse)(\d*)/.exec(o.name);
       if (m) rigs.push({ node: o, base: o.position.clone(), kind: m[1], index: Number(m[2] || 0) });
     });
-    return { scene: root, rigs };
+    const named = new Map<string, THREE.Object3D[]>();
+    root.traverse((o) => {
+      if (!o.name) return;
+      const list = named.get(o.name) ?? [];
+      list.push(o);
+      named.set(o.name, list);
+    });
+    // 光波環（3 個輪流使用）
+    const rings = [0, 1, 2].map(() => {
+      const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide }));
+      m.visible = false;
+      m.renderOrder = 3;
+      root.add(m);
+      return m;
+    });
+    return { scene: root, rigs, named, rings };
   }, [gltf.scene]);
+
+  /** 依名稱找節點（支援結尾 * 萬用字元，例如 Lit_*） */
+  const find = (name: string) => {
+    if (!name.endsWith('*')) return named.get(name) ?? [];
+    const pre = name.slice(0, -1);
+    const out: THREE.Object3D[] = [];
+    named.forEach((v, k) => { if (k.startsWith(pre)) out.push(...v); });
+    return out;
+  };
+
+  // ── 點擊動畫狀態 ──
+  const active = useRef<{ steps: FxStep[]; start: number; color: THREE.Color } | null>(null);
+  const applied = useRef(new Map<THREE.Object3D, Delta>());
+  const glowMats = useRef(new Map<THREE.MeshStandardMaterial, { e: THREE.Color; i: number }>());
+  const ringState = useRef<{ start: number; pos: THREE.Vector3; scale: number }[]>([]);
+  const pendingKey = useRef<number | null>(null);
+  useEffect(() => { if (fx) pendingKey.current = fx.key; }, [fx]);
+  useEffect(() => () => { glowMats.current.forEach((_, m) => m.dispose()); }, []);
+
+  const glowTargets = (node: THREE.Object3D) => {
+    const out: THREE.MeshStandardMaterial[] = [];
+    node.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || (rings as THREE.Mesh[]).includes(mesh)) return;
+      let m = mesh.material as THREE.MeshStandardMaterial;
+      if (!glowMats.current.has(m)) {
+        if (!m.userData.fxClone) {
+          m = m.clone();
+          m.userData.fxClone = true;
+          mesh.material = m;
+        }
+        glowMats.current.set(m, { e: m.emissive.clone(), i: m.emissiveIntensity });
+      }
+      out.push(m);
+    });
+    return out;
+  };
+
+  const emitRing = (node: THREE.Object3D, t: number, scale: number) => {
+    const slot = ringState.current.length % rings.length;
+    const pos = node.getWorldPosition(new THREE.Vector3());
+    scene.worldToLocal(pos);
+    ringState.current[slot] = { start: t, pos, scale };
+    ringState.current.length = Math.max(ringState.current.length, slot + 1);
+  };
 
   const litCount = useMemo(() => rigs.filter((r) => r.kind === 'Lit_').length, [rigs]);
   useFrame(({ clock, camera }, dt) => {
     const t = clock.elapsedTime;
+    // 1) 撤銷上一幀的動畫增量
+    applied.current.forEach((d, n) => {
+      n.position.x -= d.px; n.position.y -= d.py; n.position.z -= d.pz;
+      n.rotation.x -= d.rx; n.rotation.y -= d.ry; n.rotation.z -= d.rz;
+      if (d.s !== 1) n.scale.divideScalar(d.s);
+    });
+    applied.current.clear();
+    // 2) 新的觸發
+    if (pendingKey.current !== null && fx) {
+      pendingKey.current = null;
+      active.current = { steps: fx.steps, start: t, color: new THREE.Color(fx.color.startsWith('#') ? fx.color : '#ffe08a').lerp(new THREE.Color('#ffffff'), 0.35) };
+      ringState.current = [];
+      // QA 用：記錄最近一次觸發找到的節點數（tools/qa/fx.cjs 會讀取）
+      (window as unknown as { __fxLast?: unknown; __fxFind?: unknown }).__fxFind = find;
+      (window as unknown as { __fxLast?: unknown }).__fxLast = { key: fx.key, found: fx.steps.map((s) => `${s.node}:${find(s.node).length}`) };
+      fx.steps.forEach((s) => find(s.node).forEach((n) => {
+        if (s.kind !== 'stamp' && s.ring) emitRing(n, t + (s.delay ?? 0) * FX_SLOW, s.ring);
+      }));
+    }
     for (const r of rigs) {
       const n = r.node;
       switch (r.kind) {
@@ -113,6 +233,61 @@ export default function ModelDiorama({ url, release: shouldRelease = false }: { 
         }
       }
     }
+    // 3) 套用點擊動畫增量、發光
+    const a = active.current;
+    const glowing = new Set<THREE.MeshStandardMaterial>();
+    if (a) {
+      let alive = false;
+      for (const s of a.steps) {
+        const dur = DUR[s.kind] * FX_SLOW;
+        const u = (t - a.start - (s.delay ?? 0) * FX_SLOW) / dur;
+        if (u < 0) { alive = true; continue; }
+        if (u > 1) continue;
+        alive = true;
+        const d = delta(s.kind, u, dur);
+        const nodes = find(s.node);
+        nodes.forEach((n) => {
+          n.position.x += d.px; n.position.y += d.py; n.position.z += d.pz;
+          n.rotation.x += d.rx; n.rotation.y += d.ry; n.rotation.z += d.rz;
+          if (d.s !== 1) n.scale.multiplyScalar(d.s);
+          if (d.show) n.visible = true;
+          const prev = applied.current.get(n);
+          applied.current.set(n, prev ? { px: prev.px + d.px, py: prev.py + d.py, pz: prev.pz + d.pz, rx: prev.rx + d.rx, ry: prev.ry + d.ry, rz: prev.rz + d.rz, s: prev.s * d.s, show: prev.show || d.show } : d);
+          const k = s.kind === 'stamp' ? (u > 0.33 && u < 0.7 ? 1 : 0.3) : bell(u);
+          glowTargets(n).forEach((m) => {
+            glowing.add(m);
+            m.emissive.copy(a.color);
+            m.emissiveIntensity = Math.max(glowMats.current.get(m)!.i, k * 0.6);
+          });
+        });
+        // 蓋章：落下瞬間激起光波
+        if (s.kind === 'stamp' && u > 0.34 && !s._rung) {
+          nodes.forEach((n) => emitRing(n, t, s.ring ?? 2.2));
+          (s as FxStep & { _rung?: boolean })._rung = true;
+        }
+      }
+      if (!alive) {
+        a.steps.forEach((s) => { delete (s as FxStep & { _rung?: boolean })._rung; });
+        active.current = null;
+      }
+    }
+    glowMats.current.forEach((orig, m) => {
+      if (glowing.has(m)) return;
+      m.emissive.copy(orig.e);
+      m.emissiveIntensity = orig.i;
+    });
+    // 4) 光波環
+    rings.forEach((ring, i) => {
+      const st = ringState.current[i];
+      const mat = ring.material as THREE.MeshBasicMaterial;
+      if (!st || t < st.start || t - st.start > 1.1 * FX_SLOW) { ring.visible = false; return; }
+      const u = (t - st.start) / (1.1 * FX_SLOW);
+      ring.visible = true;
+      ring.position.copy(st.pos);
+      ring.scale.setScalar(0.2 + easeOut(u) * st.scale);
+      mat.color.copy(a?.color ?? mat.color);
+      mat.opacity = (1 - u) * 0.9;
+    });
   });
 
   return <primitive object={scene} />;

@@ -10,6 +10,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy  # noqa: E402
 import kit  # noqa: E402
+import env  # noqa: E402
 from kit import box, cone, cyl, material, srgb  # noqa: E402
 
 OUT = sys.argv[-1] if sys.argv[-1].endswith('.glb') else 'env_passport.glb'
@@ -82,6 +83,9 @@ box('plane_body', (1.6, 0.35, 0.35), (R, 0, 3.5), 'plane', group='Spin0', bevel=
 box('plane_wing', (0.5, 2.0, 0.06), (R, 0, 3.5), 'plane', group='Spin0', bevel=0.02)
 box('plane_tail', (0.3, 0.6, 0.06), (R - 0.7, 0, 3.6), 'plane', group='Spin0', bevel=0.02)
 box('plane_fin', (0.3, 0.06, 0.4), (R - 0.7, 0, 3.8), 'red', group='Spin0', bevel=0.02)
+# ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
+material('cr_cloud', srgb('#ffffff'), rough=1.0)
+env.cradle(-12.0, 'cloud', top=-0.9, r_top=3.0, mats=('cr_cloud', 'cr_cloud'))
 kit.merge_group('env', 'env')
 kit.pivot(kit.merge_group('Spin0', 'plane'), 'Spin0', (0, 0, 0))
 kit.export(OUT)

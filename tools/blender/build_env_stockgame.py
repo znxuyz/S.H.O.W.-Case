@@ -11,6 +11,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy  # noqa: E402
 import kit  # noqa: E402
+import env  # noqa: E402
 from kit import box, cone, cyl, material, srgb  # noqa: E402
 
 OUT = sys.argv[-1] if sys.argv[-1].endswith('.glb') else 'env_stockgame.glb'
@@ -79,6 +80,11 @@ for i in range(18):
     r = 4.2 + (i % 4) * 0.7
     kit.ico('shard', 0.08 + (i % 3) * 0.03, (math.cos(a) * r, math.sin(a) * r, -2 + (i * 5 % 9) * 0.6), 'shard', sub=0, scale=(0.6, 0.6, 1.6), group='Spin0')
 
+# ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
+material('cr_jade', srgb('#e8e4d8'), rough=0.5)
+material('cr_red', srgb('#b8323a'), rough=0.6)
+material('cr_gold', srgb('#ffd27a'), emit=srgb('#ffc24a'), emit_strength=2.0)
+env.cradle(-12.0, 'tiers', mats=('cr_jade', 'cr_red'), accent='cr_gold', stair_mat='cr_jade')
 kit.merge_group('env', 'env')
 for i, (name, a, r, z, h) in enumerate([('zhang-yu-mo-huang', 1.1, 42, 6, 16), ('bing-jing-die-xian', 2.5, 40, 8, 14), ('ba-gua-jing-dun', 0.3, 44, 4, 13)]):
     kit.pivot(kit.merge_group(f'Billboard{i}', f'spirit{i}'), f'Billboard{i}', (math.cos(a) * r, math.sin(a) * r, z))

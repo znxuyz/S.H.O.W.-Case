@@ -214,6 +214,9 @@ for i, (dx, dz, rz) in enumerate([(-1.05, 0.25, 0.25), (1.55, -0.1, -0.3), (-0.3
 for i, (x, y, z) in enumerate([(-1.6, 0.4, 2.1), (1.75, -0.6, 1.8), (-0.6, -1.5, 1.6), (1.2, 1.6, 2.6)]):
     box('sky_lantern', (0.13, 0.13, 0.18), (x, y, z), 'warm', group='Bob_2', bevel=0.02)
 
+# ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
+kit.fx_around('Fx_cave', -1.05, -0.85, r=0.42, z0=0.03, z1=1.4)
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'island')
 kit.pivot(kit.merge_group('Bob_0', 'capsule'), 'Bob_0', (CX, CY, CZ))

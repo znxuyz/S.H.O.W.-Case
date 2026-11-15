@@ -95,7 +95,7 @@ for k in range(4):
 cyl('mail_post', 0.05, 0.6, (CX, CY, 0.3), 'teal', verts=12)
 box('mail_body', (0.5, 0.38, 0.36), (CX, CY, 0.78), 'teal', bevel=0.04, segs=3)
 bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.19, depth=0.5, location=(CX, CY, 0.96), rotation=(0, math.pi / 2, 0))
-kit.finalize(bpy.context.active_object, 'teal')
+kit.finalize(bpy.context.active_object, 'teal', group='Fx_lid')
 box('mail_slot', (0.3, 0.02, 0.035), (CX, CY - 0.2, 0.88), 'white', bevel=0.004)
 label_block('mail_sign', (0.34, 0.02, 0.15), (CX, CY - 0.2, 0.72), 'mailbox_sign', bevel=0.003, face='front')
 box('mail_flag', (0.03, 0.16, 0.03), (CX + 0.27, CY, 0.95), 'flower_y', bevel=0.004)
@@ -176,6 +176,18 @@ for k, sx in enumerate((-0.18, 0.0, 0.18)):
 # 稽核紀錄簿（守望亭桌上）
 for k in range(4):
     box('record_book', (0.16, 0.11, 0.035), (GX - 0.12, GY + 0.12, 0.4 + k * 0.035), 'book_a' if k % 2 else 'book_b', rot=(0, 0, k * 0.12), bevel=0.004)
+
+# 信箱裡等著被「收進去」的三張反思卡（點擊時從投遞口彈出再落回）
+for k in range(3):
+    label_block(f'drop_card_{k}', (0.2, 0.006, 0.13), (CX - 0.06 + k * 0.06, CY - 0.02 + k * 0.01, 1.0), f'refl_{k}', group='Fx_cards', bevel=0.002, face='front', rot=(0, 0, 0.15 * (k - 1)))
+
+# ── 點擊動畫節點 ──
+kit.fx_node('Fx_lid', (CX, CY + 0.19, 0.96))
+kit.fx_node('Fx_cards', (CX, CY, 0.9))
+kit.fx_around('Fx_desk', DX, DY, r=0.3, z0=0.0, z1=0.8)
+kit.fx_around('Fx_kiosk', GX, GY, r=0.42, z0=0.09, z1=1.3, max_size=1.8)
+kit.fx_around('Fx_board', BX, BY, r=0.45, z0=0.1, z1=1.3)
+kit.fx_around('Fx_fountain', WX, WY, r=0.25, z0=0.0, z1=0.8)
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'garden')

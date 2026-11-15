@@ -11,6 +11,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy  # noqa: E402
 import kit  # noqa: E402
+import env  # noqa: E402
 from kit import box, cyl, material, srgb  # noqa: E402
 
 OUT = sys.argv[-1] if sys.argv[-1].endswith('.glb') else 'env_scheduling.glb'
@@ -81,6 +82,11 @@ def gear(name, loc, R, teeth, group):
         box(f'{name}_tooth', (0.7, 0.6, 0.9), (loc[0] + math.cos(a) * (R + 0.35), loc[1], loc[2] + math.sin(a) * (R + 0.35)), 'brass', rot=(0, -a, 0), group=group, bevel=0.05)
 gear('gearA', (22, 30, -2), 5, 22, 'GearA')
 gear('gearB', (29.6, 30, -6.5), 3.2, 14, 'GearB')
+# ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
+material('cr_metal', srgb('#26303f'), rough=0.4, metal=0.7)
+material('cr_strut', srgb('#3a4658'), rough=0.4, metal=0.6)
+material('cr_neon', srgb('#ffd166'), emit=srgb('#ffc23a'), emit_strength=3)
+env.cradle(F, 'tower', mats=('cr_metal', 'cr_strut'), accent='cr_neon')
 kit.merge_group('env', 'env')
 kit.pivot(kit.merge_group('GearA', 'gearA'), 'GearA', (22, 30, -2))
 kit.pivot(kit.merge_group('GearB', 'gearB'), 'GearB', (29.6, 30, -6.5))

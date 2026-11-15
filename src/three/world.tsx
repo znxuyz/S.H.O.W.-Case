@@ -2,7 +2,8 @@
  * 3D 世界環境：天空穹頂、延伸地面、遠景、漂浮粒子、程序化環境反射與後製。
  * 介紹頁的全螢幕舞台與首頁群島共用。
  */
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Environment, Lightformer, Sparkles } from '@react-three/drei';
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
@@ -77,6 +78,41 @@ export const WORLD_BY_PROJECT: Record<string, Partial<WorldStyle>> = {
 
 export function worldFor(kind: BuildingKind, projectId?: string): WorldStyle {
   return { ...WORLD[kind], ...(projectId ? WORLD_BY_PROJECT[projectId] : undefined) };
+}
+
+/** 柔和光暈：永遠位於主體正後方（相對鏡頭）的徑向漸層，讓視覺焦點鎖定在中央 */
+const haloTexture = (() => {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d')!;
+  const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  grd.addColorStop(0, 'rgba(255,255,255,0.9)');
+  grd.addColorStop(0.35, 'rgba(255,255,255,0.35)');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 256, 256);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})();
+
+function HaloLayer({ color }: { color: string }) {
+  const ref = useRef<THREE.Mesh>(null);
+  const mat = useMemo(() => new THREE.MeshBasicMaterial({ map: haloTexture, color, transparent: true, opacity: 0.42, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }), [color]);
+  const dir = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ camera }) => {
+    const m = ref.current;
+    if (!m) return;
+    dir.copy(camera.position).setY(0).normalize();
+    m.position.set(-dir.x * 9, 0.6, -dir.z * 9);
+    m.quaternion.copy(camera.quaternion);
+  });
+  return (
+    <mesh ref={ref} material={mat} renderOrder={-0.5} scale={22}>
+      <planeGeometry args={[1, 1]} />
+    </mesh>
+  );
 }
 
 /** 漸層天空穹頂（不受霧影響） */
@@ -294,8 +330,11 @@ function Constraints() {
 export function World({ style, sparkles = true, landscape = true }: { style: WorldStyle; sparkles?: boolean; landscape?: boolean }) {
   return (
     <>
-      <SkyDome top={style.skyTop} bottom={style.skyBottom} />
-      <fog attach="fog" args={[style.fog, style.fogNear, style.fogFar]} />
+      {/* 天空底部與霧同色：遠景沒入霧中時與地平線無縫銜接 */}
+      <SkyDome top={style.skyTop} bottom={style.fog} />
+      {/* 指數霧：近處主體清晰、遠景逐漸隱沒 */}
+      <fogExp2 attach="fog" args={[style.fog, 1.45 / style.fogFar]} />
+      <HaloLayer color={style.env[1]} />
       {landscape && (
         <>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -4, 0]} receiveShadow>

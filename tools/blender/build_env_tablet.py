@@ -11,6 +11,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy  # noqa: E402
 import kit  # noqa: E402
+import env  # noqa: E402
 from kit import box, cyl, material, srgb  # noqa: E402
 
 OUT = sys.argv[-1] if sys.argv[-1].endswith('.glb') else 'env_tablet.glb'
@@ -58,6 +59,11 @@ for i in range(28):
     r = 9 + (i % 3) * 1.6
     z = -2 + math.sin(i * 1.7) * 2.5
     box('doc_card', (0.5, 0.04, 0.68), (math.cos(a) * r, math.sin(a) * r, z), 'doc', rot=(0, 0, a + math.pi / 2), group='Spin0', bevel=0)
+# ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
+material('cr_b1', srgb('#c0392b'), rough=0.7)
+material('cr_b2', srgb('#2b6ce6'), rough=0.7)
+material('cr_b3', srgb('#f2f0ea'), rough=0.7)
+env.cradle(F, 'books', mats=('cr_b1', 'cr_b2', 'cr_b1', 'cr_b2', 'cr_b3'))
 kit.merge_group('env', 'env')
 kit.pivot(kit.merge_group('Spin0', 'docs'), 'Spin0', (0, 0, 0))
 kit.export(OUT)

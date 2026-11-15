@@ -77,5 +77,10 @@ for i in range(14):
         continue
     cyl('data_beam', 0.12, 30, (math.cos(a) * r, math.sin(a) * r, FLOOR + 15), 'beam', verts=6, group=G)
 
+# ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
+material('cr_metal', srgb('#1a2230'), rough=0.35, metal=0.8)
+material('cr_strut', srgb('#2a3548'), rough=0.4, metal=0.7)
+material('cr_neon', srgb('#22e4ff'), emit=srgb('#22e4ff'), emit_strength=4)
+env.cradle(FLOOR, 'tower', mats=('cr_metal', 'cr_strut'), accent='cr_neon')
 kit.merge_group('env', 'env')
 kit.export(OUT)

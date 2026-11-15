@@ -169,6 +169,11 @@ for k, (bx, by) in enumerate([(-0.95, -1.2), (0.0, -1.62), (0.9, -1.55)]):
 cyl('sign_post', 0.025, 0.5, (-1.75, -1.4, 0.25), 'stall', verts=6)
 kit.label_block('sign', (0.5, 0.03, 0.17), (-1.62, -1.45, 0.48), 'sign_board', bevel=0.006, face='front', rot=(0, 0, 0.35))
 
+# ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
+kit.fx_around('Fx_class', -0.2, 0.35, r=0.5, z0=1.1, z1=2.4)
+kit.fx_around('Fx_shop', -1.35, -0.35, r=0.38, z0=0.03, z1=1.1)
+kit.fx_around('Fx_flags', 0.2, 0.5, r=0.3, z0=0.03, z1=1.0)
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'forest')
 for i, (x, y, ph) in enumerate(SPOTS):

@@ -207,7 +207,44 @@ for c in range(35):
         v = 1 - (130 + (c // 7) * 92 + 42) / 600
         x = CAL_X - CAL_W / 2 + u * CAL_W
         y = CAL_Y - CAL_D / 2 + v * CAL_D
-        box('booked_tile', (0.3, 0.26, 0.05), (x, y, 0.055), f'room_{booked[day]}', bevel=0.012)
+        box('booked_tile', (0.3, 0.26, 0.05), (x, y, 0.055), f'room_{booked[day]}', bevel=0.012, group='Fx_tiles')
+
+# ── 審核桌：印章落下的地方（桌上一張借用申請單） ──
+box('review_desk', (0.56, 0.42, 0.04), (STX, STY, 0.64), 'desk', bevel=0.008)
+for sx in (-0.23, 0.23):
+    for sy in (-0.16, 0.16):
+        box('review_leg', (0.03, 0.03, 0.62), (STX + sx, STY + sy, 0.31), 'chair', bevel=0)
+label_block('review_form', (0.26, 0.32, 0.006), (STX, STY, 0.665), 'form', bevel=0)
+
+# ── 三種借用方式：三向路標（單次／每週／每月） ──
+material('sign_once', rough=0.6, tex=kit.label_texture('s1', '單次', BLUE, size=(240, 90), font_size=56))
+material('sign_week', rough=0.6, tex=kit.label_texture('s2', '每週', '#36b37e', size=(240, 90), font_size=56))
+material('sign_month', rough=0.6, tex=kit.label_texture('s3', '每月', '#f29b30', size=(240, 90), font_size=56))
+SGX, SGY = 1.5, -0.55
+cyl('sign_pole', 0.03, 1.0, (SGX, SGY, 0.5), 'wall_trim', verts=10, group='Fx_sign')
+cone('sign_cap', 0.06, 0.0, 0.08, (SGX, SGY, 1.04), 'roof', verts=10, group='Fx_sign')
+for k, (m, a) in enumerate([('sign_once', -0.5), ('sign_week', 0.9), ('sign_month', 2.4)]):
+    label_block(f'sign_{k}', (0.34, 0.025, 0.11), (SGX + math.cos(a) * 0.17, SGY + math.sin(a) * 0.17, 0.92 - k * 0.15), m,
+                bevel=0.004, face='front', rot=(0, 0, a), group='Fx_sign')
+box('sign_base', (0.16, 0.16, 0.05), (SGX, SGY, 0.025), 'wall_trim', bevel=0.01)
+
+# ── 自動寄信通知：校門旁的郵筒（蓋子掀開、信封飛出） ──
+material('post_red', srgb('#d6453d'), rough=0.45)
+material('envelope', rough=0.7, tex=kit.label_texture('env', '核准通知', '#fffaf0', fg=(53, 99, 233), size=(220, 140), font_size=40))
+MBX, MBY = -1.6, -0.6
+cyl('mbox_post', 0.035, 0.45, (MBX, MBY, 0.225), 'chair', verts=10)
+box('mbox_body', (0.3, 0.24, 0.3), (MBX, MBY, 0.6), 'post_red', bevel=0.03, segs=3)
+box('mbox_slot', (0.18, 0.012, 0.025), (MBX, MBY - 0.125, 0.66), 'chair', bevel=0)
+box('mbox_lid', (0.32, 0.26, 0.04), (MBX, MBY, 0.77), 'post_red', bevel=0.012, group='Fx_mlid')
+for k in range(2):
+    label_block(f'mail_env_{k}', (0.2, 0.006, 0.13), (MBX - 0.03 + k * 0.06, MBY + 0.01 * k, 0.66), 'envelope', bevel=0.002, face='front', group='Fx_letter', rot=(0, 0, 0.2 * (k - 0.5)))
+
+# ── 點擊動畫節點 ──
+kit.fx_node('Fx_tiles', (CAL_X, CAL_Y, 0.03))
+kit.fx_node('Fx_sign', (SGX, SGY, 0.0))
+kit.fx_node('Fx_mlid', (MBX, MBY + 0.13, 0.77))
+kit.fx_node('Fx_letter', (MBX, MBY, 0.6))
+kit.fx_around('Fx_desk', STX, STY, r=0.32, z0=0.0, z1=0.7)
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'school')

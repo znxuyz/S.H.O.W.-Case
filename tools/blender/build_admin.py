@@ -217,6 +217,11 @@ for k in range(4):
 for k, (dx, dz, m) in enumerate([(-0.12, 0.06, 'note_y'), (0.1, -0.06, 'note_p'), (0.0, -0.14, 'note_y')]):
     box('sticky', (0.09, 0.01, 0.09), (1.48 + dx * 0.9, 1.44 + dx * 0.4, 0.26 + dz), m, rot=(0.25, 0, -0.5 + k * 0.1), bevel=0)
 
+# ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
+kit.fx_around('Fx_cal', 1.5, 1.5, r=0.38, z0=0.03, z1=0.9)
+kit.fx_around('Fx_search', 0.55, 0.55, r=0.32, z0=0.03, z1=0.6)
+kit.fx_around('Fx_badges', -0.6, -0.6, r=0.32, z0=0.03, z1=0.7)
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'desk')
 kit.pivot(kit.merge_group('Spin0', 'train'), 'Spin0', (0, 0, 0))

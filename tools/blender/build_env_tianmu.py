@@ -113,6 +113,11 @@ kit.sphere('moon', 4.0, (-24, 40, 22), 'moon', seg=24, rings=14, group=G)
 for i, (x, y, z) in enumerate([(-11, 6, 3.5), (-6, 12, 6), (8, 13, 5), (13, 4, 2.5), (-14, -3, 4.5), (2, 16, 7)]):
     box('sky_lantern', (0.45, 0.45, 0.62), (x, y, z), 'lantern', group=f'Bob{i}', bevel=0.05)
 
+# ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
+material('cr_stone', srgb('#8a8f86'), rough=0.9)
+material('cr_post', srgb('#6b3a2a'), rough=0.7)
+material('cr_gold', srgb('#d8b45a'), rough=0.3, metal=0.9)
+env.cradle(FLOOR, 'tiers', mats=('cr_stone', 'cr_post'), accent='cr_gold', stair_mat='cr_stone')
 kit.merge_group('env', 'env')
 for i, (x, y, z) in enumerate([(-11, 6, 3.5), (-6, 12, 6), (8, 13, 5), (13, 4, 2.5), (-14, -3, 4.5), (2, 16, 7)]):
     kit.pivot(kit.merge_group(f'Bob{i}', f'lantern{i}'), f'Bob{i}', (x, y, z))

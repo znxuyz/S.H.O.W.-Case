@@ -212,6 +212,12 @@ label_block('task_scroll', (0.02, 0.26, 0.6), (SCX, SCY, 0.92), 'scroll', bevel=
 kit.beam('scroll_rod_b', (SCX, SCY - 0.14, 0.6), (SCX, SCY + 0.14, 0.6), 0.03, 'gold', round_=True)
 kit.beam('scroll_pole', (SCX - 0.05, SCY, 0), (SCX - 0.05, SCY, 1.3), 0.025, 'violet')
 
+# ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
+kit.fx_around('Fx_pillar', 1.4, -0.81, r=0.3, z0=0.03, z1=1.8)
+kit.fx_around('Fx_quote', 1.5, -1.45, r=0.35, z0=0.03, z1=1.3)
+kit.fx_around('Fx_codex', -1.4, -1.45, r=0.35, z0=0.03, z1=1.0)
+kit.fx_around('Fx_brazier', -1.6, 1.25, r=0.35, z0=0.03, z1=1.4)
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'altar')
 kit.pivot(kit.merge_group('Bob0', 'card'), 'Bob0', (0, -0.05, TOP + 0.42))

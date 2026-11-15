@@ -27,11 +27,16 @@ export function focusCamera(h: Hotspot): V3 {
  * 熱點標記投影：標記本身是頁面上的一般 DOM 按鈕（在 ProjectScene 渲染），
  * 這裡每幀把 3D 位置投影成螢幕座標並直接寫入 transform（不經過 React、不建立 portal）。
  */
-export function MarkerProjector({ hotspots, markers }: { hotspots: Hotspot[]; markers: MutableRefObject<(HTMLElement | null)[]> }) {
+export interface CardRefs { card: HTMLElement | null; line: HTMLElement | null }
+
+export function MarkerProjector({ hotspots, markers, active = null, cardRefs }: {
+  hotspots: Hotspot[]; markers: MutableRefObject<(HTMLElement | null)[]>; active?: number | null; cardRefs?: MutableRefObject<CardRefs>;
+}) {
   const { camera, size, scene } = useThree();
   const v = useRef(new THREE.Vector3());
   const frame = useRef(0);
   const caster = useRef(new THREE.Raycaster());
+  const liftRef = useRef(new Map<number, number>());
   useFrame(() => {
     // 每 12 幀做一次遮擋檢查：被模型擋住的標記淡化
     if (++frame.current % 12 === 0) {
@@ -47,13 +52,60 @@ export function MarkerProjector({ hotspots, markers }: { hotspots: Hotspot[]; ma
         el.classList.toggle('is-occluded', hit);
       });
     }
+    const placed: { x: number; y: number; w: number; h: number }[] = [];
+    const order = hotspots.map((h, i) => { v.current.set(h.at[0], h.at[1], h.at[2]).project(camera); return { i, y: v.current.y }; }).sort((a, b) => b.y - a.y);
     hotspots.forEach((h, i) => {
       const el = markers.current[i];
       if (!el) return;
       v.current.set(h.at[0], h.at[1], h.at[2]).project(camera);
       const visible = v.current.z < 1 && Math.abs(v.current.x) < 1.15 && Math.abs(v.current.y) < 1.15;
-      el.style.transform = `translate3d(${((v.current.x * 0.5 + 0.5) * size.width).toFixed(1)}px, ${((-v.current.y * 0.5 + 0.5) * size.height).toFixed(1)}px, 0)`;
+      const px = (v.current.x * 0.5 + 0.5) * size.width;
+      const py = (-v.current.y * 0.5 + 0.5) * size.height;
+      el.style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0)`;
       el.style.visibility = visible ? 'visible' : 'hidden';
+      (el as HTMLElement & { _p?: [number, number] })._p = [px, py];
+      // 說明卡：貼在該物件旁（優先放右側，靠近邊緣就換到左側），並以指引線連回物件
+      if (i === active && cardRefs?.current.card && size.width > 760) {
+        const card = cardRefs.current.card;
+        const w = card.offsetWidth, hh = card.offsetHeight;
+        const gap = 56;
+        const right = px + gap + w < size.width - 76;
+        let x = right ? px + gap : px - gap - w;
+        x = Math.max(16, Math.min(size.width - w - 76, x));
+        const y = Math.max(76, Math.min(size.height - hh - 92, py - hh * 0.4));
+        card.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+        card.style.visibility = 'visible';
+        const line = cardRefs.current.line;
+        if (line) {
+          const ex = right ? x : x + w;
+          const ey = Math.max(y + 18, Math.min(y + hh - 18, py));
+          const len = Math.hypot(ex - px, ey - py);
+          line.style.width = `${Math.max(0, len - 14).toFixed(1)}px`;
+          line.style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0) rotate(${Math.atan2(ey - py, ex - px).toFixed(4)}rad) translateX(14px)`;
+          line.style.visibility = visible ? 'visible' : 'hidden';
+        }
+      }
+    });
+    // 名稱標籤避讓：由畫面上方往下排，與已放好的標籤重疊就往上疊一層
+    // 先把所有圓點當成障礙物，標籤（中心約在圓點上方 33px）不得壓到別的圓點
+    markers.current.forEach((m) => {
+      const q = (m as (HTMLElement & { _p?: [number, number] }) | null)?._p;
+      if (q && m!.style.visibility !== 'hidden') placed.push({ x: q[0], y: q[1], w: 30, h: 30 });
+    });
+    order.forEach(({ i }) => {
+      const el = markers.current[i] as (HTMLElement & { _p?: [number, number]; _lab?: HTMLElement | null }) | null;
+      if (!el || !el._p || el.style.visibility === 'hidden') return;
+      if (el._lab === undefined) el._lab = el.querySelector<HTMLElement>('.hs-label');
+      const lab = el._lab;
+      if (!lab) return;
+      const w = lab.offsetWidth || 90;
+      const [x, y] = el._p;
+      let off = 0;
+      const hit = (ly: number) => placed.some((q) => Math.abs(q.x - x) < (q.w + w) / 2 + 4 && Math.abs(q.y - ly) < (q.h + 22) / 2 + 2);
+      for (let guard = 0; guard < 6 && hit(y - 33 - off); guard++) off += 26;
+      placed.push({ x, y: y - 33 - off, w, h: 22 });
+      const lift = liftRef.current;
+      if (lift.get(i) !== off) { lift.set(i, off); lab.style.translate = off ? `0 ${-off}px` : ''; }
     });
   });
   return null;
@@ -93,7 +145,7 @@ export function StageShift({ focused }: { focused: boolean }) {
     const cam = camera as THREE.PerspectiveCamera;
     const wide = size.width / size.height > 1.05 && size.width >= 1024;
     // 全景：主體略偏右（左上角留給標題）；聚焦：主體偏左（右側留給說明卡）
-    const tx = wide ? (focused ? 0.16 : -0.08) : 0;
+    const tx = wide ? (focused ? 0.02 : -0.08) : 0;
     const ty = wide ? 0 : focused ? 0.16 : -0.06;
     if (!cur.current) cur.current = [tx, ty];
     const c = cur.current;

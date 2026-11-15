@@ -116,6 +116,9 @@ for k in range(4):
 for k in range(3):
     box('sticky', (0.13, 0.13, 0.008), (-0.95 + k * 0.17, 0.95, 0.12), 'note', rot=(0, 0, k * 0.2 - 0.2), bevel=0)
 
+# ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
+kit.fx_around('Fx_manual', 1.55, -1.45, r=0.38, z0=0.03, z1=1.2)
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'desk')
 for i, (x, y, z) in enumerate(SHELVES):

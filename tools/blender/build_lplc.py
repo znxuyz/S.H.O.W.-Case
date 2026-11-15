@@ -201,10 +201,10 @@ for i, (name, col) in enumerate([('低基期', '#22e4ff'), ('動能', '#ff3df2')
 material('etf_label', rough=0.4, tex=kit.label_texture('etf', 'ETF', '#0a1a28', fg=(159, 243, 255), size=(200, 120), font_size=70), emit=srgb('#ffffff'), emit_strength=1.2, emit_tex=True)
 # K 線型態面板（後方右側，立在支架上）
 KPX, KPY = 1.25, 1.55
-label_block('pattern_panel', (1.2, 0.03, 0.7), (KPX, KPY, 1.05), 'pattern', bevel=0.006, face='front')
-box('panel_frame', (1.26, 0.025, 0.76), (KPX, KPY + 0.02, 1.05), 'frame', bevel=0.008)
+label_block('pattern_panel', (1.2, 0.03, 0.7), (KPX, KPY, 1.05), 'pattern', bevel=0.006, face='front', group='Fx_kline')
+box('panel_frame', (1.26, 0.025, 0.76), (KPX, KPY + 0.02, 1.05), 'frame', bevel=0.008, group='Fx_kline')
 for dx in (-0.5, 0.5):
-    cyl('panel_leg', 0.02, 0.7, (KPX + dx, KPY + 0.03, 0.35), 'frame', verts=6)
+    cyl('panel_leg', 0.02, 0.7, (KPX + dx, KPY + 0.03, 0.35), 'frame', verts=6, group='Fx_kline')
 # 五大選股濾鏡：五片疊起的發光鏡環（左前方）
 FLX, FLY = -1.45, -1.3
 for i in range(5):
@@ -224,6 +224,12 @@ for (x, y) in [(1.8, 1.8), (-1.8, 1.8), (1.8, -1.8), (-1.8, -1.8)]:
     cyl('pylon', 0.04, 0.9, (x, y, 0.45), 'frame', verts=6)
     cone('pylon_tip', 0.07, 0.0, 0.16, (x, y, 0.98), 'neon_c', verts=6)
     kit.sphere('pylon_led', 0.03, (x, y, 0.75), 'neon_m', seg=8, rings=5)
+
+# ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
+kit.fx_around('Fx_heat', -0.8, 0.6, r=0.55, z0=0.03, z1=1.0, exclude=())
+kit.fx_node('Fx_kline', (KPX, KPY, 0.0))
+kit.fx_extract('Fx_etf', (ETX - 0.3, ETY - 0.3, 0.03), (ETX + 0.3, ETY + 0.3, 0.75), max_size=0.5, exclude=('stock',))
+kit.fx_node('Fx_etf', (ETX, ETY, 0.0))
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'terrain')

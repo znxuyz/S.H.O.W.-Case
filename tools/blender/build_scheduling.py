@@ -143,9 +143,9 @@ for d in range(5):
 math_cells = [cells[(d, p)] for d in range(5) for p in range(6) if TIMETABLE[d][p] == '數學' and (d, p) not in DROPS]
 for a, b in zip(math_cells, math_cells[1:]):
     mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0.55)
-    beam('thread', (a[0], a[1], BH + 0.02), mid, 0.018, 'thread', round_=True)
-    beam('thread', mid, (b[0], b[1], BH + 0.02), 0.018, 'thread', round_=True)
-    kit.ico('thread_node', 0.035, mid, 'thread', sub=1)
+    beam('thread', (a[0], a[1], BH + 0.02), mid, 0.018, 'thread', round_=True, group='Fx_thread')
+    beam('thread', mid, (b[0], b[1], BH + 0.02), 0.018, 'thread', round_=True, group='Fx_thread')
+    kit.ico('thread_node', 0.035, mid, 'thread', sub=1, group='Fx_thread')
 
 # ───────────────────────── 龍門式求解機械臂 ─────────────────────────
 GZ = 1.35
@@ -208,6 +208,11 @@ for k, (x, m) in enumerate([(0.55, 'phase1'), (1.2, 'phase2')]):
 cyl('beacon_pole', 0.025, 0.6, (1.85, -1.2, 0.3), 'steel_dark', verts=8)
 kit.sphere('beacon_lamp', 0.07, (1.85, -1.2, 0.64), 'ok_lamp', seg=14, rings=8, group='Pulse0')
 label_block('zero_sign', (0.36, 0.02, 0.15), (1.85, -1.32, 0.42), 'zero', bevel=0.004, face='front')
+
+# ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
+kit.fx_node('Fx_thread', (0.0, 0.0, 0.0))
+kit.fx_around('Fx_pieces', -0.75, -1.68, r=0.38, z0=0.03, z1=0.8)
+kit.fx_around('Fx_trays', 0.9, -1.75, r=0.4, z0=0.03, z1=0.8)
 
 # ───────────────────────── 合併、設定樞紐、匯出 ─────────────────────────
 kit.merge_group('static', 'engine')

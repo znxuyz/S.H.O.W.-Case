@@ -44,8 +44,7 @@ export default function App() {
 
   useEffect(() => {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme.chrome);
-    document.title = scene.kind === 'project' ? `${scene.project.title} · S.H.O.W. Case` : 'S.H.O.W. Case — Selected Hub Of Works';
-  }, [theme, scene]);
+  }, [theme]);
 
   const openIndex = useCallback(() => setIndexOpen(true), []);
   const closeIndex = useCallback(() => setIndexOpen(false), []);

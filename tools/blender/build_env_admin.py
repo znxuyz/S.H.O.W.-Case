@@ -11,6 +11,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy  # noqa: E402
 import kit  # noqa: E402
+import env  # noqa: E402
 from kit import box, cone, cyl, material, srgb  # noqa: E402
 
 OUT = sys.argv[-1] if sys.argv[-1].endswith('.glb') else 'env_admin.glb'
@@ -109,6 +110,11 @@ cyl('plant_pot', 3, 5, (QX, QY, F + 2.5), 'pot', verts=16, group=G)
 for k in range(7):
     a = k * 0.9
     kit.ico('plant_leaf', 1.8, (QX + math.cos(a) * 1.8, QY + math.sin(a) * 1.8, F + 6 + (k % 3) * 1.2), 'leaf' if k % 2 else 'leaf_dark', sub=1, scale=(1.4, 0.8, 0.5), group=G)
+# ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
+material('cr_b1', srgb('#c2410c'), rough=0.7)
+material('cr_b2', srgb('#2f5a8a'), rough=0.7)
+material('cr_b3', srgb('#e8b04a'), rough=0.7)
+env.cradle(F, 'books', mats=('cr_b1', 'cr_b2', 'cr_b1', 'cr_b2', 'cr_b3'))
 kit.merge_group('env', 'env')
 kit.pivot(kit.merge_group('Bob0', 'steam'), 'Bob0', (CX, CY, F + 8))
 kit.export(OUT)

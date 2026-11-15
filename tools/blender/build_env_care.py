@@ -70,6 +70,8 @@ for i in range(36):
     a = i / 36 * math.tau
     r = 4.5 + (i % 4) * 0.9
     kit.ico('petal', 0.05, (math.cos(a) * r, math.sin(a) * r, -1 + (i * 7 % 11) * 0.45), 'petal', sub=0, scale=(1.4, 1, 0.3), group='Spin0')
+# ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
+env.cradle(FLOOR, 'mound', mats=('rock', 'grass'), stair_mat='concrete', seed=5)
 kit.merge_group('env', 'env')
 kit.pivot(kit.merge_group('Spin0', 'petals'), 'Spin0', (0, 0, 0))
 kit.export(OUT)
