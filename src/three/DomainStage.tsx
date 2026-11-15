@@ -2,23 +2,26 @@
  * 介紹頁的全螢幕 3D 舞台：Canvas 佔滿整個視窗，箱庭不會被任何邊框裁切。
  * 空間導覽：熱點標記綁在模型各部位，點擊後鏡頭聚焦（Hotspots.tsx）。
  */
+import { lazy, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { ContactShadows, OrbitControls } from '@react-three/drei';
 import { PCFShadowMap } from 'three';
 import type { Hotspot } from '../data/projects';
 import type { MutableRefObject } from 'react';
 import { CameraFocus, MarkerProjector, StageShift } from './Hotspots';
+
+const ModelDiorama = lazy(() => import('./ModelDiorama'));
 import { Diorama } from './dioramas';
 import type { BuildingKind } from './kinds';
 import { allowEffects, Effects, World, worldFor } from './world';
 
 export interface DomainStageProps {
-  kind: BuildingKind; accent: string; model?: string; projectId?: string; reducedMotion: boolean;
+  kind: BuildingKind; accent: string; model?: string; env?: string; projectId?: string; reducedMotion: boolean;
   hotspots?: Hotspot[]; active?: number | null; onPick?: (i: number | null) => void;
   markers?: MutableRefObject<(HTMLElement | null)[]>;
 }
 
-export default function DomainStage({ kind, accent, model, projectId, reducedMotion, hotspots = [], active = null, onPick, markers }: DomainStageProps) {
+export default function DomainStage({ kind, accent, model, env, projectId, reducedMotion, hotspots = [], active = null, onPick, markers }: DomainStageProps) {
   const W = worldFor(kind, projectId);
   const fx = allowEffects();
   // 直式螢幕畫面窄，鏡頭拉遠讓整座箱庭入鏡
@@ -34,7 +37,12 @@ export default function DomainStage({ kind, accent, model, projectId, reducedMot
       onPointerMissed={() => onPick?.(null)}
       gl={{ antialias: !fx, powerPreference: 'high-performance' }}
     >
-      <World style={W} />
+      <World style={W} landscape={!env} />
+      {env && (
+        <Suspense fallback={null}>
+          <group position={[0, -0.4, 0]}><ModelDiorama url={env} /></group>
+        </Suspense>
+      )}
       <ambientLight color={W.ambient} intensity={W.ambientI} />
       <hemisphereLight args={[W.hemi[0], W.hemi[1], 0.45]} />
       <directionalLight
@@ -55,7 +63,7 @@ export default function DomainStage({ kind, accent, model, projectId, reducedMot
       <group position={[0, -0.4, 0]}>
         <Diorama kind={kind} accent={accent} model={model} lights />
       </group>
-      <ContactShadows position={[0, -3.98, 0]} scale={18} blur={2.6} far={7} opacity={0.55} resolution={512} color="#000000" />
+      {!env && <ContactShadows position={[0, -3.98, 0]} scale={18} blur={2.6} far={7} opacity={0.55} resolution={512} color="#000000" />}
       {markers && <MarkerProjector hotspots={hotspots} markers={markers} />}
       <CameraFocus hotspot={focused ? hotspots[active!] : null} home={home} homeTarget={[0, 0.8, 0]} />
       <StageShift focused={focused} />

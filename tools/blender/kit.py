@@ -499,12 +499,13 @@ def plinth(top_mat, soil_mat='soil', rock_mat='rock', rim_mat='concrete', size=4
             ico('float_rock', r, (x, y, z), rock_mat)
 
 
-def tree(loc, s=1.0, kind='round', leaf='leaf', leaf2='leaf_dark', trunk='bark', group='static'):
+def tree(loc, s=1.0, kind='round', leaf='leaf', leaf2='leaf_dark', trunk='bark', group='static', detail=2):
+    """detail：樹冠細分等級（遠景用 0–1 以節省面數）"""
     x, y, z = loc
-    cyl('trunk', 0.06 * s, 0.6 * s, (x, y, z + 0.3 * s), trunk, verts=8, group=group)
+    cyl('trunk', 0.06 * s, 0.6 * s, (x, y, z + 0.3 * s), trunk, verts=8 if detail > 1 else 5, group=group)
     if kind == 'round':
         for (dx, dy, dz, r, m) in [(0, 0, 0.82, 0.32, leaf2), (-0.12, 0.05, 0.95, 0.24, leaf), (0.12, -0.06, 0.92, 0.23, leaf), (0.03, 0.03, 1.15, 0.2, leaf), (0.06, 0.12, 0.72, 0.18, leaf2)]:
-            ico('crown', r * s, (x + dx * s, y + dy * s, z + dz * s), m, sub=2, group=group)
+            ico('crown', r * s, (x + dx * s, y + dy * s, z + dz * s), m, sub=detail, group=group)
     else:
         for i, (r, h, dz) in enumerate([(0.38, 0.5, 0.55), (0.3, 0.45, 0.85), (0.21, 0.4, 1.12), (0.12, 0.34, 1.35)]):
             cone('pine', r * s, 0.0, h * s, (x, y, z + dz * s), leaf2 if i % 2 == 0 else leaf, verts=9, group=group)
@@ -515,3 +516,79 @@ def nature_materials():
     material('leaf_dark', srgb('#2f8f5b'), rough=0.9)
     material('bark', srgb('#6b4423'), rough=0.95)
     material('grass', rough=1.0, tex=save('grass', tint(noise(512, 8, 5, 21), (86, 150, 70), (130, 190, 96))))
+
+
+# ───────────────────────── 細節零件（3.0b） ─────────────────────────
+def window_frame(loc, w, h, face='-y', frame='white', glass='glass', sill='concrete', group='static', mullions=1):
+    """外牆窗：窗框 + 玻璃 + 窗櫺 + 窗台。face 為窗戶朝向（'-y' 朝鏡頭、'+x' 朝右）"""
+    x, y, z = loc
+    rot = (0, 0, 0) if face in ('-y', '+y') else (0, 0, math.pi / 2)
+    s = -1 if face in ('-y', '-x') else 1
+    off = (0, s * 0.012, 0) if face in ('-y', '+y') else (s * 0.012, 0, 0)
+    box('win_frame', (w + 0.05, 0.03, h + 0.05), (x, y, z), frame, rot=rot, group=group, bevel=0.004)
+    box('win_glass', (w, 0.035, h), (x + off[0] * 0.5, y + off[1] * 0.5, z), glass, rot=rot, group=group, bevel=0)
+    for m in range(1, mullions + 1):
+        u = -w / 2 + w * m / (mullions + 1)
+        dx, dy = (u, 0) if face in ('-y', '+y') else (0, u)
+        box('win_mull', (0.018, 0.04, h), (x + dx + off[0], y + dy + off[1], z), frame, rot=rot, group=group, bevel=0)
+    box('win_bar', (w, 0.04, 0.018), (x + off[0], y + off[1], z), frame, rot=rot, group=group, bevel=0)
+    box('win_sill', (w + 0.1, 0.07, 0.03), (x + off[0] * 3, y + off[1] * 3, z - h / 2 - 0.03), sill, rot=rot, group=group, bevel=0.004)
+
+
+def roof_tiles(x0, x1, y_eave, y_ridge, z_eave, z_ridge, mat, group='static', rows=None, side=1):
+    """沿斜屋面排列的瓦壟（半圓管），x0..x1 為屋面寬"""
+    n = rows or max(3, int(abs(x1 - x0) / 0.11))
+    a = Vector((0, y_eave, z_eave))
+    b = Vector((0, y_ridge, z_ridge))
+    for i in range(n + 1):
+        x = x0 + (x1 - x0) * i / n
+        beam('tile_row', (x, a.y, a.z + 0.02), (x, b.y, b.z + 0.02), 0.045, mat, group=group, round_=True)
+
+
+def flowerbed(loc, length, axis='x', group='static', colors=('flower_r', 'flower_y', 'flower_w', 'flower_p')):
+    x, y, z = loc
+    sx, sy = (length, 0.22) if axis == 'x' else (0.22, length)
+    box('bed_edge', (sx + 0.04, sy + 0.04, 0.08), (x, y, z + 0.04), 'concrete', group=group, bevel=0.01)
+    box('bed_soil', (sx, sy, 0.06), (x, y, z + 0.06), 'soil', group=group, bevel=0)
+    n = int(length / 0.09)
+    for i in range(n):
+        u = -length / 2 + (i + 0.5) * length / n
+        px, py = (x + u, y + (rng.random() - 0.5) * 0.1) if axis == 'x' else (x + (rng.random() - 0.5) * 0.1, y + u)
+        ico('bush_s', 0.05, (px, py, z + 0.12), 'leaf', sub=1, group=group)
+        if i % 2 == 0:
+            ico('flower', 0.028, (px, py, z + 0.18), colors[i // 2 % len(colors)], sub=1, group=group)
+
+
+def hedge(loc, length, axis='x', group='static'):
+    x, y, z = loc
+    n = max(2, int(length / 0.22))
+    for i in range(n):
+        u = -length / 2 + (i + 0.5) * length / n
+        px, py = (x + u, y) if axis == 'x' else (x, y + u)
+        ico('hedge', 0.15, (px, py, z + 0.14), 'leaf_dark' if i % 2 else 'leaf', sub=1, scale=(1.1, 1.0, 0.9), group=group)
+
+
+def lamp_post(loc, group='static', glow='lamp'):
+    x, y, z = loc
+    cyl('lamp_pole', 0.022, 0.75, (x, y, z + 0.375), 'black', verts=8, group=group)
+    cyl('lamp_base', 0.05, 0.05, (x, y, z + 0.025), 'black', verts=8, group=group)
+    box('lamp_head', (0.1, 0.1, 0.05), (x, y, z + 0.78), 'black', group=group, bevel=0.01)
+    sphere('lamp_bulb', 0.04, (x, y, z + 0.74), glow, seg=10, rings=6, group=group)
+
+
+def bike(loc, rot=0.0, color='flower_r', group='static'):
+    x, y, z = loc
+    for s in (-1, 1):
+        dx, dy = math.cos(rot) * s * 0.12, math.sin(rot) * s * 0.12
+        torus('wheel', 0.07, 0.008, (x + dx, y + dy, z + 0.075), 'black', rot=(math.pi / 2, 0, rot), group=group, major=16, minor=4)
+    beam('frame_a', (x - math.cos(rot) * 0.12, y - math.sin(rot) * 0.12, z + 0.075), (x, y, z + 0.16), 0.012, color, group=group)
+    beam('frame_b', (x + math.cos(rot) * 0.12, y + math.sin(rot) * 0.12, z + 0.075), (x, y, z + 0.16), 0.012, color, group=group)
+    box('seat', (0.06, 0.03, 0.015), (x - math.cos(rot) * 0.03, y - math.sin(rot) * 0.03, z + 0.18), 'black', rot=(0, 0, rot), group=group, bevel=0)
+
+
+def detail_materials():
+    material('flower_r', srgb('#ff6b6b'), rough=0.7)
+    material('flower_p', srgb('#ff9ec4'), rough=0.7)
+    material('flower_w', srgb('#ffffff'), rough=0.7)
+    if 'flower_y' not in MATS:
+        material('flower_y', srgb('#ffd35a'), rough=0.7)

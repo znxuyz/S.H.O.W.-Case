@@ -21,6 +21,7 @@ OUT = sys.argv[-1] if sys.argv[-1].endswith('.glb') else 'hcrs.glb'
 kit.reset()
 kit.standard_materials()
 kit.nature_materials()
+kit.detail_materials()
 
 BLUE = '#3563e9'
 ROOMS = [('電腦教室', '#4f86f7'), ('視聽教室', '#9b6ce0'), ('自然教室', '#36b37e'), ('美勞教室', '#f29b30'),
@@ -141,11 +142,72 @@ for s in (-1, 1):
 label_block('pigeon_form', (0.12, 0.01, 0.15), (PX + 0.33, PY, PZ - 0.05), 'form', bevel=0.002, face='front', rot=(0, 0, math.pi / 2), group='Spin0')
 
 # 植栽與路燈
-for (x, y, s) in [(-1.75, -1.75, 0.6), (1.75, -1.7, 0.55), (-1.78, 0.2, 0.5), (1.78, 0.25, 0.55)]:
-    kit.tree((x, y, 0), s=s)
-for (x, y) in [(-1.45, -0.2), (1.45, -0.2)]:
-    cyl('lamp_pole', 0.02, 0.6, (x, y, 0.3), 'chair', verts=8)
-    kit.sphere('lamp_bulb', 0.05, (x, y, 0.63), 'screen', seg=10, rings=6)
+# ── 校舍外觀細節：側牆窗、屋瓦、屋簷、雨遮 ──
+for f in range(2):
+    z = 0.08 + f * FH + FH / 2 + 0.02
+    for side in (-1, 1):
+        xw = SX + side * (W / 2 + 0.005)
+        for k in range(2):
+            kit.window_frame((xw, SY - 0.28 + k * 0.56, z), 0.34, 0.3, face='+x' if side > 0 else '-x', frame='wall_trim', glass='glass')
+    box('canopy', (W + 0.06, 0.18, 0.025), (SX, SY - D / 2 - 0.09, 0.08 + f * FH + FH - 0.03), 'roof_dark', bevel=0.004)
+# 屋瓦（前後兩面）
+RH = 0.42 * 0.72
+kit.roof_tiles(SX - W / 2 - 0.1, SX + W / 2 + 0.1, SY - D / 2 - 0.12, SY, RZ + 0.06, RZ + 0.06 + RH, 'roof_dark', rows=30)
+kit.roof_tiles(SX - W / 2 - 0.1, SX + W / 2 + 0.1, SY + D / 2 + 0.12, SY, RZ + 0.06, RZ + 0.06 + RH, 'roof_dark', rows=30)
+kit.beam('ridge', (SX - W / 2 - 0.15, SY, RZ + 0.08 + RH), (SX + W / 2 + 0.15, SY, RZ + 0.08 + RH), 0.07, 'wall_trim', round_=True)
+box('gutter', (W + 0.3, 0.05, 0.04), (SX, SY - D / 2 - 0.13, RZ + 0.05), 'chair', bevel=0)
+# 教室內：講桌、椅子
+for f in range(2):
+    z0 = 0.08 + f * FH
+    for r in range(4):
+        cx = SX - W / 2 + RW * (r + 0.5)
+        box('teacher_desk', (0.26, 0.12, 0.13), (cx + 0.15, SY + 0.33, z0 + 0.12), 'desk', bevel=0.006)
+        for row in range(2):
+            for col in (-1, 1):
+                box('chair_seat', (0.1, 0.08, 0.015), (cx + col * RW * 0.2, SY - 0.05 - row * 0.32, z0 + 0.12), 'chair', bevel=0)
+                box('chair_back', (0.1, 0.012, 0.08), (cx + col * RW * 0.2, SY - 0.09 - row * 0.32, z0 + 0.17), 'chair', bevel=0)
+
+# ── 校門與圍牆 ──
+GX, GY = -1.62, -1.25
+for dy in (-0.32, 0.32):
+    box('gate_pillar', (0.16, 0.16, 0.6), (GX, GY + dy, 0.3), 'wall_trim', bevel=0.02)
+    cyl('gate_lamp', 0.05, 0.05, (GX, GY + dy, 0.63), 'screen', verts=10)
+box('gate_beam', (0.12, 0.8, 0.12), (GX, GY, 0.66), 'roof', bevel=0.012)
+for k in range(6):
+    box('gate_bar', (0.02, 0.02, 0.38), (GX, GY - 0.22 + k * 0.088, 0.21), 'chair', bevel=0)
+kit.hedge((GX, GY + 1.25, 0), 1.6, axis='y')
+kit.hedge((GX, GY - 0.48, 0), 0.25, axis='y')
+
+# ── 花圃、樹、路燈、長椅、腳踏車、籃框 ──
+kit.flowerbed((SX - 0.6, SY - D / 2 - 0.3, 0), 1.5)
+kit.flowerbed((SX + 1.1, SY - D / 2 - 0.3, 0), 0.9)
+for (x, y, s, k) in [(-1.75, -1.75, 0.62, 'round'), (1.75, -1.7, 0.56, 'round'), (1.8, 0.25, 0.5, 'pine'), (1.78, 1.6, 0.48, 'round')]:
+    kit.tree((x, y, 0), s=s, kind=k)
+for (x, y) in [(-1.35, -0.25), (1.45, -0.25), (0.25, -1.9)]:
+    kit.lamp_post((x, y, 0), glow='screen')
+box('bike_rack', (0.8, 0.04, 0.12), (1.38, 0.2, 0.06), 'chair', bevel=0)
+for k, col in enumerate(['flower_r', 'roof', 'flower_y']):
+    kit.bike((1.13 + k * 0.25, 0.2, 0), rot=math.pi / 2, color=col)
+cyl('hoop_pole', 0.03, 0.9, (1.8, -1.1, 0.45), 'chair', verts=8)
+box('hoop_board', (0.04, 0.3, 0.2), (1.76, -1.1, 0.9), 'wall', bevel=0.004)
+kit.torus('hoop_ring', 0.07, 0.008, (1.68, -1.1, 0.82), 'flower_r', major=16, minor=4)
+for (x, y, r) in [(-0.4, -1.95, 0.0), (0.95, -1.95, 0.0)]:
+    box('bench_seat', (0.42, 0.13, 0.03), (x, y, 0.17), 'desk', bevel=0.004)
+    box('bench_back', (0.42, 0.025, 0.12), (x, y - 0.065, 0.25), 'desk', bevel=0.004)
+    for dx in (-0.17, 0.17):
+        box('bench_leg', (0.025, 0.12, 0.16), (x + dx, y, 0.08), 'chair', bevel=0)
+
+# ── 月曆廣場：已借用日以 3D 色塊浮起 ──
+CAL_X, CAL_Y, CAL_W, CAL_D = SX - 0.1, -0.85, 2.6, 2.2
+booked = {3: 0, 8: 1, 9: 2, 15: 0, 17: 7, 22: 1, 24: 0, 29: 2, 11: 4, 26: 5}
+for c in range(35):
+    day = c - 5
+    if day in booked:
+        u = (12 + (c % 7) * 96 + 44) / 700
+        v = 1 - (130 + (c // 7) * 92 + 42) / 600
+        x = CAL_X - CAL_W / 2 + u * CAL_W
+        y = CAL_Y - CAL_D / 2 + v * CAL_D
+        box('booked_tile', (0.3, 0.26, 0.05), (x, y, 0.055), f'room_{booked[day]}', bevel=0.012)
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'school')

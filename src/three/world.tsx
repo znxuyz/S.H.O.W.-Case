@@ -30,7 +30,7 @@ export interface WorldStyle {
 }
 
 const CAMPUS: WorldStyle = {
-  skyTop: '#7fb6ef', skyBottom: '#f6efe2', fog: '#e9eef2', fogNear: 22, fogFar: 62, ground: '#9cc97a', sparkle: '#ffffff', bloom: 0.35,
+  skyTop: '#7fb6ef', skyBottom: '#f6efe2', fog: '#dfe9ef', fogNear: 26, fogFar: 95, ground: '#9cc97a', sparkle: '#ffffff', bloom: 0.35,
   ambient: '#ffffff', ambientI: 0.7, sun: '#fff1d6', sunI: 2.6, hemi: ['#cfe6ff', '#8b6b4a'], env: ['#ffffff', '#ffe8c4'], scenery: 'hills',
 };
 
@@ -291,16 +291,20 @@ function Constraints() {
 }
 
 /** 完整的世界：天空、霧、地面、遠景、粒子、環境反射 */
-export function World({ style, sparkles = true }: { style: WorldStyle; sparkles?: boolean }) {
+export function World({ style, sparkles = true, landscape = true }: { style: WorldStyle; sparkles?: boolean; landscape?: boolean }) {
   return (
     <>
       <SkyDome top={style.skyTop} bottom={style.skyBottom} />
       <fog attach="fog" args={[style.fog, style.fogNear, style.fogFar]} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -4, 0]} receiveShadow>
-        <circleGeometry args={[90, 48]} />
-        <meshStandardMaterial color={style.ground} roughness={1} />
-      </mesh>
-      <Scenery kind={style.scenery} />
+      {landscape && (
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -4, 0]} receiveShadow>
+            <circleGeometry args={[90, 48]} />
+            <meshStandardMaterial color={style.ground} roughness={1} />
+          </mesh>
+          <Scenery kind={style.scenery} />
+        </>
+      )}
       {sparkles && <Sparkles count={70} scale={[16, 9, 16]} position={[0, 2, 0]} size={3} speed={0.35} opacity={0.8} color={style.sparkle} />}
       <Environment resolution={128} frames={1} environmentIntensity={0.55}>
         <Lightformer form="rect" intensity={2.4} color={style.env[0]} position={[0, 6, -8]} scale={[12, 4, 1]} />

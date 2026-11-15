@@ -16,7 +16,7 @@ export function ProjectStage({ project, reducedMotion, active, onPick, markers }
       <CanvasBoundary>
         <Suspense fallback={<div className="stage-loading">建構箱庭中…</div>}>
           <DomainStage
-            kind={kind} accent={accent} model={project.model} projectId={project.id} reducedMotion={reducedMotion}
+            kind={kind} accent={accent} model={project.model} env={project.env} projectId={project.id} reducedMotion={reducedMotion}
             hotspots={project.hotspots} active={active} onPick={onPick} markers={markers}
           />
         </Suspense>

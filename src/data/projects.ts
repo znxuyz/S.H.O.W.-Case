@@ -74,6 +74,8 @@ export interface Project {
   showcase?: Showcase;
   building?: BuildingKind;
   model?: string;
+  /** （選填）介紹頁的 3D 環境模型（.glb，放在 public/models/），取代程式產生的遠景 */
+  env?: string;
   /** 3D 空間導覽熱點（建議 3–5 個） */
   hotspots?: Hotspot[];
   hidden?: boolean;
@@ -249,6 +251,7 @@ export const projects: Project[] = [
     status: 'live',
     note: '已於學校帳號正式上線使用',
     building: 'school',
+    env: 'models/env_hcrs.glb',
     model: 'models/hcrs.glb',
     hotspots: [
       {

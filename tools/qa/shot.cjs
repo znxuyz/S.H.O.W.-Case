@@ -7,7 +7,7 @@ const { launch, collect, OUT, BASE } = require('./_launch.cjs');
   const b = await launch();
   const p = await b.newPage({ viewport: { width: w, height: h } });
   const errs = collect(p);
-  await p.goto(BASE + (id ? '#/' + id : '')); await p.reload(); await p.waitForTimeout(9000);
+  await p.goto(BASE + (id ? '#/' + id : '')); await p.reload(); await p.waitForTimeout(+(process.env.QA_WAIT || 9000));
   await p.screenshot({ path: `${OUT}/${id || 'map'}-${w}.png`, timeout: 180000 });
   if (zoom) {
     await p.mouse.move(w * 0.72, h * 0.58);

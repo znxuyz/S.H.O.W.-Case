@@ -80,9 +80,14 @@ export default function App() {
             animate="animate"
             exit="exit"
           >
-            <Suspense fallback={<div className="absolute inset-0" style={{ background: theme.chrome }} />}>
-              <Bg accent={accent} active reducedMotion={reducedMotion} />
-            </Suspense>
+            {/* 大地圖與作品頁的背景都在 3D 舞台裡；這層只在載入 / 轉場瞬間露出，用主題色漸層即可 */}
+            {scene.kind === 'outro' ? (
+              <Suspense fallback={<div className="absolute inset-0" style={{ background: theme.chrome }} />}>
+                <Bg accent={accent} active reducedMotion={reducedMotion} />
+              </Suspense>
+            ) : (
+              <div className="absolute inset-0" style={{ background: `radial-gradient(120% 90% at 60% 40%, color-mix(in srgb, ${theme.chrome} 70%, #ffffff 10%), ${theme.chrome})` }} />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
