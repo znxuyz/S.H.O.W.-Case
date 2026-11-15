@@ -141,9 +141,82 @@ for i, n in enumerate(OTHERS):
 for (x, y, r) in [(1.75, 1.6, 0.16), (-1.7, 1.65, 0.13), (1.65, -1.7, 0.12), (-1.75, -1.55, 0.15)]:
     ico('shard', r, (x, y, r), 'spirit_violet', sub=0, scale=(0.6, 0.6, 1.6))
 
+# ── 細節：報價玉碑、神祇圖鑑、修為火盆與任務卷軸 ──
+material('jade', srgb('#5fb3a0'), rough=0.25, metal=0.1)
+material('flame', srgb('#ffcf6a'), emit=srgb('#ff9a3a'), emit_strength=6)
+material('flame_v', srgb('#d8b8ff'), emit=srgb('#b98cff'), emit_strength=5)
+material('codex_cover', srgb('#4b2a6a'), rough=0.6)
+
+
+def tex_quote():
+    W, H = 300, 420
+    img = Image.new('RGB', (W, H), (20, 52, 46))
+    d = ImageDraw.Draw(img)
+    f = ImageFont.truetype(kit.CJK_FONT, 40)
+    d.text((28, 18), '盤中報價', font=f, fill=(232, 255, 240))
+    for k, (code, chg, up) in enumerate([('2330', '▲1.85', 1), ('2454', '▲3.20', 1), ('2603', '▼0.95', 0), ('0050', '▲1.12', 1), ('2317', '▼0.38', 0)]):
+        y = 90 + k * 62
+        d.text((28, y), code, font=f, fill=(200, 240, 225))
+        d.text((150, y), chg, font=f, fill=(255, 110, 130) if up else (90, 230, 170))
+    return save('quote', np.asarray(img))
+
+
+def tex_codex():
+    W, H = 640, 400
+    img = Image.new('RGB', (W, H), (250, 238, 210))
+    d = ImageDraw.Draw(img)
+    d.line([(W / 2, 0), (W / 2, H)], fill=(180, 150, 110), width=4)
+    f = ImageFont.truetype(kit.CJK_FONT, 34)
+    d.text((40, 20), '神祇圖鑑', font=f, fill=(110, 50, 30))
+    d.text((360, 20), '294 / 294', font=f, fill=(110, 50, 30))
+    for k in range(12):
+        x = 40 + (k % 4) * 66 + (300 if k % 8 >= 4 else 0) * 0
+        x = (40 if k < 6 else 360) + (k % 3) * 82
+        y = 90 + ((k % 6) // 3) * 140
+        d.rounded_rectangle([x, y, x + 70, y + 110], radius=10, outline=(150, 100, 60), width=3, fill=(240, 222, 188))
+    return save('codex', np.asarray(img))
+
+
+def tex_scroll():
+    W, H = 200, 460
+    img = Image.new('RGB', (W, H), (246, 234, 206))
+    d = ImageDraw.Draw(img)
+    f = ImageFont.truetype(kit.CJK_FONT, 40)
+    for k, t in enumerate(['每日簽到', '今日任務', '修為 +120']):
+        for j, ch in enumerate(t):
+            d.text((130 - k * 60, 30 + j * 46), ch, font=f, fill=(120, 40, 30) if k < 2 else (190, 60, 40))
+    return save('scroll', np.asarray(img))
+
+
+material('quote', rough=0.4, tex=tex_quote(), emit=srgb('#ffffff'), emit_strength=0.6, emit_tex=True)
+material('codex_pages', rough=0.8, tex=tex_codex())
+material('scroll', rough=0.85, tex=tex_scroll())
+# 報價玉碑（右前方）
+QX, QY = 1.5, -1.45
+box('stele_base', (0.5, 0.3, 0.12), (QX, QY, 0.06), 'violet', bevel=0.02)
+label_block('stele', (0.42, 0.1, 0.6), (QX, QY, 0.42), 'quote', bevel=0.02, face='front', rot=(0, 0, 0.3))
+cone('stele_cap', 0.36, 0.05, 0.12, (QX, QY, 0.78), 'gold', verts=4, rot=(0, 0, math.pi / 4 + 0.3))
+# 神祇圖鑑（左前方，攤開的書）
+CBX, CBY = -1.4, -1.45
+box('codex_stand', (0.12, 0.12, 0.3), (CBX, CBY, 0.15), 'violet', bevel=0.01)
+box('codex_cover', (0.66, 0.44, 0.04), (CBX, CBY, 0.33), 'codex_cover', rot=(0.35, 0, -0.25), bevel=0.01)
+label_block('codex_pages', (0.62, 0.4, 0.02), (CBX, CBY, 0.36), 'codex_pages', bevel=0, rot=(0.35, 0, -0.25))
+# 修為火盆（後方兩側）＋任務卷軸
+for k, (bx, by) in enumerate([(-1.6, 1.25), (1.25, 1.6)]):
+    cyl('brazier_leg', 0.05, 0.4, (bx, by, 0.2), 'gold', verts=6)
+    cyl('brazier_bowl', 0.2, 0.12, (bx, by, 0.44), 'gold', verts=12)
+    cone(f'flame_{k}', 0.15, 0.0, 0.4, (bx, by, 0.68), 'flame' if k == 0 else 'flame_v', verts=8, group=f'Pulse{k + 1}')
+SCX, SCY = -1.75, 0.3
+kit.beam('scroll_rod_t', (SCX, SCY - 0.14, 1.25), (SCX, SCY + 0.14, 1.25), 0.03, 'gold', round_=True)
+label_block('task_scroll', (0.02, 0.26, 0.6), (SCX, SCY, 0.92), 'scroll', bevel=0, rot=(0, 0, -math.pi / 2), face='front')
+kit.beam('scroll_rod_b', (SCX, SCY - 0.14, 0.6), (SCX, SCY + 0.14, 0.6), 0.03, 'gold', round_=True)
+kit.beam('scroll_pole', (SCX - 0.05, SCY, 0), (SCX - 0.05, SCY, 1.3), 0.025, 'violet')
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'altar')
 kit.pivot(kit.merge_group('Bob0', 'card'), 'Bob0', (0, -0.05, TOP + 0.42))
+for k, (bx, by) in enumerate([(-1.6, 1.25), (1.25, 1.6)]):
+    kit.pivot(kit.merge_group(f'Pulse{k + 1}', f'flame{k}'), f'Pulse{k + 1}', (bx, by, 0.5))
 kit.pivot(kit.merge_group('Billboard0', 'beast'), 'Billboard0', (0, 0, HZ))
 kit.pivot(kit.merge_group('Spin0', 'ringa'), 'Spin0', (0, 0, HZ - 0.55))
 kit.pivot(kit.merge_group('SpinR0', 'ringb'), 'SpinR0', (0, 0, HZ - 0.35))
