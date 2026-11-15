@@ -549,6 +549,34 @@ export const projects: Project[] = [
     status: 'live',
     note: '協助校內教師部署',
     building: 'kiosk',
+    env: 'models/env_passport.glb',
+    hotspots: [
+      {
+        title: '六個年級入口',
+        body: '一到六年級各有一座小島與一枚年級章；孩子點自己的年級就能直接進入對應的英聽練習頁面。',
+        at: [-1.35, 0.3, -1.05],
+      },
+      {
+        title: '英聽練習',
+        body: '每個年級的英聽題目都整理成網頁，戴上耳機就能練習聽力與跟讀。',
+        at: [0, 1.4, -0.2],
+      },
+      {
+        title: '低年級也能自己點',
+        body: '大大的按鈕、清楚的年級分類，不需要帳號或安裝任何東西，低年級孩子也能自己操作。',
+        at: [-0.6, 0.8, -0.25],
+      },
+      {
+        title: '在家也能練習',
+        body: '網頁 24 小時都能開啟，孩子回家用平板或電腦就能繼續練習，不受上課時間限制。',
+        at: [1.5, 0.0, -1.32],
+      },
+      {
+        title: '協助部署上線',
+        body: '老師做好了網頁，卻不知道怎麼發布到學校網站——我協助整理架構並部署到 GitHub Pages：純靜態、零伺服器成本，也交接了後續維護方式。',
+        at: [-1.35, 1.0, -1.45],
+      },
+    ],
     model: 'models/passport.glb',
     links: {
       demo: 'https://hresnoc-lang.github.io/115English-Learning-Passport/',

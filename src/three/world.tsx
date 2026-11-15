@@ -67,7 +67,7 @@ export const WORLD_BY_PROJECT: Record<string, Partial<WorldStyle>> = {
     ambient: '#ffe6c4', ambientI: 0.55, sun: '#ffe0b0', sunI: 2.2, hemi: ['#ffe6c4', '#3a2a1a'], env: ['#ffe6c4', '#9fd0ff'], scenery: 'desk',
   },
   passport: {
-    skyTop: '#5aa7ea', skyBottom: '#fff1e2', fog: '#f4f6fa', fogNear: 20, fogFar: 70, ground: '#ffffff', sparkle: '#ffffff', bloom: 0.35, scenery: 'clouds',
+    skyTop: '#4a9be6', skyBottom: '#ffe9d6', fog: '#e6eef8', fogNear: 30, fogFar: 110, ground: '#ffffff', sparkle: '#ffffff', bloom: 0.35, scenery: 'clouds',
   },
   tablet: {
     skyTop: '#06121f', skyBottom: '#123a4a', fog: '#0a2230', fogNear: 18, fogFar: 62, ground: '#0b2433', sparkle: '#9fe8ff', bloom: 1,

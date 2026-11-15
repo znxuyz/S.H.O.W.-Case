@@ -129,12 +129,40 @@ for s in (-1, 1):
     cyl('ear_cup', 0.13, 0.08, (HX + s * 0.32, HY, HZ - 0.08), 'headphone', rot=(0, math.pi / 2, 0), verts=20, group='Bob3')
     cyl('ear_pad', 0.11, 0.03, (HX + s * 0.27, HY, HZ - 0.08), 'headphone_pad', rot=(0, math.pi / 2, 0), verts=20, group='Bob3')
 
+# ── 細節：在家練習的小房子、GitHub Pages 雲端、聲波 ──
+kit.detail_materials()
+material('house_wall', srgb('#fff4e6'), rough=0.8)
+material('house_roof', srgb(PINK), rough=0.55)
+material('window_glow', srgb('#ffe7a8'), emit=srgb('#ffd27a'), emit_strength=3)
+material('cloud', srgb('#ffffff'), rough=0.9)
+material('wave', srgb('#7fd0ff'), emit=srgb('#5fb8ff'), emit_strength=2)
+material('pages_tag', rough=0.5, tex=kit.label_texture('ghp', 'GitHub Pages', '#24292f', size=(300, 90), font_size=40))
+material('upload', srgb('#36b37e'), emit=srgb('#36b37e'), emit_strength=1.5)
+HX2, HY2 = 1.5, 1.32
+box('home', (0.36, 0.3, 0.26), (HX2, HY2, 0.15), 'house_wall', bevel=0.01)
+cone('home_roof', 0.3, 0.0, 0.2, (HX2, HY2, 0.38), 'house_roof', verts=4, rot=(0, 0, math.pi / 4))
+box('home_win', (0.12, 0.012, 0.1), (HX2 - 0.07, HY2 - 0.156, 0.17), 'window_glow', bevel=0)
+box('home_door', (0.08, 0.012, 0.15), (HX2 + 0.09, HY2 - 0.156, 0.1), 'house_roof', bevel=0)
+kit.tree((HX2 + 0.32, HY2 + 0.1, 0.0), s=0.3)
+# GitHub Pages 雲端（浮在左上方）
+GCX, GCY, GCZ = -1.35, 1.45, 1.45
+for (dx, dz, r) in [(0, 0, 0.26), (0.24, -0.04, 0.2), (-0.24, -0.05, 0.2), (0.1, 0.12, 0.18)]:
+    kit.ico('gh_cloud', r, (GCX + dx, GCY, GCZ + dz), 'cloud', sub=2, scale=(1.2, 0.9, 0.85), group='Bob5')
+label_block('gh_tag', (0.42, 0.02, 0.12), (GCX, GCY - 0.24, GCZ - 0.22), 'pages_tag', bevel=0.004, face='front', group='Bob5')
+cone('upload_arrow', 0.1, 0.0, 0.14, (GCX + 0.55, GCY, GCZ - 0.25), 'upload', verts=4, rot=(0, 0, math.pi / 4), group='Bob5')
+box('upload_shaft', (0.06, 0.06, 0.22), (GCX + 0.55, GCY, GCZ - 0.42), 'upload', group='Bob5', bevel=0.01)
+# 聲波（耳機兩側的弧）
+for s in (-1, 1):
+    for k in range(3):
+        kit.torus('wave', 0.18 + k * 0.1, 0.01, (HX + s * 0.42, HY, HZ - 0.08), 'wave', rot=(0, math.pi / 2, 0), group='Bob3', major=24, minor=4)
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'book')
 for i, (x, y) in enumerate(SPOTS):
     kit.pivot(kit.merge_group(f'Billboard{i}', f'stamp{i}'), f'Billboard{i}', (x - 0.05, y, 0.68))
     kit.pivot(kit.merge_group(f'Lit_{i}', f'glow{i}'), f'Lit_{i}', (x, y, 0.21))
 kit.pivot(kit.merge_group('Spin0', 'planeA'), 'Spin0', (0, 0, 0))
+kit.pivot(kit.merge_group('Bob5', 'ghcloud'), 'Bob5', (GCX, GCY, GCZ))
 kit.pivot(kit.merge_group('SpinR0', 'planeB'), 'SpinR0', (0, 0, 0))
 for i in range(4):
     kit.pivot(kit.merge_group(f'Bob{i}', f'float{i}'), f'Bob{i}', (0, 0, 0))
