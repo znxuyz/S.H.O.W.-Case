@@ -10,9 +10,11 @@
 
 | 方式 | 動作 |
 |---|---|
-| 首頁拖曳 / 滾輪 | 旋轉 / 縮放 3D 群島 |
+| 首頁拖曳空白處 / 滾輪 | 旋轉 / 縮放 3D 群島 |
+| 首頁按住島嶼拖動 | 移動那座島，放開後帶慣性漂浮 |
 | 首頁點擊島嶼 | 鏡頭飛入該作品 |
-| 介紹頁右側拖曳 / 滾輪 | 360° 旋轉 / 縮放微縮箱庭 |
+| 介紹頁拖曳 / 滾輪 | 360° 旋轉 / 縮放微縮箱庭 |
+| 介紹頁點擊模型上的編號標記、或底部導覽列 | 鏡頭聚焦該部位並顯示功能說明（←/→ 切換、Esc 回全景） |
 | 右上「返回大地圖」 | 從作品縮小退回大地圖 |
 | 滾輪 / ↑ ↓ / PageUp PageDown / 空白鍵 | 上一個 / 下一個作品 |
 | 手機上下滑動 | 上一個 / 下一個作品 |
@@ -43,7 +45,12 @@
     repo: 'https://github.com/znxuyz/my-new-app',  // Source Code
   },
   showcase: { kind: 'image', src: 'media/my-new-app.webp', alt: '畫面說明', shape: 'wide' },
-  building: 'tower',                // 選填：大地圖上的建築造型（預設依 theme）
+  building: 'tower',                // 選填：沒有 .glb 時的程式箱庭造型（預設依 theme）
+  model: 'models/xxx.glb',          // 選填：Blender 精細模型
+  env: 'models/env_xxx.glb',        // 選填：介紹頁的 3D 環境
+  hotspots: [                       // 選填：3D 空間導覽（綁在模型部位上的功能說明）
+    { title: '功能名稱', body: '說明……', at: [x, y, z] },
+  ],
   hidden: false,                    // true = 暫時不顯示
 }
 ```
@@ -97,9 +104,9 @@ npm run build    # 產出 dist/
 `kit.tsx`（共用幾何與材質）、`dioramas.tsx`（各主題箱庭）、`world.tsx`（天空、地面、遠景、粒子、環境反射與光暈後製）、`MapWorld.tsx`（首頁群島）、`DomainStage.tsx`（介紹頁全螢幕 3D 舞台）。
 每個作品的全螢幕領域插畫在 `src/themes/<主題>/Background.tsx`，共用零件在 `src/themes/sceneKit.tsx`。
 
-### 精細模型（.glb）
+### 精細模型、3D 環境與首頁輕量版（.glb）
 作品可在 `projects.ts` 設定 `model: 'models/xxx.glb'`，以 Blender 建模（或 AI 生成）的精細箱庭取代程式建構版。
-目前《國小排課系統》已使用 Blender 程序化建模的「課表排列引擎」，建模腳本與流程見 `tools/blender/`。
+10 個作品都有 Blender 程序化建模的主模型（`build_<id>.py`）與 3D 環境（`build_env_<id>.py`），首頁使用 `tools/blender/build_map_lod.sh` 產生的輕量版（`models/map/`）。流程見 `tools/blender/README.md`，長期升級進度見 `UPGRADE_ROADMAP.md`。
 
 ### 效能原則
 - 不使用 `filter` / `mix-blend-mode`，光影用漸層與 `box-shadow`。

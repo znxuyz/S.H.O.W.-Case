@@ -116,7 +116,7 @@ export function WorldFragments() {
     return Array.from({ length: 16 }, (_, i) => {
       const a = (i / 16) * Math.PI * 2 + rnd() * 0.2;
       const r = 78 + rnd() * 22;
-      return { p: new THREE.Vector3(Math.cos(a) * r, -30 + rnd() * 20, Math.sin(a) * r), s: 1.4 + rnd() * 1.4, kind: kinds[i % kinds.length], phase: rnd() * 6 };
+      return { p: new THREE.Vector3(Math.cos(a) * r, -42 + rnd() * 14, Math.sin(a) * r), s: 1.4 + rnd() * 1.4, kind: kinds[i % kinds.length], phase: rnd() * 6 };
     });
   }, []);
   const rock = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2a2238', roughness: 1, flatShading: true, fog: false }), []);

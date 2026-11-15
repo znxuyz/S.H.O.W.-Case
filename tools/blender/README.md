@@ -39,3 +39,10 @@ npx gltf-transform optimize /tmp/scheduling-raw.glb public/models/scheduling.glb
 ## 接上網站
 
 在 `src/data/projects.ts` 該作品加上 `model: 'models/<檔名>.glb'`。載入期間會先顯示程式建構版。
+
+## 3D 環境與首頁輕量版
+
+- `build_env_<id>.py`：介紹頁的遠景環境（地形用頂點色、共用零件在 `env.py`），在 `projects.ts` 以 `env` 指定。
+- `build_map_lod.sh [id ...]`：從主模型產生首頁用的簡化版（128px 貼圖）到 `public/models/map/`。
+- 預算：主模型 ≤ 15k 面、環境 ≤ 20k 面；遠景樹木用 `kit.tree(..., detail=0/1)`。
+- 鏡頭在 Blender 的 (+x, -y) 方向，那一側近處不要放高大物件，以免擋住主島。
