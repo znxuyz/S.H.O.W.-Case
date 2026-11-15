@@ -181,6 +181,34 @@ kit.ico('clock_pin', 0.05, (CLX, CLY - 0.08, CLZ), 'brass', sub=1)
 beam('clock_stem', (CLX, CLY, CLZ - 0.66), (CLX, CLY, 0.0), 0.06, 'brass_dark')
 box('clock_base', (0.4, 0.2, 0.08), (CLX, CLY - 0.05, 0.04), 'brass', bevel=0.015)
 
+# ───────────────────────── 細節：配課棋子、兩階段托盤、零衝突信號燈 ─────────────────────────
+material('pawn_t', srgb('#4f86f7'), rough=0.35)
+material('pawn_h', srgb('#e45b5b'), rough=0.35)
+material('meter_bg', srgb('#22324a'), rough=0.6)
+material('meter_ok', srgb('#36b37e'), emit=srgb('#36b37e'), emit_strength=1.2)
+material('meter_hi', srgb('#f29b30'), emit=srgb('#f29b30'), emit_strength=1.2)
+material('ok_lamp', srgb('#7dffb0'), emit=srgb('#3aff8a'), emit_strength=5)
+material('tray', srgb('#1a2c44'), rough=0.4, metal=0.5)
+material('phase1', rough=0.5, tex=kit.label_texture('ph1', 'Phase 1\n科任先排', '#c9a24a', fg=(40, 30, 10), size=(240, 140), font_size=40))
+material('phase2', rough=0.5, tex=kit.label_texture('ph2', 'Phase 2\n導師接手', '#7fc4ff', fg=(10, 30, 50), size=(240, 140), font_size=40))
+material('zero', rough=0.4, tex=kit.label_texture('zero', '硬衝突 0', '#0d2a52', fg=(127, 255, 176), size=(240, 100), font_size=46), emit=srgb('#ffffff'), emit_strength=0.8, emit_tex=True)
+for k in range(5):
+    x, y = -1.35 + k * 0.32, -1.68
+    m = 'pawn_t' if k % 2 == 0 else 'pawn_h'
+    kit.cone('pawn_body', 0.09, 0.04, 0.2, (x, y, 0.1), m, verts=16)
+    kit.sphere('pawn_head', 0.055, (x, y, 0.25), m, seg=12, rings=8)
+    box('meter_bg', (0.05, 0.02, 0.3), (x + 0.12, y, 0.15), 'meter_bg', bevel=0)
+    h = [0.18, 0.24, 0.29, 0.14, 0.22][k]
+    box('meter_fill', (0.04, 0.025, h), (x + 0.12, y - 0.003, h / 2 + 0.005), 'meter_hi' if h > 0.27 else 'meter_ok', bevel=0)
+for k, (x, m) in enumerate([(0.55, 'phase1'), (1.2, 'phase2')]):
+    box('tray', (0.55, 0.36, 0.06), (x, -1.68, 0.03), 'tray', bevel=0.01)
+    for j in range(3):
+        label_block(f'tray_block_{k}_{j}', (0.14, 0.11, 0.07), (x - 0.17 + j * 0.17, -1.66, 0.1), f"subj_{['體育', '音樂', '美勞'][j] if k == 0 else ['國語', '數學', '社會'][j]}", bevel=0.01)
+    label_block(f'tray_label_{k}', (0.42, 0.02, 0.24), (x, -1.88, 0.16), m, bevel=0.004, face='front')
+cyl('beacon_pole', 0.025, 0.6, (1.85, -1.2, 0.3), 'steel_dark', verts=8)
+kit.sphere('beacon_lamp', 0.07, (1.85, -1.2, 0.64), 'ok_lamp', seg=14, rings=8, group='Pulse0')
+label_block('zero_sign', (0.36, 0.02, 0.15), (1.85, -1.32, 0.42), 'zero', bevel=0.004, face='front')
+
 # ───────────────────────── 合併、設定樞紐、匯出 ─────────────────────────
 kit.merge_group('static', 'engine')
 pivots = {}
@@ -192,6 +220,7 @@ for i, (d, p) in enumerate(DROPS):
     x, y = cells[(d, p)]
     kit.pivot(kit.merge_group(f'Drop_{i}', f'drop{i}'), f'Drop_{i}', (x, y, 0.55))
 # 機械臂頭掛在橫樑下，跟著橫樑移動
+kit.pivot(kit.merge_group('Pulse0', 'beacon'), 'Pulse0', (1.85, -1.2, 0.64))
 head, bridge = pivots['GantryHead'], pivots['GantryBridge']
 head.parent = bridge
 head.matrix_parent_inverse = bridge.matrix_world.inverted()
