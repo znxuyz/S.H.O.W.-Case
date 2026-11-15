@@ -70,7 +70,7 @@ function Island({
   return (
     <group ref={ref} position={pos} onPointerOver={over} onPointerOut={out} onClick={click}>
       <group rotation={[0, rotY, 0]}>
-        <Diorama kind={kind} accent={accent} />
+        <Diorama kind={kind} accent={accent} model={project.model} />
       </group>
       {hovered && (
         <>

@@ -11,6 +11,7 @@
  *  showcase  （選填）作品視覺：圖片或內建的動態示意畫面
  *  status    live 上線中 / dev 開發中 / maintenance 維修中 / archived 已停用
  *  hidden    true = 暫不在網站上顯示（資料保留，日後改回 false 即可）
+ *  model     （選填）精細 3D 模型檔（.glb，放在 public/models/），有設定就取代程式建構的箱庭
  *  building  （選填）大地圖上的微縮建築造型，預設依 theme 決定
  *            tower 全息高塔 / altar 懸浮祭壇 / pagoda 飛簷重樓 / treehouse 巨木樹屋 /
  *            school 鐘樓學校 / hall 列柱大樓 / library 圓頂圖書館 / kiosk 地球儀郵亭 / workshop 施工塔吊
@@ -62,6 +63,7 @@ export interface Project {
   };
   showcase?: Showcase;
   building?: BuildingKind;
+  model?: string;
   hidden?: boolean;
 }
 
@@ -252,6 +254,7 @@ export const projects: Project[] = [
     theme: 'blueprint',
     category: 'campus',
     status: 'dev',
+    model: 'models/scheduling.glb',
     links: {
       repo: 'https://github.com/znxuyz/Class-Scheduling-System',
     },

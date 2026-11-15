@@ -3,12 +3,14 @@
  * 全部以基礎幾何體程序化堆疊而成（零外部模型）。
  * lights=true 時加入窗戶/燈籠的暖色點光源（介紹頁使用）；大地圖上關閉以維持效能。
  */
-import { useRef, type ReactNode } from 'react';
+import { lazy, Suspense, useRef, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { Group } from 'three';
 import { Bench, Fence, Gable, GableTiles, Hip, Lamp, P, Plinth, Tree, Win } from './kit';
 
 import type { BuildingKind } from './kinds';
+
+const ModelDiorama = lazy(() => import('./ModelDiorama'));
 
 type V3 = [number, number, number];
 
@@ -441,7 +443,22 @@ function Workshop({ lights }: { lights: boolean }) {
   );
 }
 
-export function Diorama({ kind, accent, lights = false }: { kind: BuildingKind; accent: string; lights?: boolean }) {
+export function Diorama({ kind, accent, lights = false, model }: { kind: BuildingKind; accent: string; lights?: boolean; model?: string }) {
+  // 有精細模型就使用；載入期間先顯示程式建構版
+  if (model) {
+    return (
+      <Suspense fallback={<Diorama kind={kind} accent={accent} lights={lights} />}>
+        <ModelDiorama url={model} />
+        {lights && kind === 'workshop' && (
+          <>
+            <pointLight color="#ffd27a" intensity={4} distance={4} position={[-1.75, 1.2, -0.2]} />
+            <pointLight color="#ffd27a" intensity={4} distance={4} position={[1.78, 1.2, -0.35]} />
+            <pointLight color="#ffc870" intensity={3} distance={3} position={[-1.32, 0.5, 1.6]} />
+          </>
+        )}
+      </Suspense>
+    );
+  }
   switch (kind) {
     case 'tower': return <Tower lights={lights} />;
     case 'altar': return <Altar lights={lights} />;

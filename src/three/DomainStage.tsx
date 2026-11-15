@@ -25,7 +25,7 @@ function ViewShift() {
   return null;
 }
 
-export default function DomainStage({ kind, accent, reducedMotion }: { kind: BuildingKind; accent: string; reducedMotion: boolean }) {
+export default function DomainStage({ kind, accent, model, reducedMotion }: { kind: BuildingKind; accent: string; model?: string; reducedMotion: boolean }) {
   const W = WORLD[kind];
   const fx = allowEffects();
   // 直式螢幕畫面窄，鏡頭拉遠讓整座箱庭入鏡
@@ -57,7 +57,7 @@ export default function DomainStage({ kind, accent, reducedMotion }: { kind: Bui
         shadow-camera-far={34}
       />
       <group position={[0, -0.4, 0]}>
-        <Diorama kind={kind} accent={accent} lights />
+        <Diorama kind={kind} accent={accent} model={model} lights />
       </group>
       <ContactShadows position={[0, -3.98, 0]} scale={18} blur={2.6} far={7} opacity={0.55} resolution={512} color="#000000" />
       <ViewShift />

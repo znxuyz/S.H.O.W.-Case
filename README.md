@@ -97,6 +97,10 @@ npm run build    # 產出 dist/
 `kit.tsx`（共用幾何與材質）、`dioramas.tsx`（各主題箱庭）、`world.tsx`（天空、地面、遠景、粒子、環境反射與光暈後製）、`MapWorld.tsx`（首頁群島）、`DomainStage.tsx`（介紹頁全螢幕 3D 舞台）。
 每個作品的全螢幕領域插畫在 `src/themes/<主題>/Background.tsx`，共用零件在 `src/themes/sceneKit.tsx`。
 
+### 精細模型（.glb）
+作品可在 `projects.ts` 設定 `model: 'models/xxx.glb'`，以 Blender 建模（或 AI 生成）的精細箱庭取代程式建構版。
+目前《國小排課系統》已使用 Blender 程序化建模版本，建模腳本與流程見 `tools/blender/`。
+
 ### 效能原則
 - 不使用 `filter` / `mix-blend-mode`，光影用漸層與 `box-shadow`。
 - 持續動畫只動 `transform` / `opacity`（GPU 合成，不重繪）。

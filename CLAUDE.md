@@ -14,5 +14,6 @@
   - `dioramas.tsx`：各主題的微縮箱庭；`world.tsx`：天空/地面/遠景/粒子/環境反射/後製
   - `MapWorld.tsx`：首頁 3D 群島；`DomainStage.tsx`：介紹頁全螢幕 3D 舞台（文字懸浮在左側）
   - R3F `<Canvas>` 一律加 `resize={{ offsetSize: true }}`：轉場會對外層做 CSS scale，用 getBoundingClientRect 量測會讓畫布尺寸錯誤而黑屏
+- 精細模型：`public/models/*.glb`，由 `tools/blender/` 的 bpy 腳本產生（流程見該資料夾 README），在 `projects.ts` 以 `model` 欄位指定
 - 首頁 2D 疊層：`src/map/`；領域背景插畫：`src/themes/<主題>/Background.tsx`
 - 效能：Canvas `dpr={[1, 1.5]}`、幾何與材質共用、群島不使用點光源、觸控裝置關閉後製；2D 部分不用 filter / mix-blend-mode。
