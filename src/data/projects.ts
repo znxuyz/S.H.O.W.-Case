@@ -603,6 +603,29 @@ export const projects: Project[] = [
     status: 'live',
     note: '已於學校帳號正式上線使用',
     building: 'school',
+    env: 'models/env_tablet.glb',
+    hotspots: [
+      {
+        title: '文件下載專區',
+        body: '學校平板載具計畫的所有文件集中在一個頁面：校務規範、導師必備、表單下載、學生宣導，一處就能找到。',
+        at: [0.05, 0.2, 0.35],
+      },
+      {
+        title: '分類卡片',
+        body: '文件依類別整理成卡片，每類的文件數量自動統計；新增分類只要在設定裡加一筆。',
+        at: [0.25, 2.1, -0.45],
+      },
+      {
+        title: 'PDF ＋ Word 雙格式',
+        body: '每份文件都提供 PDF 與可編輯的 Word 兩種格式下載，老師能直接修改表單再使用。',
+        at: [-1.1, 1.35, -0.9],
+      },
+      {
+        title: '改一行就上線',
+        body: '不需要工程背景：把檔案上傳到 files 資料夾、在設定裡複製一行改成新文件，1～2 分鐘後網頁就會更新，並附完整維護說明。',
+        at: [1.55, 0.35, 1.45],
+      },
+    ],
     model: 'models/tablet.glb',
     links: {
       demo: 'https://hresnoc-lang.github.io/hres-tablet/',

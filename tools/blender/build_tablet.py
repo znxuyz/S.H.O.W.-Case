@@ -97,6 +97,25 @@ kit.tree((-1.6, 1.55, 0.16), s=0.45)
 cyl('mug', 0.12, 0.2, (1.6, 1.55, 0.1), 'shelf', verts=20, bevel=0.01)
 kit.torus('mug_handle', 0.07, 0.018, (1.72, 1.55, 0.1), 'shelf', rot=(math.pi / 2, 0, 0), major=20, minor=6)
 
+# ── 細節：維護說明書、文件數計數器、上傳托盤、耳機與便利貼 ──
+kit.detail_materials()
+material('manual', rough=0.6, tex=kit.label_texture('manual', '維護說明\n改一行就上線', '#c2410c', size=(240, 300), font_size=38))
+material('counter', rough=0.4, tex=kit.label_texture('count', '文件 48 份', '#0b2433', fg=(159, 232, 255), size=(260, 100), font_size=46), emit=srgb('#ffffff'), emit_strength=0.8, emit_tex=True)
+material('tray_m', srgb('#c7ccd4'), rough=0.3, metal=0.8)
+material('note', srgb('#ffe27a'), rough=0.8)
+# 維護說明書（右前方立著）
+kit.label_block('manual', (0.36, 0.05, 0.46), (1.55, -1.45, 0.24), 'manual', bevel=0.01, face='front', rot=(-0.2, 0, 0.35))
+# 文件數計數器（平板旁的小螢幕）
+box('counter_body', (0.5, 0.12, 0.22), (-1.45, -1.55, 0.13), 'bezel', rot=(0, 0, -0.3), bevel=0.02)
+kit.label_block('counter_screen', (0.44, 0.02, 0.17), (-1.43, -1.62, 0.14), 'counter', bevel=0, face='front', rot=(0, 0, -0.3))
+# 上傳托盤：一疊待上傳文件
+box('upload_tray', (0.5, 0.36, 0.05), (1.5, 0.75, 0.03), 'tray_m', bevel=0.01)
+for k in range(4):
+    kit.label_block(f'tray_doc_{k}', (0.2, 0.27, 0.012), (1.42 + k * 0.03, 0.75 + k * 0.01, 0.07 + k * 0.014), 'doc_pdf' if k % 2 else 'doc_word', bevel=0, rot=(0, 0, k * 0.08))
+# 便利貼
+for k in range(3):
+    box('sticky', (0.13, 0.13, 0.008), (-0.95 + k * 0.17, 0.95, 0.12), 'note', rot=(0, 0, k * 0.2 - 0.2), bevel=0)
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'desk')
 for i, (x, y, z) in enumerate(SHELVES):
