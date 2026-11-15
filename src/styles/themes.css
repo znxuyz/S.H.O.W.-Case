@@ -21,20 +21,15 @@
   --wm-accent: #22e4ff;
 }
 [data-theme='cyber'] .sc-title { text-shadow: 0 0 28px rgba(34, 228, 255, 0.55), 2px 0 0 rgba(255, 61, 242, 0.35), -2px 0 0 rgba(34, 228, 255, 0.35); }
-[data-theme='cyber'] .sc-copy { padding: clamp(1.2rem, 3vw, 2rem); background: linear-gradient(135deg, rgba(4, 20, 32, 0.65), rgba(4, 12, 24, 0.35)); border: 1px solid var(--line); backdrop-filter: blur(10px); clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px)); }
+[data-theme='cyber'] .sc-copy { padding: clamp(1.2rem, 3vw, 2rem); background: linear-gradient(135deg, rgba(4, 20, 32, 0.65), rgba(4, 12, 24, 0.35)); border: 1px solid var(--line); clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px)); }
 [data-theme='cyber'] .sc-btn { clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); text-transform: uppercase; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; }
 [data-theme='cyber'] .sc-btn-primary { box-shadow: none; }
-[data-theme='cyber'] .sc-btn-primary:hover { filter: brightness(1.15) drop-shadow(0 0 12px #22e4ff); }
+[data-theme='cyber'] .sc-btn-primary:hover { box-shadow: 0 0 22px #22e4ff; }
 .cyber-corners i { position: absolute; width: 14px; height: 14px; border-color: var(--accent); border-style: solid; border-width: 0; }
 .cyber-corners i:nth-child(1) { left: 6px; top: 6px; border-left-width: 2px; border-top-width: 2px; }
 .cyber-corners i:nth-child(2) { right: 30px; top: 6px; border-right-width: 2px; border-top-width: 2px; display: none; }
 .cyber-corners i:nth-child(3) { right: 6px; bottom: 6px; border-right-width: 2px; border-bottom-width: 2px; }
 .cyber-corners i:nth-child(4) { left: 30px; bottom: 6px; border-left-width: 2px; border-bottom-width: 2px; display: none; }
-.cyber-scanlines { pointer-events: none; background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px); mix-blend-mode: overlay; }
-.cyber-sweep { pointer-events: none; top: -10rem; background: linear-gradient(180deg, transparent, rgba(34, 228, 255, 0.07), transparent); animation: sweep 7s linear infinite; }
-@keyframes sweep { to { transform: translateY(calc(100vh + 10rem)); } }
-.cyber-reticle { animation: spin 60s linear infinite; }
-@keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
 /* ── 神話神獸 · Mythic ─────────────────────────────── */
 [data-theme='mythic'] {
@@ -48,18 +43,11 @@
 [data-theme='mythic'] .sc-title { font-family: 'Noto Serif TC', 'Cinzel', serif; font-weight: 900; color: #ffe3a6; text-shadow: 0 0 2px #fff4dc, 0 0 28px rgba(255, 170, 80, 0.65), 0 0 70px rgba(185, 140, 255, 0.45), 0 3px 0 #7a3a12; }
 [data-theme='mythic'] .sc-code { font-family: 'Cinzel', serif; letter-spacing: 0.2em; }
 [data-theme='mythic'] .sc-btn-secondary { border-color: #b98cff66; }
-.mythic-nebula {
-  background:
-    radial-gradient(35% 30% at 70% 30%, rgba(140, 70, 255, 0.35), transparent 70%),
-    radial-gradient(30% 35% at 20% 70%, rgba(255, 90, 120, 0.25), transparent 70%),
-    radial-gradient(25% 25% at 50% 50%, rgba(80, 200, 255, 0.15), transparent 70%);
-  filter: blur(40px); animation: aurora 30s ease-in-out infinite alternate;
-}
-.soul-rings { position: absolute; width: min(130%, 34rem); aspect-ratio: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; fill: none; }
+.soul-rings { animation: ring-spin 50s linear infinite; will-change: transform; position: absolute; width: min(130%, 34rem); aspect-ratio: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; fill: none; }
 .soul-rings circle { stroke-linecap: round; transform-origin: center; }
-.soul-rings circle:nth-child(1) { stroke: #ffc76b66; stroke-width: 1.2; stroke-dasharray: 2 10 30 10; animation: ring 40s linear infinite; }
-.soul-rings circle:nth-child(2) { stroke: #b98cff66; stroke-width: 2; stroke-dasharray: 60 20; animation: ring 28s linear infinite reverse; filter: drop-shadow(0 0 6px #b98cff); }
-.soul-rings circle:nth-child(3) { stroke: #7fd8ff55; stroke-width: 1; stroke-dasharray: 1 6; animation: ring 20s linear infinite; }
+.soul-rings circle:nth-child(1) { stroke: #ffc76b66; stroke-width: 1.2; stroke-dasharray: 2 10 30 10; }
+.soul-rings circle:nth-child(2) { stroke: #b98cff66; stroke-width: 2; stroke-dasharray: 60 20; }
+.soul-rings circle:nth-child(3) { stroke: #7fd8ff55; stroke-width: 1; stroke-dasharray: 1 6; }
 @keyframes ring { to { transform: rotate(360deg); } }
 
 /* ── 古典中式 · Oriental（玄漆描金）─────────────────── */
@@ -79,17 +67,6 @@
 @media (min-width: 1280px) { .oriental-vertical { display: flex; } }
 .vertical-text { writing-mode: vertical-rl; font-family: 'LXGW WenKai TC', serif; letter-spacing: 0.45em; font-size: 0.95rem; color: #e8c872b3; }
 .seal { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; writing-mode: vertical-rl; font-family: 'Noto Serif TC', serif; font-weight: 900; font-size: 0.95rem; line-height: 1; color: #f4dfc0; background: #b5432f; border-radius: 4px; box-shadow: inset 0 0 0 2px #b5432f, inset 0 0 0 3px #f4dfc066; transform: rotate(-4deg); }
-.oriental-moon { background: radial-gradient(circle at 40% 40%, #fff3d0, #e8c872 55%, #9b7a3f); box-shadow: 0 0 80px 20px rgba(232, 200, 114, 0.25), 0 0 200px 60px rgba(232, 200, 114, 0.12); opacity: 0.85; }
-.oriental-mist { background: radial-gradient(ellipse at center, rgba(239, 227, 200, 0.12), transparent 70%); filter: blur(20px); }
-.animate-mist { animation: mist 40s ease-in-out infinite alternate; }
-.animate-mist-rev { animation: mist 50s ease-in-out infinite alternate-reverse; }
-@keyframes mist { from { transform: translateX(0); } to { transform: translateX(45vw); } }
-.oriental-drift-0 { animation: drift 60s ease-in-out infinite alternate; }
-.oriental-drift-1 { animation: drift 45s ease-in-out infinite alternate-reverse; }
-.oriental-drift-2 { animation: drift 35s ease-in-out infinite alternate; }
-@keyframes drift { from { transform: translateX(-20px); } to { transform: translateX(20px); } }
-.oriental-ridge { stroke-dasharray: 2400; stroke-dashoffset: 2400; animation: ridge 3.5s 0.4s cubic-bezier(.65,0,.35,1) forwards; }
-@keyframes ridge { to { stroke-dashoffset: 0; } }
 
 /* ── 守護獸森林 · Guardian ────────────────────────── */
 [data-theme='guardian'] {
@@ -105,11 +82,6 @@
 [data-theme='guardian'] .sc-btn-primary { box-shadow: 0 5px 0 #b06d00, 0 12px 30px -8px #ffb547; }
 [data-theme='guardian'] .sc-btn-primary:hover { transform: translateY(-3px); box-shadow: 0 8px 0 #b06d00, 0 18px 40px -8px #ffb547; }
 [data-theme='guardian'] .sc-btn-primary:active { transform: translateY(3px); box-shadow: 0 2px 0 #b06d00; }
-.guardian-rays { background: conic-gradient(from 180deg at 50% 0%, transparent 160deg, rgba(200, 255, 220, 0.07) 168deg, transparent 176deg, rgba(200, 255, 220, 0.05) 184deg, transparent 192deg, rgba(200, 255, 220, 0.06) 198deg, transparent 206deg); animation: rays 12s ease-in-out infinite alternate; transform-origin: 50% 0; }
-@keyframes rays { from { opacity: 0.6; transform: translateX(-50%) rotate(-4deg); } to { opacity: 1; transform: translateX(-50%) rotate(4deg); } }
-.guardian-sway { transform-origin: 0% 100%; animation: sway 7s ease-in-out infinite alternate; }
-.guardian-sway-rev { transform-origin: 100% 100%; animation: sway 8s ease-in-out infinite alternate-reverse; }
-@keyframes sway { from { rotate: -2deg; } to { rotate: 2deg; } }
 
 /* ── 校園文具 · Campus（淺色）──────────────────────── */
 [data-theme='campus'] {
@@ -126,19 +98,6 @@
 [data-theme='campus'] .sc-status-dev { color: #1d4ed8; }
 [data-theme='campus'] .sc-copy { transition: color 0.5s; }
 [data-theme='campus'] .sc-btn-primary { box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 60%, black), 0 14px 30px -12px var(--accent); }
-.campus-paper {
-  background-color: #f6f2ea;
-  background-image: linear-gradient(#1f24300b 1px, transparent 1px), linear-gradient(90deg, #1f24300b 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-.campus-blob { border-radius: 50%; background: radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--accent) 35%, transparent), transparent 65%); filter: blur(30px); opacity: 0.55; transition: background 0.9s ease; }
-.campus-blob-2 { background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent) 22%, #ffd36b 30%), transparent 65%); opacity: 0.45; }
-.animate-blob { animation: blob 18s ease-in-out infinite alternate; }
-.animate-blob-rev { animation: blob 22s ease-in-out infinite alternate-reverse; }
-@keyframes blob { from { transform: translate(0, 0) scale(1); } to { transform: translate(-6%, 6%) scale(1.12); } }
-.campus-doodle { stroke: var(--accent); opacity: 0.35; transition: stroke 0.9s; }
-.campus-doodle path { stroke-dasharray: 600; stroke-dashoffset: 600; animation: doodle 2.4s 0.6s ease-out forwards; }
-@keyframes doodle { to { stroke-dashoffset: 0; } }
 
 /* ── 工程藍圖 · Blueprint ───────────────────────── */
 [data-theme='blueprint'] {
@@ -154,13 +113,5 @@
 @keyframes caret { 50% { opacity: 0; } }
 [data-theme='blueprint'] .sc-copy { padding-left: 1.4rem; border-left: 1px dashed var(--line-strong); }
 [data-theme='blueprint'] .sc-btn-primary, [data-theme='blueprint'] .sc-btn-disabled { font-family: 'JetBrains Mono', monospace; }
-.blueprint-paper {
-  background-color: #0b2a55;
-  background-image:
-    linear-gradient(#cfe3ff26 1px, transparent 1px), linear-gradient(90deg, #cfe3ff26 1px, transparent 1px),
-    linear-gradient(#cfe3ff10 1px, transparent 1px), linear-gradient(90deg, #cfe3ff10 1px, transparent 1px);
-  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
-}
-.bp-draw { stroke-dashoffset: 1200; animation: bpdraw 3s 0.5s ease-out forwards; }
-@keyframes bpdraw { to { stroke-dashoffset: 0; } }
-.bp-spin { transform-origin: 1280px 200px; animation: ring 50s linear infinite; }
+
+@keyframes ring-spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }

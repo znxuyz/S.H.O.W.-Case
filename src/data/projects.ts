@@ -23,7 +23,7 @@ import type { BuildingKind } from '../map/buildings';
 export type ProjectStatus = 'live' | 'dev' | 'maintenance' | 'archived';
 
 export type Showcase =
-  | { kind: 'image'; src: string; alt: string; shape?: 'wide' | 'tall' }
+  | { kind: 'image'; src: string; alt: string; shape?: 'wide' | 'tall'; w: number; h: number }
   | { kind: 'pets'; pets: string[] }
   | { kind: 'heatmap' }
   | { kind: 'stages' }
@@ -110,7 +110,7 @@ export const projects: Project[] = [
       demo: 'https://stockgame-692.pages.dev',
       repo: 'https://github.com/znxuyz/StockGame',
     },
-    showcase: { kind: 'image', src: 'media/stockgame-cover.webp', alt: '神獸股市主視覺：巨大神獸展翼於燈火仙城之上', shape: 'tall' },
+    showcase: { kind: 'image', src: 'media/stockgame-cover.webp', alt: '神獸股市主視覺：巨大神獸展翼於燈火仙城之上', shape: 'tall', w: 640, h: 1142 },
   },
   {
     id: 'tianmu',
@@ -134,7 +134,7 @@ export const projects: Project[] = [
       demoLabel: '下載安裝',
       repo: 'https://github.com/znxuyz/TianMu-Island',
     },
-    showcase: { kind: 'image', src: 'media/tianmu-poster.webp', alt: '天幕島導覽影片畫面：螢幕頂端的玄黑膠囊', shape: 'wide' },
+    showcase: { kind: 'image', src: 'media/tianmu-poster.webp', alt: '天幕島導覽影片畫面：螢幕頂端的玄黑膠囊', shape: 'wide', w: 1280, h: 720 },
   },
   {
     id: 'guardian',
@@ -182,7 +182,7 @@ export const projects: Project[] = [
       demo: 'https://znxuyz.github.io/C.A.R.E.-System/',
       repo: 'https://github.com/znxuyz/C.A.R.E.-System',
     },
-    showcase: { kind: 'image', src: 'media/care-dashboard.webp', alt: 'C.A.R.E. 生教組儀表板（深色模式）', shape: 'wide' },
+    showcase: { kind: 'image', src: 'media/care-dashboard.webp', alt: 'C.A.R.E. 生教組儀表板（深色模式）', shape: 'wide', w: 1100, h: 1229 },
   },
   {
     id: 'admin',
@@ -305,7 +305,7 @@ export const projects: Project[] = [
       demo: 'https://hresnoc-lang.github.io/hres-tablet/',
       repo: 'https://github.com/hresnoc-lang/hres-tablet',
     },
-    showcase: { kind: 'image', src: 'media/tablet.webp', alt: '平板載具計畫文件下載專區首頁', shape: 'wide' },
+    showcase: { kind: 'image', src: 'media/tablet.webp', alt: '平板載具計畫文件下載專區首頁', shape: 'wide', w: 1280, h: 800 },
   },
   {
     id: 'scoreboard',

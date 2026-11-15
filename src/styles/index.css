@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './themes.css';
 @import './showcase.css';
+@import './domains.css';
 
 @theme {
   --font-display: 'Cormorant Garamond', 'Noto Serif TC', serif;
@@ -209,7 +210,6 @@ body {
 .sc-note { margin-top: 1rem; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.05em; }
 
 @media (max-width: 1023px) {
-  .sc-media { max-height: 46vh; }
   .sc-highlights li:nth-child(n + 4) { display: none; }
 }
 @media (max-width: 640px) {
@@ -220,15 +220,6 @@ body {
 }
 
 /* ───────────────── Ambient animations ───────────────── */
-.bg-aurora {
-  background:
-    radial-gradient(40% 35% at 25% 30%, rgba(200, 168, 105, 0.22), transparent 70%),
-    radial-gradient(35% 30% at 75% 65%, rgba(120, 70, 40, 0.28), transparent 70%),
-    radial-gradient(30% 40% at 60% 20%, rgba(70, 60, 110, 0.22), transparent 70%);
-  filter: blur(30px);
-  animation: aurora 26s ease-in-out infinite alternate;
-}
-@keyframes aurora { 0% { transform: translate3d(0,0,0) rotate(0deg); } 50% { transform: translate3d(3%, -2%, 0) rotate(8deg); } 100% { transform: translate3d(-3%, 2%, 0) rotate(-6deg); } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }

@@ -1,165 +1,128 @@
 /**
- * 浮空大地圖佈局。沙盤平面座標為 1000 × 1000，兩座浮島：
- *   personal 個人創作島、campus 校園專案島，中間以橋樑相連。
- * 作品依 category 自動分配到島上的建築位（slot），新增作品不需要手填座標。
+ * 浮空群島佈局：每一件作品都是一座獨立的微型浮空島。
+ *
+ * 位置以「螢幕座標」設計（X 往右、Y 往下，單位 px，縮放 1 時），
+ * 再換算回沙盤平面座標，讓群島在等距視角下排成錯落的星座。
+ * 新增作品時會自動接續排列，不需要手填座標。
  */
 import type { Project } from '../data/projects';
 import type { ThemeKey } from '../themes/types';
 import type { BuildingKind, PropKind } from './buildings';
 import { mulberry32 } from '../lib/useCanvasLoop';
 
-export const PLANE = 1000;
+/** 沙盤視角：rotateX(BOARD_RX) rotateZ(BOARD_RZ) */
+export const BOARD_RX = 55;
+export const BOARD_RZ = 45;
+const COS_RX = Math.cos((BOARD_RX * Math.PI) / 180);
 
-export interface Island {
-  key: Project['category'];
-  label: string;
-  en: string;
-  cx: number;
-  cy: number;
-  r: number;
-  seed: number;
-  /** 建築位，相對島心 */
-  slots: [number, number][];
+/** 螢幕座標 → 沙盤平面座標（以沙盤中心為原點） */
+function toPlane(X: number, Y: number) {
+  const a = Math.SQRT2 * X;
+  const b = (Math.SQRT2 * Y) / COS_RX;
+  return { x: (a + b) / 2, y: (b - a) / 2 };
 }
 
-const ISLANDS: Island[] = [
-  {
-    key: 'personal', label: '個人創作', en: 'PERSONAL WORKS', cx: 300, cy: 700, r: 228, seed: 11,
-    slots: [[-118, -78], [92, -118], [118, 88], [-88, 120], [-6, 0], [-175, 30], [30, -185]],
-  },
-  {
-    key: 'campus', label: '校園專案', en: 'CAMPUS TOOLS', cx: 700, cy: 300, r: 226, seed: 29,
-    slots: [[-128, -60], [-20, -150], [110, -100], [150, 40], [60, 145], [-80, 120], [0, 0], [-170, 50]],
-  },
+/** 橫式：上排 4 座（較大），下排 6 座，交錯起伏（座標為設計值，實際會被透視壓縮） */
+const LANDSCAPE: [number, number][] = [
+  [-400, -250], [-135, -290], [135, -240], [400, -280],
+  // 下排由右往左，讓能量橋樑蛇行串連、不會斜切過畫面
+  [530, 150], [318, 185], [106, 145], [-106, 185], [-318, 148], [-530, 182],
 ];
+/** 直式：兩欄交錯 */
+const PORTRAIT: [number, number][] = Array.from({ length: 10 }, (_, i) => [i % 2 ? 118 : -118, -360 + i * 84 + (i % 2 ? 26 : 0)] as [number, number]);
 
-/** 直式螢幕把兩島改成上下排列：沿對角線鏡射 y */
-export function islandsFor(portrait: boolean): Island[] {
-  if (!portrait) return ISLANDS;
-  return ISLANDS.map((i) => ({ ...i, cy: PLANE - i.cy, slots: i.slots.map(([x, y]) => [x, -y] as [number, number]) }));
+function slotFor(i: number, portrait: boolean): [number, number] {
+  const list = portrait ? PORTRAIT : LANDSCAPE;
+  if (list[i]) return list[i];
+  // 超出預設位置：往下再開一排
+  const extra = i - list.length;
+  return portrait
+    ? [extra % 2 ? 118 : -118, 530 + extra * 96]
+    : [-530 + (extra % 6) * 212, 330 + Math.floor(extra / 6) * 220];
 }
 
-/** 不規則島嶼輪廓（相對島心的多邊形頂點） */
-export function islandOutline(r: number, seed: number, jitter = 1) {
-  const rnd = mulberry32(seed);
-  const a = rnd() * 6, b = rnd() * 6, c = rnd() * 6;
-  const out: [number, number][] = [];
-  const N = 28;
-  for (let i = 0; i < N; i++) {
-    const t = (i / N) * Math.PI * 2;
-    const k = 1 + 0.07 * Math.sin(3 * t + a) + 0.05 * Math.sin(5 * t + b) + 0.03 * Math.sin(9 * t + c) + (rnd() - 0.5) * 0.04 * jitter;
-    out.push([Math.cos(t) * r * k, Math.sin(t) * r * k]);
-  }
-  return out;
-}
+export type Terrain = 'cyber' | 'mythic' | 'oriental' | 'guardian' | 'campus' | 'blueprint';
+
+const TERRAIN: Record<ThemeKey, Terrain> = {
+  brand: 'campus', cyber: 'cyber', mythic: 'mythic', oriental: 'oriental', guardian: 'guardian', campus: 'campus', blueprint: 'blueprint',
+};
 
 export const DEFAULT_BUILDING: Record<ThemeKey, BuildingKind> = {
-  brand: 'hall',
-  cyber: 'tower',
-  mythic: 'altar',
-  oriental: 'pagoda',
-  guardian: 'treehouse',
-  campus: 'school',
-  blueprint: 'workshop',
+  brand: 'hall', cyber: 'tower', mythic: 'altar', oriental: 'pagoda', guardian: 'treehouse', campus: 'school', blueprint: 'workshop',
 };
-
-const GROUND: Partial<Record<ThemeKey, { fill: string; stroke: string }>> = {
-  cyber: { fill: '#0b1a28', stroke: '#22e4ff' },
-  mythic: { fill: '#2b1745', stroke: '#b98cff' },
-  oriental: { fill: '#1d1813', stroke: '#e8c872' },
-  guardian: { fill: '#2f7a4c', stroke: '#9effc9' },
-  blueprint: { fill: '#123c72', stroke: '#cfe3ff' },
-};
-
-const PROPS: Partial<Record<ThemeKey, PropKind[]>> = {
-  cyber: ['spire', 'spire', 'spire'],
-  mythic: ['crystal', 'crystal', 'rock'],
-  oriental: ['lantern', 'pine', 'lantern'],
-  guardian: ['tree', 'tree', 'bush'],
-  campus: ['tree', 'lamp', 'bush'],
-  blueprint: ['lamp', 'rock'],
-};
-
-export interface Placed {
-  project: Project;
-  island: Island;
-  x: number;
-  y: number;
-  kind: BuildingKind;
-  accent: string;
-  ground?: { fill: string; stroke: string };
-  order: number;
-}
 
 const ACCENT: Record<ThemeKey, string> = {
   brand: '#c8a869', cyber: '#22e4ff', mythic: '#ffc76b', oriental: '#e8c872', guardian: '#ffd35a', campus: '#3563e9', blueprint: '#ffd166',
 };
 
-export function placeProjects(projects: Project[], islands: Island[]): Placed[] {
-  const used = new Map<string, number>();
+const PROPS: Record<Terrain, PropKind[]> = {
+  cyber: ['spire', 'spire'],
+  mythic: ['crystal', 'crystal', 'rock'],
+  oriental: ['pine', 'lantern', 'pine'],
+  guardian: ['tree', 'bush', 'tree'],
+  campus: ['tree', 'lamp'],
+  blueprint: ['lamp', 'rock'],
+};
+
+export interface IslandSpec {
+  project: Project;
+  order: number;
+  x: number;
+  y: number;
+  r: number;
+  terrain: Terrain;
+  kind: BuildingKind;
+  accent: string;
+  /** 有機的島嶼外形（border-radius） */
+  shape: string;
+  props: { dx: number; dy: number; kind: PropKind }[];
+}
+
+export function layoutIslands(projects: Project[], portrait: boolean): IslandSpec[] {
   return projects.map((p, order) => {
-    const island = islands.find((i) => i.key === p.category) ?? islands[0];
-    const n = used.get(island.key) ?? 0;
-    used.set(island.key, n + 1);
-    // 超出預設建築位時，沿外圈繼續排列
-    const [dx, dy] = island.slots[n] ?? [Math.cos(n * 2.4) * island.r * 0.62, Math.sin(n * 2.4) * island.r * 0.62];
+    const [X, Y] = slotFor(order, portrait);
+    const { x, y } = toPlane(X, Y);
+    const rnd = mulberry32(order * 131 + 7);
+    const v = () => Math.round(38 + rnd() * 24);
+    const terrain = TERRAIN[p.theme];
+    const r = p.category === 'personal' ? 104 : 90;
+    // 小物放在島的後半圈（螢幕上方），不擋住建築正面
+    const props = PROPS[terrain].map((kind, i) => {
+      const ang = (225 + (i - (PROPS[terrain].length - 1) / 2) * 62) * (Math.PI / 180);
+      const d = r * (0.66 + rnd() * 0.08);
+      return { dx: Math.cos(ang) * d, dy: Math.sin(ang) * d, kind };
+    });
     return {
-      project: p, island, order,
-      x: island.cx + dx, y: island.cy + dy,
+      project: p, order, x, y, r, terrain, props,
       kind: p.building ?? DEFAULT_BUILDING[p.theme],
       accent: p.accent ?? ACCENT[p.theme],
-      ground: GROUND[p.theme],
+      shape: `${v()}% ${v()}% ${v()}% ${v()}% / ${v()}% ${v()}% ${v()}% ${v()}%`,
     };
   });
 }
 
-export interface PropSpot { x: number; y: number; kind: PropKind; key: string }
-
-/** 每座建築周圍散佈 3 個風格小物 + 島緣植栽 */
-export function scatterProps(placed: Placed[], islands: Island[]): PropSpot[] {
-  const out: PropSpot[] = [];
-  placed.forEach((b) => {
-    const kinds = PROPS[b.project.theme] ?? PROPS.campus!;
-    const rnd = mulberry32(b.order * 97 + 5);
-    kinds.forEach((kind, i) => {
-      const ang = rnd() * Math.PI * 2;
-      const rad = 62 + rnd() * 16;
-      out.push({ x: b.x + Math.cos(ang + i * 2.1) * rad, y: b.y + Math.sin(ang + i * 2.1) * rad, kind, key: `${b.project.id}-${i}` });
-    });
-  });
-  islands.forEach((isl) => {
-    const rnd = mulberry32(isl.seed * 13);
-    for (let i = 0; i < 9; i++) {
-      const t = (i / 9) * Math.PI * 2 + rnd() * 0.3;
-      const rad = isl.r * (0.8 + rnd() * 0.06);
-      const kind: PropKind = isl.key === 'personal' ? (i % 3 ? 'pine' : 'rock') : i % 2 ? 'tree' : 'bush';
-      out.push({ x: isl.cx + Math.cos(t) * rad, y: isl.cy + Math.sin(t) * rad, kind, key: `${isl.key}-edge-${i}` });
-    }
-  });
-  // 遠離建築中心，避免小物擋住建築
-  return out.filter((p) => placed.every((b) => Math.hypot(b.x - p.x, b.y - p.y) > 48));
+/** 能量橋樑：依序串連群島，修剪掉兩端落在島內的部分 */
+export function bridgesFor(islands: IslandSpec[]) {
+  const out: { key: string; x: number; y: number; len: number; angle: number; from: string; to: string }[] = [];
+  for (let i = 0; i < islands.length - 1; i++) {
+    const a = islands[i], b = islands[i + 1];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.hypot(dx, dy);
+    const ux = dx / dist, uy = dy / dist;
+    const sx = a.x + ux * a.r * 0.82, sy = a.y + uy * a.r * 0.82;
+    const len = dist - a.r * 0.82 - b.r * 0.82;
+    if (len <= 4) continue;
+    out.push({ key: `${a.project.id}-${b.project.id}`, x: sx, y: sy, len, angle: (Math.atan2(uy, ux) * 180) / Math.PI, from: a.accent, to: b.accent });
+  }
+  return out;
 }
 
-/** 能量軌道：島心 → 各建築的弧線，以及跨島主幹 */
-export function trackPaths(placed: Placed[], islands: Island[]) {
-  const paths: { d: string; key: string; main?: boolean }[] = [];
-  placed.forEach((b) => {
-    const { cx, cy } = b.island;
-    const mx = (cx + b.x) / 2, my = (cy + b.y) / 2;
-    const nx = -(b.y - cy) * 0.22, ny = (b.x - cx) * 0.22;
-    paths.push({ key: b.project.id, d: `M${cx},${cy} Q${mx + nx},${my + ny} ${b.x},${b.y}` });
-  });
-  const [a, c] = islands;
-  if (a && c) paths.push({ key: 'bridge', main: true, d: `M${a.cx},${a.cy} L${c.cx},${c.cy}` });
-  return paths;
-}
-
-export function bridgeGeometry(islands: Island[]) {
-  const [a, c] = islands;
-  const dx = c.cx - a.cx, dy = c.cy - a.cy;
-  const len = Math.hypot(dx, dy);
-  const ux = dx / len, uy = dy / len;
-  const start = { x: a.cx + ux * a.r * 0.78, y: a.cy + uy * a.r * 0.78 };
-  const end = { x: c.cx - ux * c.r * 0.78, y: c.cy - uy * c.r * 0.78 };
-  return { x: start.x, y: start.y, length: Math.hypot(end.x - start.x, end.y - start.y), angle: (Math.atan2(uy, ux) * 180) / Math.PI };
+/** 依視窗計算整個群島的縮放與垂直置中位移 */
+export function stageFit(w: number, h: number, portrait: boolean) {
+  if (portrait) {
+    const s = Math.max(0.3, Math.min((w * 0.94) / 480, (h - 170) / 1080, 1));
+    return { s, dy: 250 * s + 50 };
+  }
+  const s = Math.max(0.36, Math.min((w * 0.92) / 1270, (h - 190) / 640, 1.15));
+  return { s, dy: 300 * s + 10 };
 }

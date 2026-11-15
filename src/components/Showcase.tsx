@@ -1,8 +1,61 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { Project } from '../data/projects';
 import { mulberry32 } from '../lib/useCanvasLoop';
 
 const asset = (p: string) => `${import.meta.env.BASE_URL}${p}`;
+
+/** 網址列顯示用：去掉 https:// 與結尾斜線 */
+function shortUrl(u?: string) {
+  if (!u) return 'localhost';
+  return u.replace(/^https?:\/\//, '').replace(/\/$/, '');
+}
+
+/* ───────── 預覽外框：內容完整顯示，絕不裁切 ───────── */
+
+/** 瀏覽器視窗外框（淺色 / 深色） */
+function BrowserFrame({ url, light, children }: { url: string; light?: boolean; children: ReactNode }) {
+  return (
+    <div className={`browser ${light ? 'browser-light' : 'browser-dark'}`}>
+      <div className="browser-bar">
+        <span className="browser-dots"><i /><i /><i /></span>
+        <span className="browser-url"><svg viewBox="0 0 16 16" width="10" height="10" aria-hidden><path d="M4 7V5a4 4 0 0 1 8 0v2h1v8H3V7h1Zm2 0h4V5a2 2 0 0 0-4 0v2Z" fill="currentColor" /></svg>{url}</span>
+      </div>
+      <div className="browser-view">{children}</div>
+    </div>
+  );
+}
+
+/** 卷軸外框（古典中式）：上下軸桿、裱紙與描金邊 */
+function ScrollFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="scroll-frame">
+      <span className="scroll-rod scroll-rod-top" />
+      <div className="scroll-paper"><div className="scroll-inner">{children}</div></div>
+      <span className="scroll-rod scroll-rod-bottom" />
+    </div>
+  );
+}
+
+/** 手機外框（直式畫面） */
+function PhoneFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="phone-frame">
+      <span className="phone-notch" />
+      <div className="phone-screen">{children}</div>
+    </div>
+  );
+}
+
+/** 全息投影外框（科技風） */
+function HoloFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="holo-frame">
+      <span className="holo-corner tl" /><span className="holo-corner tr" /><span className="holo-corner bl" /><span className="holo-corner br" />
+      {children}
+      <span className="holo-base" />
+    </div>
+  );
+}
 
 /** L.P.L.C.：成交額熱力圖示意 */
 function Heatmap() {
@@ -169,16 +222,17 @@ export function Showcase({ project }: { project: Project }) {
   const s = project.showcase;
   if (!s) return null;
   switch (s.kind) {
-    case 'image':
-      return (
-        <figure className={`media-frame ${s.shape === 'tall' ? 'media-tall' : 'media-wide'}`}>
-          <img src={asset(s.src)} alt={s.alt} loading="lazy" draggable={false} />
-        </figure>
-      );
+    case 'image': {
+      const img = <img className="shot" src={asset(s.src)} alt={s.alt} width={s.w} height={s.h} loading="lazy" draggable={false} />;
+      const url = shortUrl(project.links.demo ?? project.links.repo);
+      if (s.shape === 'tall') return <PhoneFrame>{img}</PhoneFrame>;
+      if (project.theme === 'oriental') return <ScrollFrame>{img}</ScrollFrame>;
+      return <BrowserFrame url={url} light={project.theme === 'campus'}>{img}</BrowserFrame>;
+    }
     case 'pets': return <Pets pets={s.pets} />;
-    case 'heatmap': return <Heatmap />;
-    case 'stages': return <Stages />;
-    case 'calendar': return <Calendar />;
+    case 'heatmap': return <HoloFrame><Heatmap /></HoloFrame>;
+    case 'stages': return <BrowserFrame light url={shortUrl(project.links.demo)}><Stages /></BrowserFrame>;
+    case 'calendar': return <BrowserFrame light url={shortUrl(project.links.demo)}><Calendar /></BrowserFrame>;
     case 'timetable': return <Timetable />;
     case 'passport': return <Passport />;
   }
