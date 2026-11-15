@@ -184,6 +184,7 @@ export const projects: Project[] = [
     category: 'campus',
     status: 'live',
     building: 'hall',
+    model: 'models/care.glb',
     links: {
       demo: 'https://znxuyz.github.io/C.A.R.E.-System/',
       repo: 'https://github.com/znxuyz/C.A.R.E.-System',
