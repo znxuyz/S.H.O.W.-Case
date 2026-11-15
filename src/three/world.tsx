@@ -26,7 +26,7 @@ export interface WorldStyle {
   hemi: [string, string];
   /** 環境反射的主色（Lightformer） */
   env: [string, string];
-  scenery: 'city' | 'rocks' | 'mountains' | 'forest' | 'hills' | 'blueprint';
+  scenery: 'city' | 'rocks' | 'mountains' | 'forest' | 'hills' | 'blueprint' | 'constraints';
 }
 
 const CAMPUS: WorldStyle = {
@@ -52,9 +52,10 @@ export const WORLD: Record<BuildingKind, WorldStyle> = {
     ambient: '#5a8a7a', ambientI: 0.5, sun: '#d8fff0', sunI: 1.3, hemi: ['#9effc9', '#2a1d12'], env: ['#9effc9', '#ffcf6a'], scenery: 'forest',
   },
   school: CAMPUS, hall: CAMPUS, library: CAMPUS, kiosk: CAMPUS,
+  // 國小排課系統：約束空間（約束網絡、時鐘刻度環、漂浮的課表面板）
   workshop: {
-    skyTop: '#06193a', skyBottom: '#123c72', fog: '#0b2a55', fogNear: 18, fogFar: 60, ground: '#0b2a55', sparkle: '#cfe3ff', bloom: 0.6,
-    ambient: '#8fb4e8', ambientI: 0.6, sun: '#e6f0ff', sunI: 1.7, hemi: ['#cfe3ff', '#0a2244'], env: ['#cfe3ff', '#ffd166'], scenery: 'blueprint',
+    skyTop: '#030a1c', skyBottom: '#0d2a52', fog: '#071a36', fogNear: 20, fogFar: 70, ground: '#081d3c', sparkle: '#9fd8ff', bloom: 1.0,
+    ambient: '#8fb4e8', ambientI: 0.5, sun: '#e6f0ff', sunI: 1.8, hemi: ['#9fd8ff', '#0a2244'], env: ['#9fd8ff', '#ffc24a'], scenery: 'constraints',
   },
 };
 
@@ -153,6 +154,8 @@ function Scenery({ kind }: { kind: WorldStyle['scenery'] }) {
           {items.filter((t) => t.i % 3 === 0).map((t) => <Tree key={`t${t.i}`} p={[t.x * 0.62, base, t.z * 0.62]} s={2.2} />)}
         </group>
       );
+    case 'constraints':
+      return <Constraints />;
     case 'blueprint':
       return (
         <group>
@@ -163,6 +166,60 @@ function Scenery({ kind }: { kind: WorldStyle['scenery'] }) {
         </group>
       );
   }
+}
+
+/** 約束空間：節點與約束邊（單一 LineSegments，極省效能）、時鐘刻度環、漂浮課表面板 */
+function Constraints() {
+  const { nodes, edges } = useMemo(() => {
+    const rnd = mulberry32(31);
+    const nodes: THREE.Vector3[] = Array.from({ length: 46 }, () => {
+      const a = rnd() * Math.PI * 2;
+      const r = 15 + rnd() * 16;
+      return new THREE.Vector3(Math.cos(a) * r, -2 + rnd() * 16, Math.sin(a) * r);
+    });
+    const pts: number[] = [];
+    nodes.forEach((n, i) => {
+      const near = nodes.map((m, j) => ({ j, d: n.distanceTo(m) })).filter((x) => x.j !== i).sort((a, b) => a.d - b.d).slice(0, 2);
+      near.forEach(({ j }) => pts.push(n.x, n.y, n.z, nodes[j].x, nodes[j].y, nodes[j].z));
+    });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    return { nodes, edges: g };
+  }, []);
+  const panels = useMemo(() => {
+    const rnd = mulberry32(77);
+    return Array.from({ length: 7 }, (_, i) => {
+      const a = (i / 7) * Math.PI * 2 + 0.4;
+      return { p: [Math.cos(a) * 13, 2 + rnd() * 7, Math.sin(a) * 13] as [number, number, number], r: -a + Math.PI / 2, s: 0.8 + rnd() * 0.6 };
+    });
+  }, []);
+  return (
+    <group>
+      <lineSegments geometry={edges}>
+        <lineBasicMaterial color="#5fb8ff" transparent opacity={0.35} />
+      </lineSegments>
+      {nodes.map((n, i) => (
+        <P key={i} g="ico1" c={i % 5 ? '#7fd0ff' : '#ffc24a'} e ei={2} p={[n.x, n.y, n.z]} s={0.22 + (i % 3) * 0.08} />
+      ))}
+      <group position={[0, 6, -26]}>
+        <P g="torus" c="#9fd8ff" e ei={0.9} s={22} />
+        {Array.from({ length: 60 }, (_, i) => {
+          const a = (i / 60) * Math.PI * 2;
+          const long = i % 5 === 0;
+          return <P key={i} c="#9fd8ff" e ei={long ? 1.4 : 0.6} p={[Math.sin(a) * 10.4, Math.cos(a) * 10.4, 0]} s={[0.08, long ? 0.9 : 0.4, 0.05]} r={[0, 0, -a]} />;
+        })}
+      </group>
+      {panels.map((pl, i) => (
+        <group key={i} position={pl.p} rotation={[0, pl.r, 0]} scale={pl.s}>
+          <P c="#9fd8ff" op={0.12} s={[2.6, 2, 0.02]} />
+          {Array.from({ length: 5 }, (_, d) => Array.from({ length: 4 }, (_, p) => (
+            (d + p + i) % 3 !== 0 && <P key={`${d}${p}`} c={['#e45b5b', '#4f86f7', '#f29b30', '#36b37e', '#9b6ce0'][(d * 3 + p + i) % 5]} e ei={0.8} op={0.7} p={[-1 + d * 0.5, 0.7 - p * 0.45, 0.02]} s={[0.42, 0.36, 0.02]} />
+          )))}
+        </group>
+      ))}
+      <gridHelper args={[140, 70, '#2f6cb8', '#14335f']} position={[0, -3.99, 0]} />
+    </group>
+  );
 }
 
 /** 完整的世界：天空、霧、地面、遠景、粒子、環境反射 */

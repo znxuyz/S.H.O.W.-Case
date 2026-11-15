@@ -449,11 +449,10 @@ export function Diorama({ kind, accent, lights = false, model }: { kind: Buildin
     return (
       <Suspense fallback={<Diorama kind={kind} accent={accent} lights={lights} />}>
         <ModelDiorama url={model} />
-        {lights && kind === 'workshop' && (
+        {lights && (
           <>
-            <pointLight color="#ffd27a" intensity={4} distance={4} position={[-1.75, 1.2, -0.2]} />
-            <pointLight color="#ffd27a" intensity={4} distance={4} position={[1.78, 1.2, -0.35]} />
-            <pointLight color="#ffc870" intensity={3} distance={3} position={[-1.32, 0.5, 1.6]} />
+            <pointLight color="#9fd8ff" intensity={6} distance={6} position={[0, 1.6, 0.6]} />
+            <pointLight color="#ffc24a" intensity={8} distance={4} position={[0, -1.7, 0]} />
           </>
         )}
       </Suspense>

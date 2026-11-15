@@ -1,555 +1,238 @@
 """
-《國小排課系統》施工現場微縮箱庭 —— Blender 程序化建模腳本（背景模式執行）
+《國小排課系統》—— 課表排列引擎（Timetable Engine）
 
-用法（需要 bpy 5.x）：
-    python tools/blender/build_scheduling.py <輸出.glb>
+專案核心：把「老師 × 班級 × 教室 × 時段」排成一張零衝突的課表（OR-Tools CP-SAT）。
+主角因此不是建築，而是一台正在求解的機器：
+  · 浮空的立體課表棋盤（星期一～五 × 第 1～6 節），各科彩色積木嵌在格子裡
+  · 龍門式求解機械臂（GantryBridge / GantryHead）來回把積木放進空格
+  · 幾塊積木懸在空格上方，依序落下（Drop_0..3）——求解進行中
+  · 發光的約束線連接同一位老師的課，代表「不撞堂」的約束
+  · 背面懸浮的時鐘（ClockHand / ClockHandH）＝時段
+  · 棋盤底部是黃銅齒輪引擎（GearA / GearB）與發光核心
 
-座標：Blender Z 軸朝上；匯出 glTF 時自動轉為 Y 朝上。
-地塊 4×4、頂面高度 z=0，與網站 src/three/kit.tsx 的 Plinth 尺寸一致。
-Blender 的 -Y 方向 = 網站場景的 +Z（鏡頭正面）。
+用法：python tools/blender/build_scheduling.py <輸出.glb>
 """
 import math
 import os
-import random
 import sys
-import tempfile
 
-import bpy  # 必須先載入 bpy，bmesh / mathutils 才能匯入
-import bmesh
-import numpy as np
-from mathutils import Matrix, Vector
-from PIL import Image, ImageDraw, ImageFilter
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import bpy  # noqa: E402
+import bmesh  # noqa: E402
+import kit  # noqa: E402
+from kit import Image, ImageDraw, ImageFont, beam, box, cyl, finalize, material, np, save, srgb  # noqa: E402
 
 OUT = sys.argv[-1] if sys.argv[-1].endswith('.glb') else 'scheduling.glb'
-TEX_DIR = tempfile.mkdtemp(prefix='show_tex_')
-rng = random.Random(502)
-np_rng = np.random.default_rng(502)
+kit.reset()
+kit.standard_materials()
 
-# ───────────────────────── 場景初始化 ─────────────────────────
-bpy.ops.wm.read_factory_settings(use_empty=True)
-scene = bpy.context.scene
-dg = bpy.context.evaluated_depsgraph_get
-
-
-# ───────────────────────── 程序化貼圖 ─────────────────────────
-def noise(size, scale, octaves=4, seed=0):
-    g = np.random.default_rng(seed)
-    out = np.zeros((size, size))
-    amp = 1.0
-    for o in range(octaves):
-        n = max(2, int(scale * 2 ** o))
-        base = g.random((n, n))
-        img = Image.fromarray((base * 255).astype(np.uint8)).resize((size, size), Image.BICUBIC)
-        out += np.asarray(img, dtype=np.float32) / 255 * amp
-        amp *= 0.5
-    out -= out.min()
-    return out / out.max()
-
-
-def save(name, arr):
-    path = os.path.join(TEX_DIR, f'{name}.png')
-    Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8)).save(path)
-    return path
-
-
-def tint(n, c0, c1):
-    c0, c1 = np.array(c0, np.float32), np.array(c1, np.float32)
-    return c0[None, None, :] * (1 - n[..., None]) + c1[None, None, :] * n[..., None]
-
-
-def tex_concrete():
-    n = noise(512, 4, 5, 1)
-    speck = (np_rng.random((512, 512)) > 0.985) * 0.35
-    arr = tint(np.clip(n * 0.7 + speck, 0, 1), (150, 150, 146), (198, 196, 190))
-    return save('concrete', arr)
-
-
-def tex_gravel():
-    n = noise(512, 8, 4, 2)
-    arr = tint(n, (112, 100, 86), (164, 150, 128))
-    img = Image.fromarray(arr.astype(np.uint8))
-    d = ImageDraw.Draw(img)
-    for _ in range(2600):
-        x, y, r = rng.randrange(512), rng.randrange(512), rng.choice([1, 1, 2, 2, 3])
-        c = rng.choice([(90, 82, 72), (186, 176, 158), (128, 120, 108), (205, 196, 180)])
-        d.ellipse([x - r, y - r, x + r, y + r], fill=c)
-    return save('gravel', np.asarray(img))
-
-
-def tex_brick():
+# ───────────────────────── 專屬材質 ─────────────────────────
+def tex_board():
     W = 512
-    img = Image.new('RGB', (W, W), (196, 186, 170))
-    d = ImageDraw.Draw(img)
-    bh, bw = 32, 76
-    for row in range(W // bh + 1):
-        off = (bw // 2) * (row % 2)
-        for col in range(-1, W // bw + 2):
-            x0, y0 = col * bw + off + 3, row * bh + 3
-            base = rng.choice([(158, 70, 52), (170, 82, 60), (146, 64, 48), (182, 92, 66), (136, 60, 46)])
-            d.rectangle([x0, y0, x0 + bw - 6, y0 + bh - 6], fill=base)
-    arr = np.asarray(img, dtype=np.float32) * (0.85 + noise(W, 16, 3, 3)[..., None] * 0.3)
-    return save('brick', arr)
-
-
-def tex_wood():
-    W = 512
-    y = np.linspace(0, 1, W)[:, None]
-    grain = noise(W, 3, 3, 4)
-    stripes = (np.sin((y * 90 + grain * 6) * math.pi) * 0.5 + 0.5)
-    planks = ((np.arange(W)[:, None] // 64) % 2) * 0.12
-    arr = tint(np.clip(stripes * 0.6 + planks + grain * 0.3, 0, 1), (122, 82, 46), (190, 140, 88))
-    arr = np.broadcast_to(arr, (W, W, 3)).copy()
-    arr[(np.arange(W) % 64) < 2, :, :] *= 0.55
-    return save('wood', arr)
-
-
-def tex_paint_yellow():
-    n = noise(256, 6, 4, 5)
-    arr = tint(n, (232, 172, 20), (255, 206, 60))
-    wear = noise(256, 20, 2, 6) > 0.86
-    arr[wear] = arr[wear] * 0.55
-    return save('paint_yellow', arr)
-
-
-def tex_blueprint():
-    W = 512
-    img = Image.new('RGB', (W, W), (24, 76, 150))
+    img = Image.new('RGB', (W, W), (14, 40, 82))
     d = ImageDraw.Draw(img)
     for i in range(0, W, 16):
-        d.line([(i, 0), (i, W)], fill=(52, 104, 176), width=1)
-        d.line([(0, i), (W, i)], fill=(52, 104, 176), width=1)
+        d.line([(i, 0), (i, W)], fill=(28, 62, 112))
+        d.line([(0, i), (W, i)], fill=(28, 62, 112))
     for i in range(0, W, 64):
-        d.line([(i, 0), (i, W)], fill=(90, 140, 205), width=1)
-        d.line([(0, i), (W, i)], fill=(90, 140, 205), width=1)
-    c = (226, 238, 255)
-    d.rectangle([80, 200, 430, 420], outline=c, width=3)
-    d.rectangle([215, 120, 295, 420], outline=c, width=3)
-    d.polygon([(200, 120), (255, 70), (310, 120)], outline=c)
-    for r in range(2):
-        for k in range(6):
-            x = 100 + k * 54 + (40 if k > 2 else 0)
-            if x < 410:
-                d.rectangle([x, 240 + r * 80, x + 24, 280 + r * 80], outline=c, width=2)
-    d.ellipse([235, 140, 275, 180], outline=c, width=2)
-    d.line([(80, 450), (430, 450)], fill=c, width=2)
-    d.line([(80, 440), (80, 460)], fill=c, width=2)
-    d.line([(430, 440), (430, 460)], fill=c, width=2)
-    return save('blueprint', np.asarray(img.filter(ImageFilter.SMOOTH)))
+        d.line([(i, 0), (i, W)], fill=(52, 96, 156))
+        d.line([(0, i), (W, i)], fill=(52, 96, 156))
+    arr = np.asarray(img, np.float32) * (0.9 + kit.noise(W, 6, 3, 11)[..., None] * 0.2)
+    return save('board', arr)
 
 
-def tex_corrugated():
-    W = 256
-    x = np.linspace(0, 1, W)[None, :]
-    ribs = np.sin(x * math.pi * 2 * 14) * 0.5 + 0.5
-    n = noise(W, 6, 3, 7)
-    v = np.clip(ribs * 0.35 + n * 0.25 + 0.4, 0, 1)
-    arr = tint(np.broadcast_to(v, (W, W)), (34, 86, 150), (74, 132, 196))
-    return save('corrugated', arr)
+material('board', rough=0.7, tex=tex_board())
+material('brass', srgb('#c9a24a'), rough=0.3, metal=0.9)
+material('brass_dark', srgb('#8a6a2a'), rough=0.4, metal=0.85)
+material('steel_dark', srgb('#3a4250'), rough=0.45, metal=0.8)
+material('grid_line', srgb('#9fd0ff'), emit=srgb('#7fc4ff'), emit_strength=1.6)
+material('thread', srgb('#7ff3ff'), emit=srgb('#5fe8ff'), emit_strength=5)
+material('core', srgb('#ffd98a'), emit=srgb('#ffc24a'), emit_strength=7)
+material('dial', srgb('#f4ecd8'), rough=0.6)
+material('hand', srgb('#1d2430'), rough=0.4, metal=0.6)
+
+SUBJECTS = {
+    '國語': '#e45b5b', '數學': '#4f86f7', '英語': '#f29b30', '自然': '#36b37e',
+    '社會': '#9b6ce0', '體育': '#ef5d9c', '音樂': '#1fb6c9', '美勞': '#f2c230',
+}
+FONT = ImageFont.truetype(kit.CJK_FONT, 92)
+FONT_S = ImageFont.truetype(kit.CJK_FONT, 120)
 
 
-def tex_soil():
-    return save('soil', tint(noise(512, 6, 5, 8), (92, 66, 44), (132, 96, 64)))
+def label_texture(key, text, bg, fg=(255, 255, 255), font=FONT, size=(256, 200)):
+    img = Image.new('RGB', size, tuple(int(bg.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4)))
+    d = ImageDraw.Draw(img)
+    w, h = size
+    d.rounded_rectangle([10, 10, w - 10, h - 10], radius=18, outline=tuple(min(255, c + 60) for c in img.getpixel((0, 0))), width=5)
+    bbox = d.textbbox((0, 0), text, font=font)
+    d.text(((w - bbox[2] - bbox[0]) / 2, (h - bbox[3] - bbox[1]) / 2 - 6), text, font=font, fill=fg)
+    return save(f'label_{key}', np.asarray(img))
 
 
-def tex_rock():
-    return save('rock', tint(noise(512, 5, 5, 9), (58, 50, 44), (102, 92, 82)))
+for name, col in SUBJECTS.items():
+    material(f'subj_{name}', rough=0.42, tex=label_texture(name, name, col))
+for i, t in enumerate('一二三四五'):
+    material(f'day_{i}', rough=0.5, metal=0.2, tex=label_texture(f'day{i}', t, '#c9a24a', fg=(40, 30, 10), font=FONT_S, size=(200, 200)))
+for i in range(6):
+    material(f'per_{i}', rough=0.5, tex=label_texture(f'per{i}', str(i + 1), '#22324a', fg=(207, 227, 255), font=FONT_S, size=(200, 200)))
 
 
-# ───────────────────────── 材質 ─────────────────────────
-MATS = {}
-
-
-def material(name, color=(0.8, 0.8, 0.8), rough=0.8, metal=0.0, tex=None, emit=None, emit_strength=0.0, alpha=1.0):
-    m = bpy.data.materials.new(name)
-    m.use_nodes = True
-    nt = m.node_tree
-    bsdf = nt.nodes['Principled BSDF']
-    bsdf.inputs['Base Color'].default_value = (*color, 1)
-    bsdf.inputs['Roughness'].default_value = rough
-    bsdf.inputs['Metallic'].default_value = metal
-    if tex:
-        node = nt.nodes.new('ShaderNodeTexImage')
-        node.image = bpy.data.images.load(tex)
-        nt.links.new(node.outputs['Color'], bsdf.inputs['Base Color'])
-    if emit:
-        bsdf.inputs['Emission Color'].default_value = (*emit, 1)
-        bsdf.inputs['Emission Strength'].default_value = emit_strength
-    if alpha < 1:
-        bsdf.inputs['Alpha'].default_value = alpha
-        m.surface_render_method = 'BLENDED'
-    MATS[name] = m
-    return m
-
-
-def srgb(h):
-    h = h.lstrip('#')
-    return tuple((int(h[i:i + 2], 16) / 255) ** 2.2 for i in (0, 2, 4))
-
-
-material('concrete', rough=0.9, tex=tex_concrete())
-material('concrete_dark', srgb('#8f8d86'), rough=0.95)
-material('gravel', rough=1.0, tex=tex_gravel())
-material('soil', rough=1.0, tex=tex_soil())
-material('rock', rough=1.0, tex=tex_rock())
-material('brick', rough=0.9, tex=tex_brick())
-material('wood', rough=0.75, tex=tex_wood())
-material('steel', srgb('#a7b0ba'), rough=0.32, metal=0.85)
-material('rebar', srgb('#7a4a30'), rough=0.85, metal=0.4)
-material('yellow', rough=0.45, metal=0.15, tex=tex_paint_yellow())
-material('black', srgb('#24272c'), rough=0.6)
-material('glass', srgb('#a9d4ff'), rough=0.05, alpha=0.45)
-material('net', srgb('#3fbf6a'), rough=0.9, alpha=0.5)
-material('orange', srgb('#ff6b1f'), rough=0.6)
-material('white', srgb('#f2f0ea'), rough=0.6)
-material('container', rough=0.55, metal=0.3, tex=tex_corrugated())
-material('blueprint', rough=0.85, tex=tex_blueprint())
-material('bag', srgb('#d8cbb0'), rough=0.95)
-material('lamp', srgb('#ffe2a0'), emit=srgb('#ffd27a'), emit_strength=6)
-material('window_warm', srgb('#ffe0a0'), emit=srgb('#ffc870'), emit_strength=3)
-material('beacon', srgb('#ff4a2a'), emit=srgb('#ff3a1a'), emit_strength=8)
-material('hat', srgb('#ffcf1a'), rough=0.35)
-
-# ───────────────────────── 建模工具 ─────────────────────────
-GROUPS = {}  # group -> list of objects
-UV_SCALE = 1.4
-
-
-def finalize(obj, mat, group='static', bevel=0.0, segs=2, uv=True):
-    """套用倒角（烘焙成實際幾何）、世界座標方盒投影 UV、指定材質與群組"""
-    if bevel > 0:
-        mod = obj.modifiers.new('bevel', 'BEVEL')
-        mod.width = bevel
-        mod.segments = segs
-        mod.limit_method = 'ANGLE'
-        mod.angle_limit = math.radians(40)
-        mod.harden_normals = True
-        ev = obj.evaluated_get(dg())
-        mesh = bpy.data.meshes.new_from_object(ev)
-        obj.modifiers.clear()
-        old = obj.data
-        obj.data = mesh
-        bpy.data.meshes.remove(old)
-    if uv:
-        box_uv(obj)
-    obj.data.materials.clear()
-    obj.data.materials.append(MATS[mat])
-    GROUPS.setdefault(group, []).append(obj)
-    return obj
-
-
-def box_uv(obj):
-    me = obj.data
-    bm = bmesh.new()
-    bm.from_mesh(me)
-    layer = bm.loops.layers.uv.verify()
-    mw = obj.matrix_world
-    rot = mw.to_3x3()
-    for f in bm.faces:
-        n = (rot @ f.normal)
-        ax = max(range(3), key=lambda i: abs(n[i]))
-        for loop in f.loops:
-            w = mw @ loop.vert.co
-            if ax == 0:
-                u, v = w.y, w.z
-            elif ax == 1:
-                u, v = w.x, w.z
-            else:
-                u, v = w.x, w.y
-            loop[layer].uv = (u * UV_SCALE, v * UV_SCALE)
-    bm.to_mesh(me)
-    bm.free()
-
-
-def box(name, size, loc, mat, rot=(0, 0, 0), group='static', bevel=0.012, segs=2):
-    bpy.ops.mesh.primitive_cube_add(size=1, location=loc, rotation=rot)
+def label_block(name, size, loc, mat, group='static', bevel=0.03):
+    """頂面顯示完整標籤貼圖、側面取貼圖邊緣純色的積木"""
+    bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
     o = bpy.context.active_object
     o.name = name
     o.scale = size
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    return finalize(o, mat, group, bevel, segs)
-
-
-def cyl(name, r, h, loc, mat, rot=(0, 0, 0), verts=12, group='static', bevel=0.0):
-    bpy.ops.mesh.primitive_cylinder_add(vertices=verts, radius=r, depth=h, location=loc, rotation=rot)
-    o = bpy.context.active_object
-    o.name = name
-    return finalize(o, mat, group, bevel)
-
-
-def beam(name, a, b, thick, mat, group='static', round_=False):
-    """兩點之間的桿件（方管或圓管）"""
-    a, b = Vector(a), Vector(b)
-    d = b - a
-    length = d.length
-    mid = (a + b) / 2
-    rot = d.to_track_quat('Z', 'Y').to_euler()
-    if round_:
-        return cyl(name, thick / 2, length, mid, mat, rot=rot, verts=8, group=group)
-    return box(name, (thick, thick, length), mid, mat, rot=rot, group=group, bevel=0)
-
-
-def cone(name, r1, r2, h, loc, mat, verts=16, group='static', rot=(0, 0, 0)):
-    bpy.ops.mesh.primitive_cone_add(vertices=verts, radius1=r1, radius2=r2, depth=h, location=loc, rotation=rot)
-    o = bpy.context.active_object
-    o.name = name
-    return finalize(o, mat, group)
-
-
-def ico(name, r, loc, mat, sub=1, scale=(1, 1, 1), group='static'):
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=sub, radius=r, location=loc)
-    o = bpy.context.active_object
-    o.name = name
-    o.scale = scale
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    for v in o.data.vertices:
-        v.co *= 0.85 + rng.random() * 0.3
-    return finalize(o, mat, group)
-
-
-# ───────────────────────── 地塊 ─────────────────────────
-S = 4.0
-box('site_ground', (S - 0.16, S - 0.16, 0.28), (0, 0, -0.14), 'gravel', bevel=0.02)
-for i, (sx, sy, x, y) in enumerate([(S, 0.16, 0, S / 2 - 0.08), (S, 0.16, 0, -S / 2 + 0.08), (0.16, S - 0.32, S / 2 - 0.08, 0), (0.16, S - 0.32, -S / 2 + 0.08, 0)]):
-    box(f'curb_{i}', (sx, sy, 0.3), (x, y, -0.13), 'concrete', bevel=0.025)
-box('soil', (S - 0.06, S - 0.06, 0.48), (0, 0, -0.52), 'soil', bevel=0.03)
-box('rock', (S - 0.18, S - 0.18, 0.4), (0, 0, -0.96), 'rock', bevel=0.04)
-bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=S * 0.65, radius2=0, depth=2, location=(0, 0, -2.15), rotation=(math.pi, 0, math.pi / 4))
-o = bpy.context.active_object
-for v in o.data.vertices:
-    if v.co.z < 0.9:
-        v.co.x += (rng.random() - 0.5) * 0.25
-        v.co.y += (rng.random() - 0.5) * 0.25
-finalize(o, 'rock')
-for i, (x, y, z, r) in enumerate([(1.3, -0.7, -1.5, 0.38), (-1.1, 0.8, -1.8, 0.3), (0.4, 1.2, -2.6, 0.2)]):
-    ico(f'float_rock_{i}', r, (x, y, z), 'rock')
-
-# ───────────────────────── 施工中的校舍 ─────────────────────────
-BX, BY = -0.35, 0.15  # 建物中心
-box('pad', (2.7, 2.3, 0.06), (BX, BY, 0.03), 'concrete', bevel=0.01)
-box('slab_1', (2.4, 2.0, 0.12), (BX, BY, 0.12), 'concrete', bevel=0.02)
-cols = [(BX + dx, BY + dy) for dx in (-1.08, 0, 1.08) for dy in (-0.88, 0.88)]
-for i, (x, y) in enumerate(cols):
-    box(f'col1_{i}', (0.14, 0.14, 0.8), (x, y, 0.58), 'concrete', bevel=0.012)
-box('slab_2', (2.4, 2.0, 0.1), (BX, BY, 1.03), 'concrete', bevel=0.018)
-# 二樓：只完成一半的柱子 + 外露鋼筋
-for i, (x, y) in enumerate(cols):
-    h = 0.75 if i % 2 == 0 else 0.42
-    box(f'col2_{i}', (0.14, 0.14, h), (x, y, 1.08 + h / 2), 'concrete', bevel=0.012)
-    for k, (ox, oy) in enumerate([(-0.04, -0.04), (0.04, -0.04), (-0.04, 0.04), (0.04, 0.04)]):
-        cyl(f'rebar_{i}_{k}', 0.008, 0.28, (x + ox, y + oy, 1.08 + h + 0.12), 'rebar', verts=6)
-box('beam_2', (2.36, 0.12, 0.12), (BX, BY + 0.88, 1.79), 'concrete', bevel=0.01)
-
-# 一樓：後牆完整（含兩扇窗）、左牆一磚一磚砌到一半
-WALL_Y = BY + 0.95
-for i, (x0, x1) in enumerate([(-1.15, -0.62), (-0.18, 0.18), (0.62, 1.15)]):
-    box(f'backwall_{i}', (x1 - x0, 0.1, 0.78), (BX + (x0 + x1) / 2, WALL_Y, 0.57), 'brick', bevel=0.006)
-for i, xc in enumerate((-0.4, 0.4)):
-    box(f'win_sill_{i}', (0.44, 0.1, 0.22), (BX + xc, WALL_Y, 0.29), 'brick', bevel=0.006)
-    box(f'win_head_{i}', (0.44, 0.1, 0.16), (BX + xc, WALL_Y, 0.88), 'brick', bevel=0.006)
-    box(f'win_frame_{i}', (0.44, 0.12, 0.4), (BX + xc, WALL_Y, 0.6), 'white', bevel=0.004)
-    box(f'win_glass_{i}', (0.38, 0.13, 0.34), (BX + xc, WALL_Y, 0.6), 'glass', bevel=0)
-    box(f'win_mull_{i}', (0.02, 0.135, 0.34), (BX + xc, WALL_Y, 0.6), 'white', bevel=0)
-BRICK_L, BRICK_H = 0.2, 0.065
-wx = BX - 1.16
-for row in range(11):
-    z = 0.18 + row * (BRICK_H + 0.008) + BRICK_H / 2
-    built = 2.0 - row * 0.14 + (rng.random() * 0.1)
-    off = (BRICK_L / 2) * (row % 2)
-    y = BY - 0.85 + off
-    while y < BY - 0.85 + built and y < BY + 0.85:
-        box('brick', (0.1, BRICK_L - 0.012, BRICK_H), (wx, y + BRICK_L / 2, z), 'brick', bevel=0.004, segs=1)
-        y += BRICK_L
-# 鷹架（正面）
-SY = BY - 1.15
-for i, x in enumerate([BX - 1.1, BX - 0.55, BX, BX + 0.55, BX + 1.1]):
-    beam(f'scaf_v_{i}', (x, SY, 0.06), (x, SY, 1.95), 0.03, 'steel', round_=True)
-    beam(f'scaf_v2_{i}', (x, SY - 0.32, 0.06), (x, SY - 0.32, 1.95), 0.03, 'steel', round_=True)
-for lvl, z in enumerate((0.55, 1.05, 1.55)):
-    beam(f'scaf_h_{lvl}', (BX - 1.12, SY, z), (BX + 1.12, SY, z), 0.026, 'steel', round_=True)
-    beam(f'scaf_h2_{lvl}', (BX - 1.12, SY - 0.32, z), (BX + 1.12, SY - 0.32, z), 0.026, 'steel', round_=True)
-    for i in range(4):
-        x0 = BX - 1.1 + i * 0.55
-        box(f'scaf_plank_{lvl}_{i}', (0.52, 0.3, 0.025), (x0 + 0.275, SY - 0.16, z + 0.02), 'wood', bevel=0.004, segs=1)
-        a, b = (x0, SY - 0.32, z - 0.5 if lvl else 0.08), (x0 + 0.55, SY - 0.32, z)
-        beam(f'scaf_d_{lvl}_{i}', a, b, 0.02, 'steel', round_=True)
-box('safety_net', (1.15, 0.01, 1.3), (BX + 0.55, SY - 0.34, 1.2), 'net', bevel=0)
-
-# ───────────────────────── 塔吊（獨立物件，可旋轉） ─────────────────────────
-CX, CY = 1.35, 1.3
-MAST_H = 3.15
-m = 0.11
-for cx_, cy_ in ((-m, -m), (m, -m), (-m, m), (m, m)):
-    beam('mast_leg', (CX + cx_, CY + cy_, 0.05), (CX + cx_, CY + cy_, MAST_H), 0.035, 'yellow', group='crane')
-z = 0.05
-k = 0
-while z < MAST_H - 0.2:
-    z2 = z + 0.26
-    for (a, b) in [((-m, -m), (m, -m)), ((m, -m), (m, m)), ((m, m), (-m, m)), ((-m, m), (-m, -m))]:
-        beam('mast_ring', (CX + a[0], CY + a[1], z2), (CX + b[0], CY + b[1], z2), 0.018, 'yellow', group='crane')
-        if k % 2:
-            beam('mast_diag', (CX + a[0], CY + a[1], z), (CX + b[0], CY + b[1], z2), 0.014, 'yellow', group='crane')
-        else:
-            beam('mast_diag', (CX + b[0], CY + b[1], z), (CX + a[0], CY + a[1], z2), 0.014, 'yellow', group='crane')
-    z = z2
-    k += 1
-box('crane_base', (0.5, 0.5, 0.12), (CX, CY, 0.06), 'concrete_dark', bevel=0.015)
-cyl('turntable', 0.2, 0.1, (CX, CY, MAST_H + 0.05), 'black', group='crane', verts=20)
-box('cab', (0.26, 0.24, 0.24), (CX + 0.2, CY - 0.18, MAST_H + 0.02), 'white', group='crane', bevel=0.02)
-box('cab_window', (0.27, 0.2, 0.12), (CX + 0.2, CY - 0.2, MAST_H + 0.05), 'window_warm', group='crane', bevel=0)
-# 吊臂（三角斷面桁架，朝 -X）
-JZ = MAST_H + 0.14
-JL = 2.5
-top = (0, JZ + 0.2)
-for i in range(12):
-    x0 = CX - i * JL / 12
-    x1 = CX - (i + 1) * JL / 12
-    for dy in (-0.07, 0.07):
-        beam('jib_chord', (x0, CY + dy, JZ), (x1, CY + dy, JZ), 0.022, 'yellow', group='crane')
-        beam('jib_web', (x0, CY + dy, JZ), (x1, CY, JZ + 0.16), 0.012, 'yellow', group='crane')
-    beam('jib_top', (x0, CY, JZ + 0.16), (x1, CY, JZ + 0.16), 0.018, 'yellow', group='crane')
-    beam('jib_rung', (x0, CY - 0.07, JZ), (x0, CY + 0.07, JZ), 0.012, 'yellow', group='crane')
-# 平衡臂與配重
-for dy in (-0.08, 0.08):
-    beam('cjib', (CX, CY + dy, JZ), (CX + 1.0, CY + dy, JZ), 0.03, 'yellow', group='crane')
-for i in range(3):
-    box(f'counterweight_{i}', (0.12, 0.26, 0.3), (CX + 0.62 + i * 0.13, CY, JZ - 0.12), 'concrete_dark', group='crane', bevel=0.01)
-box('cjib_deck', (1.0, 0.2, 0.02), (CX + 0.5, CY, JZ + 0.01), 'steel', group='crane', bevel=0)
-# 塔頂 A 字架與拉索
-beam('apex_a', (CX - 0.1, CY, JZ), (CX, CY, JZ + 0.75), 0.04, 'yellow', group='crane')
-beam('apex_b', (CX + 0.1, CY, JZ), (CX, CY, JZ + 0.75), 0.04, 'yellow', group='crane')
-beam('tie_jib', (CX, CY, JZ + 0.75), (CX - JL * 0.7, CY, JZ + 0.16), 0.008, 'black', group='crane', round_=True)
-beam('tie_cjib', (CX, CY, JZ + 0.75), (CX + 0.95, CY, JZ + 0.02), 0.008, 'black', group='crane', round_=True)
-cyl('beacon', 0.035, 0.05, (CX, CY, JZ + 0.8), 'beacon', group='crane', verts=10)
-# 小車 + 鋼索 + 吊鉤（吊鉤另成物件，網站上會上下晃動）
-TX = CX - 1.6
-box('trolley', (0.14, 0.18, 0.06), (TX, CY, JZ - 0.03), 'black', group='crane', bevel=0.008)
-beam('cable', (TX, CY, JZ - 0.05), (TX, CY, 1.95), 0.008, 'black', group='crane', round_=True)
-box('hook_block', (0.1, 0.06, 0.12), (TX, CY, 1.89), 'yellow', group='hook', bevel=0.01)
-bpy.ops.mesh.primitive_torus_add(major_radius=0.035, minor_radius=0.01, location=(TX, CY, 1.79), rotation=(math.pi / 2, 0, 0))
-finalize(bpy.context.active_object, 'steel', 'hook')
-box('load_beam', (0.5, 0.06, 0.06), (TX, CY, 1.67), 'steel', group='hook', bevel=0.006)
-beam('sling_a', (TX, CY, 1.78), (TX - 0.22, CY, 1.7), 0.006, 'black', group='hook', round_=True)
-beam('sling_b', (TX, CY, 1.78), (TX + 0.22, CY, 1.7), 0.006, 'black', group='hook', round_=True)
-
-# ───────────────────────── 工地道具 ─────────────────────────
-# 工務所貨櫃屋
-OX, OY = -1.32, -1.25
-box('office', (0.9, 0.5, 0.48), (OX, OY, 0.26), 'container', bevel=0.012)
-box('office_roof', (0.96, 0.56, 0.04), (OX, OY, 0.52), 'white', bevel=0.008)
-box('office_door', (0.16, 0.02, 0.32), (OX + 0.26, OY - 0.255, 0.2), 'white', bevel=0.004)
-box('office_win', (0.3, 0.02, 0.16), (OX - 0.15, OY - 0.255, 0.3), 'window_warm', bevel=0.003)
-box('office_ac', (0.14, 0.1, 0.1), (OX - 0.3, OY + 0.29, 0.3), 'white', bevel=0.008)
-box('office_step', (0.22, 0.12, 0.05), (OX + 0.26, OY - 0.32, 0.025), 'concrete_dark', bevel=0.006)
-# 棧板 + 水泥袋
-PX, PY = 1.25, -1.25
-for i in range(5):
-    box(f'pallet_top_{i}', (0.5, 0.08, 0.02), (PX, PY - 0.2 + i * 0.1, 0.09), 'wood', bevel=0.004, segs=1)
-for i in range(3):
-    box(f'pallet_blk_{i}', (0.08, 0.5, 0.06), (PX - 0.2 + i * 0.2, PY, 0.04), 'wood', bevel=0.004, segs=1)
-for layer in range(2):
-    for i in range(3):
-        bpy.ops.mesh.primitive_cube_add(size=1, location=(PX - 0.15 + i * 0.15 + layer * 0.02, PY + (0.1 if layer else -0.08), 0.14 + layer * 0.08))
-        o = bpy.context.active_object
-        o.scale = (0.14, 0.28, 0.07)
-        o.rotation_euler = (0, 0, (rng.random() - 0.5) * 0.15)
-        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-        sub = o.modifiers.new('sub', 'SUBSURF')
-        sub.levels = 2
-        finalize(o, 'bag', bevel=0.02)
-# 鋼管堆
-for i in range(6):
-    row = 0 if i < 4 else 1
-    x = 0.95 + (i if row == 0 else i - 4) * 0.07 + row * 0.035
-    cyl(f'pipe_{i}', 0.03, 0.9, (x, 0.42, 0.05 + 0.03 + row * 0.055), 'steel', rot=(math.pi / 2, 0, 0), verts=12)
-for y in (0.1, 0.74):
-    box('pipe_block', (0.36, 0.06, 0.05), (1.05, y, 0.025), 'wood', bevel=0.004, segs=1)
-# 三角錐（帶白色反光環）
-for i, (x, y) in enumerate([(-0.1, -1.72), (0.35, -1.72), (0.8, -1.72), (1.7, -0.45)]):
-    cone(f'cone_{i}', 0.07, 0.012, 0.22, (x, y, 0.13), 'orange')
-    cyl(f'cone_band_{i}', 0.047, 0.04, (x, y, 0.14), 'white', verts=16)
-    box(f'cone_base_{i}', (0.16, 0.16, 0.02), (x, y, 0.01), 'orange', bevel=0.004)
-# 施工圍籬
-for i in range(5):
-    x = -1.75 + i * 0.36
-    beam(f'fence_post_{i}', (x, -1.84, 0), (x, -1.84, 0.42), 0.025, 'steel', round_=True)
-    if i < 4:
-        box(f'fence_panel_{i}', (0.34, 0.01, 0.34), (x + 0.18, -1.84, 0.22), 'net', bevel=0)
-        box(f'fence_rail_{i}', (0.36, 0.02, 0.02), (x + 0.18, -1.84, 0.4), 'steel', bevel=0)
-    box(f'fence_foot_{i}', (0.08, 0.16, 0.04), (x, -1.84, 0.02), 'orange', bevel=0.006)
-# 藍圖桌 + 安全帽
-TX2, TY2 = 0.62, -0.95
-box('table_top', (0.5, 0.34, 0.03), (TX2, TY2, 0.36), 'wood', bevel=0.006, segs=1)
-box('table_sheet', (0.44, 0.28, 0.006), (TX2, TY2, 0.378), 'blueprint', bevel=0)
-for dx in (-0.22, 0.22):
-    for dy in (-0.14, 0.14):
-        beam('table_leg', (TX2 + dx, TY2 + dy, 0), (TX2 + dx, TY2 + dy, 0.35), 0.022, 'black')
-bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=0.07, location=(TX2 + 0.14, TY2 + 0.06, 0.38))
-o = bpy.context.active_object
-for v in o.data.vertices:
-    v.co.z = max(v.co.z, 0)
-finalize(o, 'hat')
-box('ground_blueprint', (0.9, 0.62, 0.004), (-0.05, -1.0, 0.004), 'blueprint', rot=(0, 0, 0.12), bevel=0)
-# 工地照明燈
-for i, (x, y) in enumerate([(-1.75, 0.2), (1.78, 0.35)]):
-    beam(f'light_pole_{i}', (x, y, 0), (x, y, 1.1), 0.035, 'black', round_=True)
-    box(f'light_head_{i}', (0.16, 0.08, 0.1), (x, y, 1.12), 'black', bevel=0.008)
-    box(f'light_lens_{i}', (0.13, 0.085, 0.07), (x, y - 0.005, 1.11), 'lamp', bevel=0)
-# 碎石堆
-for i in range(14):
-    a = rng.random() * math.tau
-    r = rng.random() * 0.22
-    ico(f'gravel_{i}', 0.04 + rng.random() * 0.04, (-1.45 + math.cos(a) * r, 0.95 + math.sin(a) * r, 0.03), 'concrete_dark', sub=0)
-
-
-# ───────────────────────── 合併與匯出 ─────────────────────────
-def join(objs, name):
-    if not objs:
-        return None
-    with bpy.context.temp_override(active_object=objs[0], object=objs[0], selected_objects=objs, selected_editable_objects=objs):
-        bpy.ops.object.join()
-    o = objs[0]
-    o.name = name
+    finalize(o, mat, group, bevel=bevel, segs=3, uv=False)
+    me = o.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    uvl = bm.loops.layers.uv.verify()
+    sx, sy = size[0] / 2, size[1] / 2
+    for f in bm.faces:
+        top = f.normal.z > 0.6
+        for lp in f.loops:
+            if top:
+                lp[uvl].uv = (np.clip((lp.vert.co.x + sx) / (2 * sx), 0, 1), np.clip((lp.vert.co.y + sy) / (2 * sy), 0, 1))
+            else:
+                lp[uvl].uv = (0.015, 0.5)
+    bm.to_mesh(me)
+    bm.free()
     return o
 
 
-def merge_group(group, name):
-    by_mat = {}
-    for o in GROUPS.get(group, []):
-        by_mat.setdefault(o.data.materials[0].name, []).append(o)
-    parts = [join(objs, f'{name}_{mat}') for mat, objs in by_mat.items()]
-    return [p for p in parts if p]
+# ───────────────────────── 浮空引擎底座 ─────────────────────────
+box('board', (4.0, 4.0, 0.22), (0, 0, -0.11), 'board', bevel=0.02)
+for (sx, sy, x, y) in [(4.2, 0.14, 0, 2.03), (4.2, 0.14, 0, -2.03), (0.14, 3.92, 2.03, 0), (0.14, 3.92, -2.03, 0)]:
+    box('rim', (sx, sy, 0.3), (x, y, -0.09), 'brass', bevel=0.03)
+for x in (-2.03, 2.03):
+    for y in (-2.03, 2.03):
+        cyl('rim_cap', 0.13, 0.36, (x, y, -0.08), 'brass_dark', verts=16)
+        kit.ico('rim_bolt', 0.06, (x, y, 0.12), 'brass', sub=1)
+box('undercarriage', (3.6, 3.6, 0.32), (0, 0, -0.38), 'steel_dark', bevel=0.03)
+for k in range(8):
+    a = k / 8 * math.tau
+    beam('strut', (math.cos(a) * 1.5, math.sin(a) * 1.5, -0.5), (0, 0, -1.6), 0.07, 'steel_dark')
+bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=14, radius=0.32, location=(0, 0, -1.65))
+finalize(bpy.context.active_object, 'core')
+cyl('core_ring', 0.5, 0.06, (0, 0, -1.65), 'brass', verts=32)
 
 
-def pivot(objs, name, piv):
-    """把一組物件放進以 piv 為原點的空物件下（網站以它為旋轉中心）"""
-    empty = bpy.data.objects.new(name, None)
-    scene.collection.objects.link(empty)
-    empty.location = piv
-    for o in objs:
-        o.parent = empty
-        o.matrix_parent_inverse = Matrix.Translation(-Vector(piv))
-    return empty
+def gear(name, loc, r, teeth, axis='y', thick=0.12):
+    rot = (math.pi / 2, 0, 0) if axis == 'y' else (0, math.pi / 2, 0)
+    parts = [cyl(f'{name}_disc', r, thick, loc, 'brass', rot=rot, verts=32, group=name)]
+    parts.append(cyl(f'{name}_hub', r * 0.3, thick * 1.6, loc, 'brass_dark', rot=rot, verts=16, group=name))
+    for t in range(teeth):
+        a = t / teeth * math.tau
+        if axis == 'y':
+            p = (loc[0] + math.cos(a) * (r + 0.05), loc[1], loc[2] + math.sin(a) * (r + 0.05))
+            parts.append(box(f'{name}_tooth', (0.09, thick, 0.1), p, 'brass', rot=(0, -a, 0), group=name, bevel=0.01, segs=1))
+        else:
+            p = (loc[0], loc[1] + math.cos(a) * (r + 0.05), loc[2] + math.sin(a) * (r + 0.05))
+            parts.append(box(f'{name}_tooth', (thick, 0.09, 0.1), p, 'brass', rot=(a, 0, 0), group=name, bevel=0.01, segs=1))
+    return parts
 
 
-static = merge_group('static', 'site')
-crane = merge_group('crane', 'crane')
-hook = merge_group('hook', 'hook')
-crane_root = pivot(crane, 'Crane', (CX, CY, 0))
-hook_root = pivot(hook, 'Hook', (TX, CY, 1.95))
-hook_root.parent = crane_root
-hook_root.matrix_parent_inverse = Matrix.Translation(-Vector((CX, CY, 0)))
+gear('GearA', (-0.9, -1.86, -0.62), 0.5, 18, 'y')
+gear('GearB', (0.05, -1.86, -0.8), 0.32, 12, 'y')
+gear('GearC', (1.86, 0.6, -0.66), 0.45, 16, 'x')
 
-tris = sum(len(o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
-print(f'objects={len([o for o in bpy.data.objects if o.type == "MESH"])} faces={tris}')
+# ───────────────────────── 立體課表 ─────────────────────────
+CW, CH = 0.56, 0.42           # 每格 x / y 尺寸
+GX0, GY1 = -1.25, 1.18        # 課表左緣 x、最上方（第 1 節）y
+cells = {}
+for d in range(5):
+    for p in range(6):
+        cells[(d, p)] = (GX0 + CW * (d + 0.5), GY1 - CH * (p + 0.5))
+# 格線（微微發光）
+for d in range(6):
+    x = GX0 + CW * d
+    box('grid_v', (0.02, CH * 6, 0.025), (x, GY1 - CH * 3, 0.012), 'grid_line', bevel=0)
+for p in range(7):
+    y = GY1 - CH * p
+    box('grid_h', (CW * 5, 0.02, 0.025), (GX0 + CW * 2.5, y, 0.012), 'grid_line', bevel=0)
+# 星期與節次標籤
+for d in range(5):
+    label_block(f'day_{d}', (CW - 0.08, 0.3, 0.1), (cells[(d, 0)][0], GY1 + 0.22, 0.05), f'day_{d}', bevel=0.02)
+for p in range(6):
+    label_block(f'per_{p}', (0.3, CH - 0.08, 0.1), (GX0 - 0.24, cells[(0, p)][1], 0.05), f'per_{p}', bevel=0.02)
 
-bpy.ops.export_scene.gltf(
-    filepath=OUT,
-    export_format='GLB',
-    export_apply=True,
-    export_yup=True,
-    export_image_format='WEBP',
-    export_materials='EXPORT',
-    export_lights=False,
-    export_cameras=False,
-)
-print('exported', OUT, os.path.getsize(OUT))
+TIMETABLE = [  # [day][period]
+    ['國語', '數學', '英語', '自然', '體育', '美勞'],
+    ['數學', '國語', '社會', '音樂', '自然', '國語'],
+    ['英語', '數學', '國語', '體育', '社會', '音樂'],
+    ['國語', '自然', '數學', '英語', '美勞', '社會'],
+    ['數學', '國語', '音樂', '社會', '英語', '體育'],
+]
+DROPS = [(1, 2), (3, 0), (2, 4), (4, 1)]   # 這幾格的積木懸在空中、會依序落下
+BH = 0.16
+for d in range(5):
+    for p in range(6):
+        x, y = cells[(d, p)]
+        subj = TIMETABLE[d][p]
+        if (d, p) in DROPS:
+            i = DROPS.index((d, p))
+            kit.cyl(f'slot_glow_{i}', 0.04, 0.01, (x, y, 0.03), 'thread', verts=12)
+            label_block(f'Drop_{i}', (CW - 0.08, CH - 0.08, BH), (x, y, BH / 2 + 0.55), f'subj_{subj}', group=f'Drop_{i}')
+        else:
+            label_block(f'cell_{d}_{p}', (CW - 0.08, CH - 0.08, BH), (x, y, BH / 2 + 0.01), f'subj_{subj}')
+
+# 約束線：同一位老師（數學）的課以發光弧線相連 → 不能撞堂
+math_cells = [cells[(d, p)] for d in range(5) for p in range(6) if TIMETABLE[d][p] == '數學' and (d, p) not in DROPS]
+for a, b in zip(math_cells, math_cells[1:]):
+    mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0.55)
+    beam('thread', (a[0], a[1], BH + 0.02), mid, 0.018, 'thread', round_=True)
+    beam('thread', mid, (b[0], b[1], BH + 0.02), 0.018, 'thread', round_=True)
+    kit.ico('thread_node', 0.035, mid, 'thread', sub=1)
+
+# ───────────────────────── 龍門式求解機械臂 ─────────────────────────
+GZ = 1.35
+for x in (-1.75, 1.75):
+    for y in (-1.75, 1.75):
+        beam('gantry_post', (x, y, 0), (x, y, GZ), 0.08, 'steel_dark')
+        box('gantry_foot', (0.18, 0.18, 0.06), (x, y, 0.03), 'brass_dark', bevel=0.01)
+    box('gantry_rail', (0.1, 3.7, 0.1), (x, 0, GZ), 'brass', bevel=0.012)
+BY0 = 0.3
+box('bridge_beam', (3.6, 0.14, 0.12), (0, BY0, GZ + 0.11), 'steel_dark', group='GantryBridge', bevel=0.015)
+for x in (-1.75, 1.75):
+    box('bridge_shoe', (0.2, 0.26, 0.14), (x, BY0, GZ + 0.1), 'brass_dark', group='GantryBridge', bevel=0.015)
+HX0 = -0.4
+box('head_carriage', (0.26, 0.24, 0.18), (HX0, BY0, GZ + 0.11), 'brass', group='GantryHead', bevel=0.02)
+cyl('head_rod', 0.025, 0.7, (HX0, BY0, GZ - 0.3), 'steel', group='GantryHead')
+box('gripper_plate', (0.22, 0.06, 0.03), (HX0, BY0, GZ - 0.66), 'steel_dark', group='GantryHead', bevel=0.005)
+for s in (-1, 1):
+    box('gripper_claw', (0.02, 0.05, 0.12), (HX0 + s * 0.24, BY0, GZ - 0.73), 'steel_dark', group='GantryHead', bevel=0.004)
+label_block('carried', (CW - 0.08, CH - 0.08, BH), (HX0, BY0, GZ - 0.75), 'subj_自然', group='GantryHead')
+kit.ico('head_light', 0.04, (HX0, BY0 - 0.13, GZ + 0.11), 'thread', sub=1, group='GantryHead')
+
+# ───────────────────────── 懸浮時鐘（時段） ─────────────────────────
+CLX, CLY, CLZ = 0.15, 2.25, 2.05
+cyl('clock_face', 0.62, 0.05, (CLX, CLY, CLZ), 'dial', rot=(math.pi / 2, 0, 0), verts=48)
+bpy.ops.mesh.primitive_torus_add(major_radius=0.64, minor_radius=0.045, location=(CLX, CLY, CLZ), rotation=(math.pi / 2, 0, 0))
+finalize(bpy.context.active_object, 'brass')
+for t in range(12):
+    a = t / 12 * math.tau
+    box('clock_tick', (0.03, 0.02, 0.1 if t % 3 else 0.16), (CLX + math.sin(a) * 0.5, CLY - 0.03, CLZ + math.cos(a) * 0.5), 'hand', rot=(0, -a, 0), bevel=0)
+box('hand_min', (0.03, 0.02, 0.44), (CLX, CLY - 0.06, CLZ + 0.2), 'hand', group='ClockHand', bevel=0)
+box('hand_hour', (0.05, 0.02, 0.3), (CLX, CLY - 0.07, CLZ + 0.13), 'brass_dark', group='ClockHandH', bevel=0)
+kit.ico('clock_pin', 0.05, (CLX, CLY - 0.08, CLZ), 'brass', sub=1)
+beam('clock_stem', (CLX, CLY, CLZ - 0.66), (CLX, CLY, 0.0), 0.06, 'brass_dark')
+box('clock_base', (0.4, 0.2, 0.08), (CLX, CLY - 0.05, 0.04), 'brass', bevel=0.015)
+
+# ───────────────────────── 合併、設定樞紐、匯出 ─────────────────────────
+kit.merge_group('static', 'engine')
+pivots = {}
+for name, piv in [('GearA', (-0.9, -1.86, -0.62)), ('GearB', (0.05, -1.86, -0.8)), ('GearC', (1.86, 0.6, -0.66)),
+                  ('ClockHand', (CLX, CLY - 0.06, CLZ)), ('ClockHandH', (CLX, CLY - 0.07, CLZ)),
+                  ('GantryBridge', (0, BY0, GZ)), ('GantryHead', (HX0, BY0, GZ))]:
+    pivots[name] = kit.pivot(kit.merge_group(name, name.lower()), name, piv)
+for i, (d, p) in enumerate(DROPS):
+    x, y = cells[(d, p)]
+    kit.pivot(kit.merge_group(f'Drop_{i}', f'drop{i}'), f'Drop_{i}', (x, y, 0.55))
+# 機械臂頭掛在橫樑下，跟著橫樑移動
+head, bridge = pivots['GantryHead'], pivots['GantryBridge']
+head.parent = bridge
+head.matrix_parent_inverse = bridge.matrix_world.inverted()
+
+kit.export(OUT)

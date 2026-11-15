@@ -99,7 +99,7 @@ npm run build    # 產出 dist/
 
 ### 精細模型（.glb）
 作品可在 `projects.ts` 設定 `model: 'models/xxx.glb'`，以 Blender 建模（或 AI 生成）的精細箱庭取代程式建構版。
-目前《國小排課系統》已使用 Blender 程序化建模版本，建模腳本與流程見 `tools/blender/`。
+目前《國小排課系統》已使用 Blender 程序化建模的「課表排列引擎」，建模腳本與流程見 `tools/blender/`。
 
 ### 效能原則
 - 不使用 `filter` / `mix-blend-mode`，光影用漸層與 `box-shadow`。
