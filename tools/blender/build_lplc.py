@@ -173,6 +173,58 @@ for k in range(3):
     cone('rewind_arrow', 0.08, 0.0, 0.18, (math.cos(a) * 1.85, math.sin(a) * 1.85, 0.04), 'neon_m', verts=3,
          rot=(0, math.pi / 2, a - math.pi / 2), group='SpinR1')
 
+# ── 細節：K 線型態面板、五大選股濾鏡、ETF 籃子、資料塔 ──
+def tex_pattern():
+    W, H = 512, 300
+    img = Image.new('RGB', (W, H), (4, 14, 24))
+    d = ImageDraw.Draw(img)
+    for x in range(0, W, 32):
+        d.line([(x, 0), (x, H)], fill=(12, 40, 56))
+    v = 160.0
+    rng2 = kit.random.Random(9)
+    for k in range(24):
+        o = v; v += (rng2.random() - 0.46) * 26; c = v
+        hi, lo = max(o, c) + rng2.random() * 12, min(o, c) - rng2.random() * 12
+        x = 18 + k * 20
+        col = (255, 61, 110) if c < o else (0, 230, 160)
+        d.line([(x, H - hi), (x, H - lo)], fill=col, width=2)
+        d.rectangle([x - 6, H - max(o, c), x + 6, H - min(o, c)], fill=col)
+    d.rectangle([250, 40, 420, 240], outline=(255, 214, 102), width=4)
+    d.text((262, 46), 'W 底 · 勝率 68%', font=ImageFont.truetype(kit.CJK_FONT, 26), fill=(255, 214, 102))
+    return save('pattern', np.asarray(img)[::-1] if False else np.asarray(img))
+
+
+material('pattern', rough=0.4, tex=tex_pattern(), emit=srgb('#ffffff'), emit_strength=1.4, emit_tex=True)
+material('lens', srgb('#9fe8ff'), rough=0.05, alpha=0.25)
+for i, (name, col) in enumerate([('低基期', '#22e4ff'), ('動能', '#ff3df2'), ('高股息', '#ffd166'), ('事件', '#7fff9f'), ('籌碼', '#b98cff')]):
+    material(f'lens_{i}', srgb(col), emit=srgb(col), emit_strength=3)
+material('etf_label', rough=0.4, tex=kit.label_texture('etf', 'ETF', '#0a1a28', fg=(159, 243, 255), size=(200, 120), font_size=70), emit=srgb('#ffffff'), emit_strength=1.2, emit_tex=True)
+# K 線型態面板（後方右側，立在支架上）
+KPX, KPY = 1.25, 1.55
+label_block('pattern_panel', (1.2, 0.03, 0.7), (KPX, KPY, 1.05), 'pattern', bevel=0.006, face='front')
+box('panel_frame', (1.26, 0.025, 0.76), (KPX, KPY + 0.02, 1.05), 'frame', bevel=0.008)
+for dx in (-0.5, 0.5):
+    cyl('panel_leg', 0.02, 0.7, (KPX + dx, KPY + 0.03, 0.35), 'frame', verts=6)
+# 五大選股濾鏡：五片疊起的發光鏡環（左前方）
+FLX, FLY = -1.45, -1.3
+for i in range(5):
+    kit.torus(f'lens_ring_{i}', 0.32 - i * 0.02, 0.018, (FLX, FLY, 0.3 + i * 0.18), f'lens_{i}', group='SpinR2', major=32, minor=6)
+    cyl(f'lens_disc_{i}', 0.3 - i * 0.02, 0.006, (FLX, FLY, 0.3 + i * 0.18), 'lens', verts=24, group='SpinR2')
+kit.sphere('lens_pick', 0.06, (FLX, FLY, 1.25), 'cap_up3', seg=12, rings=8, group='Bob9')
+# ETF 籃子：由小方塊組成的立方體（左後方）
+ETX, ETY = -1.5, 1.45
+for a in range(3):
+    for b in range(3):
+        for c in range(3):
+            if (a + b + c) % 2 == 0 or c == 2:
+                box('etf_cell', (0.13, 0.13, 0.13), (ETX - 0.15 + a * 0.15, ETY - 0.15 + b * 0.15, 0.1 + c * 0.15), ['heat_up2', 'heat_dn2', 'heat_flat'][(a + b + c) % 3], bevel=0.01, segs=1)
+label_block('etf_tag', (0.3, 0.02, 0.18), (ETX, ETY - 0.26, 0.62), 'etf_label', bevel=0.004, face='front')
+# 資料塔（四角，帶閃爍燈）
+for (x, y) in [(1.8, 1.8), (-1.8, 1.8), (1.8, -1.8), (-1.8, -1.8)]:
+    cyl('pylon', 0.04, 0.9, (x, y, 0.45), 'frame', verts=6)
+    cone('pylon_tip', 0.07, 0.0, 0.16, (x, y, 0.98), 'neon_c', verts=6)
+    kit.sphere('pylon_led', 0.03, (x, y, 0.75), 'neon_m', seg=8, rings=5)
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'terrain')
 kit.pivot(kit.merge_group('Pulse0', 'eye'), 'Pulse0', (EX, EY, EZ))
@@ -181,6 +233,8 @@ kit.pivot(kit.merge_group('Spin0', 'ringa'), 'Spin0', (EX, EY, EZ))
 kit.pivot(kit.merge_group('SpinR0', 'ringb'), 'SpinR0', (EX, EY, EZ))
 kit.pivot(kit.merge_group('Spin1', 'ticker'), 'Spin1', (EX, EY, EZ - 0.75))
 kit.pivot(kit.merge_group('SpinR1', 'rewind'), 'SpinR1', (0, 0, 0.04))
+kit.pivot(kit.merge_group('SpinR2', 'lenses'), 'SpinR2', (FLX, FLY, 0))
+kit.pivot(kit.merge_group('Bob9', 'pick'), 'Bob9', (FLX, FLY, 1.25))
 for i in range(7):
     a = i / 7 * math.tau
     kit.pivot(kit.merge_group(f'Bob{i}', f'candle{i}'), f'Bob{i}', (EX + math.cos(a) * 1.55, EY + math.sin(a) * 1.55, EZ - 0.2 + (i % 3) * 0.22))
