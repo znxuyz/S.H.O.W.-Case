@@ -109,6 +109,7 @@ export const projects: Project[] = [
     theme: 'mythic',
     category: 'personal',
     status: 'maintenance',
+    model: 'models/stockgame.glb',
     links: {
       demo: 'https://stockgame-692.pages.dev',
       repo: 'https://github.com/znxuyz/StockGame',
