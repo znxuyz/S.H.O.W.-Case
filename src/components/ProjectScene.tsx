@@ -1,9 +1,10 @@
-import { useLayoutEffect, useRef } from 'react';
-import { ArrowUpRight, Hammer, Wrench, Archive } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ArrowUpRight, Hammer, Wrench, Archive, ChevronLeft, ChevronRight, X, Info, MonitorSmartphone, Rotate3d, Maximize2 } from 'lucide-react';
 import type { Project } from '../data/projects';
 import { themes } from '../themes';
 import { playSceneIntro } from '../lib/titleFx';
-import { MediaPanel, ProjectStage } from './MediaPanel';
+import { ProjectStage } from './MediaPanel';
+import { Showcase } from './Showcase';
 import { GitHubIcon } from './icons';
 
 const STATUS = {
@@ -13,45 +14,70 @@ const STATUS = {
   archived: { label: '已停用', icon: Archive },
 } as const;
 
-/** 依主題附加的裝飾（不影響版面結構） */
-function ThemeOrnament({ project }: { project: Project }) {
-  switch (project.theme) {
-    case 'oriental':
-      return (
-        <div className="oriental-vertical reveal" aria-hidden>
-          <span className="seal">{project.title.slice(0, 2)}</span>
-          <span className="vertical-text">{project.tagline}</span>
-        </div>
-      );
-    case 'cyber':
-      return <span className="cyber-corners" aria-hidden><i /><i /><i /><i /></span>;
-    default:
-      return null;
-  }
-}
-
+/**
+ * 作品介紹頁：空間化敘事。
+ * 畫面只保留左上角的極簡標題卡與按鈕；功能介紹綁在 3D 模型的熱點上，
+ * 點擊熱點 → 鏡頭聚焦 → 彈出說明卡；完整文字收在「關於此作品」抽屜。
+ */
 export function ProjectScene({ project, index, total, reducedMotion }: { project: Project; index: number; total: number; reducedMotion: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   const theme = themes[project.theme];
   const status = STATUS[project.status];
+  const hotspots = project.hotspots ?? [];
+  const [active, setActive] = useState<number | null>(null);
+  const [panel, setPanel] = useState<'none' | 'about' | 'preview'>('none');
+  const markers = useRef<(HTMLElement | null)[]>([]);
+  const accent = project.accent ?? 'var(--accent)';
 
   useLayoutEffect(() => {
     if (!root.current) return;
     return playSceneIntro(root.current, theme.title, reducedMotion);
   }, [theme.title, reducedMotion]);
 
+  const pick = useCallback((i: number | null) => { setActive(i); if (i !== null) setPanel('none'); }, []);
+  const step = useCallback((d: number) => {
+    if (!hotspots.length) return;
+    setActive((a) => (a === null ? (d > 0 ? 0 : hotspots.length - 1) : (a + d + hotspots.length) % hotspots.length));
+    setPanel('none');
+  }, [hotspots.length]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setActive(null); setPanel('none'); }
+      if (active !== null && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { e.preventDefault(); step(e.key === 'ArrowRight' ? 1 : -1); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [active, step]);
+
   const num = String(index).padStart(2, '0');
   const StatusIcon = status.icon;
+  const h = active !== null ? hotspots[active] : null;
 
   return (
     <>
-    {/* 全螢幕 3D 舞台（在文字下方） */}
-    <ProjectStage project={project} reducedMotion={reducedMotion} />
-    <div className="stage-veil" aria-hidden />
-    <div ref={root} data-scroll className="scene-scroll scene-over">
-      <div className={`scene-grid scene-${project.theme}`}>
-        <div className="sc-copy">
-          <ThemeOrnament project={project} />
+      <ProjectStage project={project} reducedMotion={reducedMotion} active={active} onPick={pick} markers={markers} />
+      {/* 3D 熱點標記（位置由舞台每幀投影寫入） */}
+      <div className="hs-layer" aria-label="模型上的導覽標記">
+        {hotspots.map((hs, i) => (
+          <div key={i} ref={(el) => { markers.current[i] = el; }} className="hs-anchor" style={{ visibility: 'hidden' }}>
+            <button
+              className={`hs-dot ${active === i ? 'is-active' : ''} ${active !== null && active !== i ? 'is-dim' : ''}`}
+              style={{ ['--c' as string]: accent }}
+              onClick={() => pick(active === i ? null : i)}
+              aria-label={`導覽 ${i + 1}：${hs.title}`}
+            >
+              <span className="hs-num">{i + 1}</span>
+              <span className="hs-label">{hs.title}</span>
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="corner-veil" aria-hidden />
+
+      <div ref={root} className={`tour scene-${project.theme}`}>
+        {/* 左上：極簡標題卡 */}
+        <header className="tour-title">
           <div className="sc-kicker reveal">
             <span className="sc-num">{num}<span className="opacity-50"> / {String(total).padStart(2, '0')}</span></span>
             <span className="sc-kicker-sep" />
@@ -61,18 +87,8 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
               {status.label}
             </span>
           </div>
-          {project.code && <p className="sc-code reveal">{project.code}</p>}
           <h2 className="sc-title">{project.title}</h2>
           <p className="sc-tagline reveal">{project.tagline}</p>
-          <p className="sc-desc reveal">{project.description}</p>
-          <ul className="sc-highlights">
-            {project.highlights.map((h) => (
-              <li key={h} className="reveal">{h}</li>
-            ))}
-          </ul>
-          <div className="sc-tags reveal">
-            {project.tech.map((t) => <span key={t}>{t}</span>)}
-          </div>
           <div className="sc-actions reveal">
             {project.links.demo ? (
               <a className="sc-btn sc-btn-primary" href={project.links.demo} target="_blank" rel="noopener noreferrer">
@@ -80,20 +96,75 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
                 <ArrowUpRight className="h-4 w-4" aria-hidden />
               </a>
             ) : (
-              <span className="sc-btn sc-btn-disabled" aria-disabled="true">
-                <Hammer className="h-4 w-4" aria-hidden /> <span>開發中 · 尚未開放</span>
-              </span>
+              <span className="sc-btn sc-btn-disabled" aria-disabled="true"><Hammer className="h-4 w-4" aria-hidden /> <span>開發中</span></span>
             )}
             <a className="sc-btn sc-btn-secondary" href={project.links.repo} target="_blank" rel="noopener noreferrer">
-              <GitHubIcon />
-              <span>Source Code</span>
+              <GitHubIcon /><span>Source Code</span>
             </a>
           </div>
-          {project.note && <p className="sc-note reveal">※ {project.note}</p>}
-        </div>
-        <MediaPanel project={project} />
+          <div className="tour-links reveal">
+            <button className={panel === 'about' ? 'is-on' : ''} onClick={() => { setPanel(panel === 'about' ? 'none' : 'about'); setActive(null); }}>
+              <Info className="h-3.5 w-3.5" aria-hidden /> 關於此作品
+            </button>
+            {project.showcase && (
+              <button className={panel === 'preview' ? 'is-on' : ''} onClick={() => { setPanel(panel === 'preview' ? 'none' : 'preview'); setActive(null); }}>
+                <MonitorSmartphone className="h-3.5 w-3.5" aria-hidden /> 網站預覽
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* 底部：導覽列 */}
+        {hotspots.length > 0 && (
+          <nav className="tour-strip reveal" aria-label="空間導覽">
+            <span className="tour-hint"><Rotate3d className="h-3.5 w-3.5" aria-hidden /> 探索模型</span>
+            {hotspots.map((hs, i) => (
+              <button key={i} className={active === i ? 'is-on' : ''} onClick={() => pick(active === i ? null : i)} aria-pressed={active === i}>
+                <b>{i + 1}</b><span>{hs.title}</span>
+              </button>
+            ))}
+            {active !== null && (
+              <button className="tour-home" onClick={() => pick(null)} aria-label="回到全景"><Maximize2 className="h-3.5 w-3.5" aria-hidden /> 全景</button>
+            )}
+          </nav>
+        )}
+
+        {/* 熱點說明卡 */}
+        {h && (
+          <aside className="tour-card" key={active} role="dialog" aria-label={h.title}>
+            <div className="tour-card-head">
+              <span className="tour-card-num">{String(active! + 1).padStart(2, '0')}<small> / {String(hotspots.length).padStart(2, '0')}</small></span>
+              <button onClick={() => pick(null)} aria-label="關閉說明"><X className="h-4 w-4" /></button>
+            </div>
+            <h3>{h.title}</h3>
+            <p>{h.body}</p>
+            <div className="tour-card-nav">
+              <button onClick={() => step(-1)} aria-label="上一個"><ChevronLeft className="h-4 w-4" /> 上一個</button>
+              <button onClick={() => step(1)} aria-label="下一個">下一個 <ChevronRight className="h-4 w-4" /></button>
+            </div>
+          </aside>
+        )}
+
+        {/* 關於此作品 / 網站預覽 抽屜 */}
+        {panel === 'about' && (
+          <aside className="tour-card tour-about" role="dialog" aria-label="關於此作品">
+            <div className="tour-card-head">
+              {project.code && <span className="tour-card-code">{project.code}</span>}
+              <button onClick={() => setPanel('none')} aria-label="關閉"><X className="h-4 w-4" /></button>
+            </div>
+            <p>{project.description}</p>
+            <ul className="sc-highlights">{project.highlights.map((x) => <li key={x}>{x}</li>)}</ul>
+            <div className="sc-tags">{project.tech.map((t) => <span key={t}>{t}</span>)}</div>
+            {project.note && <p className="sc-note">※ {project.note}</p>}
+          </aside>
+        )}
+        {panel === 'preview' && (
+          <aside className="tour-preview" role="dialog" aria-label="網站預覽">
+            <button className="tour-preview-close" onClick={() => setPanel('none')} aria-label="關閉"><X className="h-4 w-4" /></button>
+            <Showcase project={project} />
+          </aside>
+        )}
       </div>
-    </div>
     </>
   );
 }

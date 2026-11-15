@@ -1,41 +1,37 @@
 /**
  * 介紹頁的全螢幕 3D 舞台：Canvas 佔滿整個視窗，箱庭不會被任何邊框裁切。
- * 透過 camera.setViewOffset 把箱庭推到畫面右側（直式則推到下方），
- * 左側留白給懸浮的文字排版。
+ * 空間導覽：熱點標記綁在模型各部位，點擊後鏡頭聚焦（Hotspots.tsx）。
  */
-import { useLayoutEffect } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { ContactShadows, OrbitControls } from '@react-three/drei';
-import { PCFShadowMap, type PerspectiveCamera } from 'three';
+import { PCFShadowMap } from 'three';
+import type { Hotspot } from '../data/projects';
+import type { MutableRefObject } from 'react';
+import { CameraFocus, MarkerProjector, StageShift } from './Hotspots';
 import { Diorama } from './dioramas';
 import type { BuildingKind } from './kinds';
 import { allowEffects, Effects, World, worldFor } from './world';
 
-/** 依視窗比例把主體推到右側 / 下方 */
-function ViewShift() {
-  const { camera, size } = useThree();
-  useLayoutEffect(() => {
-    const cam = camera as PerspectiveCamera;
-    const wide = size.width / size.height > 1.05 && size.width >= 1024;
-    if (wide) cam.setViewOffset(size.width, size.height, -size.width * 0.2, 0, size.width, size.height);
-    else cam.setViewOffset(size.width, size.height, 0, -size.height * 0.2, size.width, size.height);
-    cam.updateProjectionMatrix();
-    return () => { cam.clearViewOffset(); };
-  }, [camera, size.width, size.height]);
-  return null;
+export interface DomainStageProps {
+  kind: BuildingKind; accent: string; model?: string; projectId?: string; reducedMotion: boolean;
+  hotspots?: Hotspot[]; active?: number | null; onPick?: (i: number | null) => void;
+  markers?: MutableRefObject<(HTMLElement | null)[]>;
 }
 
-export default function DomainStage({ kind, accent, model, projectId, reducedMotion }: { kind: BuildingKind; accent: string; model?: string; projectId?: string; reducedMotion: boolean }) {
+export default function DomainStage({ kind, accent, model, projectId, reducedMotion, hotspots = [], active = null, onPick, markers }: DomainStageProps) {
   const W = worldFor(kind, projectId);
   const fx = allowEffects();
   // 直式螢幕畫面窄，鏡頭拉遠讓整座箱庭入鏡
   const far = typeof window !== 'undefined' && window.innerWidth / window.innerHeight < 1 ? 1.75 : 1;
+  const home: [number, number, number] = [10.5 * far, 6.5 * far, 10.5 * far];
+  const focused = active !== null && !!hotspots[active];
   return (
     <Canvas
       resize={{ offsetSize: true }}
       shadows={{ type: PCFShadowMap }}
       dpr={[1, 1.5]}
-      camera={{ position: [10.5 * far, 6.5 * far, 10.5 * far], fov: 32, near: 0.1, far: 300 }}
+      camera={{ position: home, fov: 32, near: 0.1, far: 300 }}
+      onPointerMissed={() => onPick?.(null)}
       gl={{ antialias: !fx, powerPreference: 'high-performance' }}
     >
       <World style={W} />
@@ -60,7 +56,9 @@ export default function DomainStage({ kind, accent, model, projectId, reducedMot
         <Diorama kind={kind} accent={accent} model={model} lights />
       </group>
       <ContactShadows position={[0, -3.98, 0]} scale={18} blur={2.6} far={7} opacity={0.55} resolution={512} color="#000000" />
-      <ViewShift />
+      {markers && <MarkerProjector hotspots={hotspots} markers={markers} />}
+      <CameraFocus hotspot={focused ? hotspots[active!] : null} home={home} homeTarget={[0, 0.8, 0]} />
+      <StageShift focused={focused} />
       <OrbitControls
         makeDefault
         target={[0, 0.8, 0]}
@@ -71,7 +69,7 @@ export default function DomainStage({ kind, accent, model, projectId, reducedMot
         maxDistance={34}
         minPolarAngle={0.2}
         maxPolarAngle={Math.PI / 2 - 0.06}
-        autoRotate={!reducedMotion}
+        autoRotate={!reducedMotion && !focused}
         autoRotateSpeed={0.5}
       />
       {fx && <Effects bloom={W.bloom} />}

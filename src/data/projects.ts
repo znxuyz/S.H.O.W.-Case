@@ -32,6 +32,16 @@ export type Showcase =
   | { kind: 'timetable' }
   | { kind: 'passport' };
 
+/** 空間導覽熱點：綁在 3D 模型某個部位上的功能說明（座標為網站場景座標，Y 朝上） */
+export interface Hotspot {
+  title: string;
+  body: string;
+  /** 標記點位置 */
+  at: [number, number, number];
+  /** （選填）聚焦時的鏡頭位置；未指定則自動從場景中心往外退後抬高 */
+  cam?: [number, number, number];
+}
+
 export interface Project {
   /** 網址錨點，例如 #/lplc */
   id: string;
@@ -64,6 +74,8 @@ export interface Project {
   showcase?: Showcase;
   building?: BuildingKind;
   model?: string;
+  /** 3D 空間導覽熱點（建議 3–5 個） */
+  hotspots?: Hotspot[];
   hidden?: boolean;
 }
 
@@ -238,6 +250,33 @@ export const projects: Project[] = [
     note: '已於學校帳號正式上線使用',
     building: 'school',
     model: 'models/hcrs.glb',
+    hotspots: [
+      {
+        title: '公開借用月曆',
+        body: '不用登入就能查看「借用狀況」月曆，只顯示已核准的借用。可依教室篩選，點一下日期就能看到當天各教室 × 節次的使用表。',
+        at: [-0.1, -0.3, 0.85],
+      },
+      {
+        title: '教室借用燈號與衝突檢查',
+        body: '電腦、視聽、自然、禮堂……每間專科教室的借用狀態即時亮燈。送出申請時若和已核准的時段衝突，會直接擋下並列出衝突日期。',
+        at: [-0.45, 0.35, -0.3],
+      },
+      {
+        title: '三種借用方式',
+        body: '只借一次、每週固定、每月固定——整學期的固定借用一次設定完成；管理員也能把舊 Excel 上的固定借用直接核准匯入。',
+        at: [0.85, 0.95, -0.3],
+      },
+      {
+        title: '主管一鍵審核',
+        body: '主管在後台同意／不同意，也能切換成「自動同意」；核准時會再檢查一次衝突。所有借用可依狀態、教室、月份篩選並匯出 CSV。',
+        at: [1.0, 0.8, 0.75],
+      },
+      {
+        title: '自動寄信通知',
+        body: '教師送出申請 → 寄信給所有主管；審核完成 → 寄信通知申請人。只接受學校網域的 Google 帳號登入，前端與資料庫規則雙重把關。',
+        at: [0, 1.65, -0.75],
+      },
+    ],
     links: {
       demo: 'https://hresnoc-lang.github.io/H.C.R.S-HRES-Classroom-Reservation-System/index.html#calendar',
       repo: 'https://github.com/znxuyz/H.C.R.S-HRES-Classroom-Reservation-System',
