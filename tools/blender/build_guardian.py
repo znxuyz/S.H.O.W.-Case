@@ -121,6 +121,54 @@ for i in range(14):
     r = 0.9 + (i % 3) * 0.35
     kit.sphere('firefly', 0.025, (TX + math.cos(a) * r, TY - 0.4 + math.sin(a) * r, 0.6 + (i % 5) * 0.35), 'firefly', seg=8, rings=6, group='Spin_1')
 
+# ── 細節：照護站（健康機制）、獎品商店、領地旗、餵食碗、招牌 ──
+kit.detail_materials()
+material('tent', srgb('#fffaf0'), rough=0.85)
+material('cross', srgb('#ff5a5a'), rough=0.5)
+material('stall', srgb('#c98a4b'), rough=0.75)
+material('awning_a', srgb('#ff8a6b'), rough=0.6)
+material('awning_b', srgb('#fff4e0'), rough=0.6)
+material('flag_r', srgb('#ff5a5a'), rough=0.6)
+material('flag_b', srgb('#4f86f7'), rough=0.6)
+material('flag_y', srgb('#ffd35a'), rough=0.6)
+material('bowl', srgb('#7fd6cc'), rough=0.4)
+material('food', srgb('#e2a65a'), rough=0.8)
+material('sign_board', rough=0.8, tex=kit.label_texture('gsign', '守護獸學園', '#8a5a2e', fg=(255, 240, 200), size=(360, 120), font_size=60))
+# 照護站：小帳篷 + 紅十字 + 生病的小石虎（cat-baby）＋愛心
+CX, CY = 1.05, 0.25
+bpy.ops.mesh.primitive_cylinder_add(vertices=3, radius=0.34, depth=0.55, location=(CX, CY, 0.17), rotation=(0, math.pi / 2, 0))
+tent = bpy.context.active_object
+tent.rotation_euler = (math.pi / 2, 0, 0.3)
+bpy.ops.object.transform_apply(rotation=True)
+kit.finalize(tent, 'tent', bevel=0.01)
+box('cross_v', (0.04, 0.02, 0.14), (CX - 0.05, CY - 0.28, 0.27), 'cross', rot=(0, 0, 0.3), bevel=0)
+box('cross_h', (0.14, 0.02, 0.04), (CX - 0.05, CY - 0.28, 0.27), 'cross', rot=(0, 0, 0.3), bevel=0)
+kit.image_card('sick_pet', os.path.join(PETS, 'cat-baby.png'), 0.36, (CX - 0.12, CY - 0.42, 0.2), group='Billboard8')
+kit.sphere('heart_l', 0.035, (CX - 0.15, CY - 0.45, 0.48), 'cross', seg=10, rings=6, group='Bob1')
+kit.sphere('heart_r', 0.035, (CX - 0.09, CY - 0.45, 0.48), 'cross', seg=10, rings=6, group='Bob1')
+cone('heart_tip', 0.06, 0.0, 0.07, (CX - 0.12, CY - 0.45, 0.43), 'cross', verts=8, rot=(math.pi, 0, 0), group='Bob1')
+# 獎品商店攤
+SX2, SY2 = -1.35, -0.35
+box('stall_counter', (0.6, 0.3, 0.32), (SX2, SY2, 0.16), 'stall', bevel=0.02)
+for dx in (-0.27, 0.27):
+    cyl('stall_post', 0.018, 0.5, (SX2 + dx, SY2 + 0.1, 0.57), 'stall', verts=6)
+for k in range(6):
+    box('awning', (0.11, 0.42, 0.02), (SX2 - 0.275 + k * 0.11, SY2 - 0.02, 0.83), 'awning_a' if k % 2 else 'awning_b', rot=(0.35, 0, 0), bevel=0)
+for k, m in enumerate(['flag_r', 'flag_b', 'flag_y', 'bowl']):
+    box('prize', (0.09, 0.09, 0.09), (SX2 - 0.2 + k * 0.13, SY2 - 0.02, 0.37), m, rot=(0, 0, k * 0.4), bevel=0.012)
+kit.sphere('coin', 0.05, (SX2 + 0.2, SY2 - 0.16, 0.36), 'gold', seg=12, rings=6, scale=(1, 0.3, 1), group='Spin2')
+# 領地佔領戰：三色旗插在小丘上
+for k, (fx, fy, m) in enumerate([(0.15, 0.35, 'flag_r'), (0.45, 0.6, 'flag_b'), (-0.15, 0.62, 'flag_y')]):
+    cyl('flag_pole', 0.012, 0.6, (fx, fy, 0.3), 'stall', verts=6)
+    box('flag', (0.2, 0.01, 0.12), (fx + 0.1, fy, 0.53), m, bevel=0)
+# 餵食碗
+for k, (bx, by) in enumerate([(-0.95, -1.2), (0.0, -1.62), (0.9, -1.55)]):
+    cyl('bowl', 0.07, 0.04, (bx, by, 0.02), 'bowl', verts=14)
+    kit.sphere('food', 0.055, (bx, by, 0.045), 'food', seg=10, rings=5, scale=(1, 1, 0.45))
+# 招牌
+cyl('sign_post', 0.025, 0.5, (-1.75, -1.4, 0.25), 'stall', verts=6)
+kit.label_block('sign', (0.5, 0.03, 0.17), (-1.62, -1.45, 0.48), 'sign_board', bevel=0.006, face='front', rot=(0, 0, 0.35))
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'forest')
 for i, (x, y, ph) in enumerate(SPOTS):
@@ -130,4 +178,7 @@ for i, (x, y) in enumerate([(1.55, 0.55), (-1.62, 0.15), (0.9, 1.6)]):
 kit.pivot(kit.merge_group('Bob_0', 'spirit'), 'Bob_0', (GX, GY, GZ))
 kit.pivot(kit.merge_group('Spin_0', 'spiritring'), 'Spin_0', (GX, GY, GZ))
 kit.pivot(kit.merge_group('Spin_1', 'fireflies'), 'Spin_1', (TX, TY - 0.4, 0))
+kit.pivot(kit.merge_group('Billboard8', 'sickpet'), 'Billboard8', (CX - 0.12, CY - 0.42, 0.02))
+kit.pivot(kit.merge_group('Bob1', 'heart'), 'Bob1', (CX - 0.12, CY - 0.45, 0.46))
+kit.pivot(kit.merge_group('Spin2', 'coin'), 'Spin2', (SX2 + 0.2, SY2 - 0.16, 0.36))
 kit.export(OUT)

@@ -200,6 +200,34 @@ export const projects: Project[] = [
     theme: 'guardian',
     category: 'personal',
     status: 'live',
+    env: 'models/env_guardian.glb',
+    hotspots: [
+      {
+        title: '從蛋到守護神獸',
+        body: '8 種台灣特有種（台灣黑熊、石虎、帝雉、穿山甲……）各有 4 個成長階段。累積經驗只增不減，讓孩子看著自己的守護獸一步步長大。',
+        at: [1.35, 0.9, 1.0],
+      },
+      {
+        title: '樹屋教室・課堂工具',
+        body: '點名出席、抽籤機（可以優先抽到「需要關心」的孩子）、計時器、聯絡簿自動匯整——老師上課需要的工具都在這裡。',
+        at: [-0.2, 1.45, -0.35],
+      },
+      {
+        title: '照護站：需要關心的孩子',
+        body: '超過 3 天沒被關注，寵物會「微恙」；超過 7 天會「生病」。系統自動把這些孩子列進需要關心清單，提醒老師多看一眼。',
+        at: [0.95, 0.15, -0.0],
+      },
+      {
+        title: '獎品商店・積分雙軌',
+        body: '累積經驗用來進化、可用積分用來兌換。老師自訂獎品與點數，學生自行兌換、老師確認發放。',
+        at: [-1.35, 0.35, 0.35],
+      },
+      {
+        title: '領地佔領戰',
+        body: '分組對抗的即時佔領遊戲，搭配線上測驗（可一鍵從 Excel 匯入題庫）與教室大屏投影模式，全班一起見證成長。',
+        at: [0.2, 0.25, -0.5],
+      },
+    ],
     model: 'models/guardian.glb',
     links: {
       demo: 'https://znxuyz.github.io/ClassroomManagementSystem2.0/',
