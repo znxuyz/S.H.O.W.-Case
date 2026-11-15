@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { Environment, Html, Lightformer, OrbitControls, Sparkles } from '@react-three/drei';
+import { Environment, Html, Lightformer, OrbitControls, PerformanceMonitor, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import type { Project } from '../data/projects';
@@ -81,7 +81,7 @@ function Island({
       onPointerDown={(e) => onDown(project.id, e)}
     >
       <group rotation={[0, body.yaw, 0]}>
-        <Diorama kind={kind} accent={accent} model={project.model} />
+        <Diorama kind={kind} accent={accent} model={project.model} lod />
       </group>
       {hovered && (
         <>
@@ -280,7 +280,8 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
   // 讓 Swarm 能判斷哪座島被懸停
   bodies.forEach((b, i) => { if (b.group) b.group.userData.id = ids[i]; });
 
-  const fx = allowEffects();
+  const [low, setLow] = useState(false);
+  const fx = allowEffects() && !low;
   const camPos: [number, number, number] = portrait ? [0, 46, 17] : [1.2, 19, 30];
 
   return (
@@ -288,13 +289,14 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
       // 以 offsetWidth/Height 量測：轉場中的 CSS scale 不會把畫布量成數倍大（先前首頁變黑的原因）
       resize={{ offsetSize: true }}
       shadows={{ type: THREE.PCFShadowMap }}
-      dpr={[1, 1.5]}
+      dpr={low ? 1 : [1, 1.5]}
       camera={{ position: camPos, fov: portrait ? 52 : 40, near: 0.5, far: 320 }}
       gl={{ antialias: !fx, powerPreference: 'high-performance' }}
-      onCreated={({ camera }) => { cameraRef.current = camera; }}
+      onCreated={({ camera, gl }) => { cameraRef.current = camera; (window as unknown as { __mapGL?: unknown }).__mapGL = gl; }}
       onPointerMissed={() => setHovered(null)}
       style={{ cursor: hovered ? 'grab' : 'default' }}
     >
+      <PerformanceMonitor flipflops={2} onDecline={() => setLow(true)} />
       <NebulaDome />
       <fog attach="fog" args={['#0b0918', 55, 140]} />
       <ambientLight color="#8a90b8" intensity={0.55} />

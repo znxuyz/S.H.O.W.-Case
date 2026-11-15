@@ -2,9 +2,9 @@
  * 介紹頁的全螢幕 3D 舞台：Canvas 佔滿整個視窗，箱庭不會被任何邊框裁切。
  * 空間導覽：熱點標記綁在模型各部位，點擊後鏡頭聚焦（Hotspots.tsx）。
  */
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { ContactShadows, OrbitControls } from '@react-three/drei';
+import { ContactShadows, OrbitControls, PerformanceMonitor } from '@react-three/drei';
 import { PCFShadowMap } from 'three';
 import type { Hotspot } from '../data/projects';
 import type { MutableRefObject } from 'react';
@@ -23,7 +23,9 @@ export interface DomainStageProps {
 
 export default function DomainStage({ kind, accent, model, env, projectId, reducedMotion, hotspots = [], active = null, onPick, markers }: DomainStageProps) {
   const W = worldFor(kind, projectId);
-  const fx = allowEffects();
+  // 自動品質：幀率持續偏低時降低解析度並關閉後製
+  const [low, setLow] = useState(false);
+  const fx = allowEffects() && !low;
   // 直式螢幕畫面窄，鏡頭拉遠讓整座箱庭入鏡
   const far = typeof window !== 'undefined' && window.innerWidth / window.innerHeight < 1 ? 1.75 : 1;
   const home: [number, number, number] = [10.5 * far, 6.5 * far, 10.5 * far];
@@ -32,15 +34,17 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
     <Canvas
       resize={{ offsetSize: true }}
       shadows={{ type: PCFShadowMap }}
-      dpr={[1, 1.5]}
+      dpr={low ? 1 : [1, 1.5]}
       camera={{ position: home, fov: 32, near: 0.1, far: 300 }}
       onPointerMissed={() => onPick?.(null)}
+      onCreated={({ gl }) => { (window as unknown as { __stageGL?: unknown }).__stageGL = gl; }}
       gl={{ antialias: !fx, powerPreference: 'high-performance' }}
     >
+      <PerformanceMonitor flipflops={2} onDecline={() => setLow(true)} />
       <World style={W} landscape={!env} />
       {env && (
         <Suspense fallback={null}>
-          <group position={[0, -0.4, 0]}><ModelDiorama url={env} /></group>
+          <group position={[0, -0.4, 0]}><ModelDiorama url={env} release /></group>
         </Suspense>
       )}
       <ambientLight color={W.ambient} intensity={W.ambientI} />

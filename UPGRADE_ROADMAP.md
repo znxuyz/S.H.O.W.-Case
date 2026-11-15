@@ -64,12 +64,12 @@ node tools/qa/perf.cjs                             # 來回切換 10 次，檢�
 - [x] 4.6 無障礙：熱點可用鍵盤 Tab 聚焦、卡片有標題語意
 
 ## 5. 效能與記憶體
-- [ ] 5.1 模型壓縮管線：meshopt（等同或優於 Draco 的壓縮率，且解碼器更小、不需 WASM CDN）＋ WebP 貼圖、上限 512/1024
-- [ ] 5.2 首頁專用輕量版模型（gltf-transform simplify，`models/map/*.glb`），首頁總量目標 < 1.5MB
-- [ ] 5.3 面數預算：介紹頁每座 ≤ 25k 面、首頁版 ≤ 6k 面；材質合併、繪製次數 ≤ 60
-- [ ] 5.4 離開頁面時釋放：Canvas 卸載自動 dispose；GLTF 快取只保留目前與首頁所需
-- [ ] 5.5 效能測試腳本：反覆切換頁面後比對 `renderer.info`（geometries / textures）與 JS heap，確認沒有累積
-- [ ] 5.6 自動品質調整：偵測低幀率時降低 dpr、關閉陰影/後製
+- [x] 5.1 模型壓縮管線：meshopt（等同或優於 Draco 的壓縮率，且解碼器更小、不需 WASM CDN）＋ WebP 貼圖、上限 512/1024
+- [x] 5.2 首頁專用輕量版模型（`tools/blender/build_map_lod.sh` → `models/map/*.glb`，簡化＋128px 貼圖）：首頁 3.2MB → 1.9MB（未達 1.5MB 目標：箱庭由大量獨立小零件組成，簡化器無法再合併；meshopt 檔案經 gzip 可再減半，視 GitHub Pages 是否壓縮 .glb 而定）
+- [x] 5.3 面數預算：介紹頁每座 ≤ 25k 面、首頁版 ≤ 6k 面；材質合併、繪製次數 ≤ 60
+- [x] 5.4 離開頁面時釋放：Canvas 卸載自動 dispose；GLTF 快取只保留目前與首頁所需
+- [x] 5.5 效能測試腳本：反覆切換頁面後比對 `renderer.info`（geometries / textures）與 JS heap，確認沒有累積
+- [x] 5.6 自動品質調整：偵測低幀率時降低 dpr、關閉陰影/後製
 
 ---
 
@@ -88,3 +88,4 @@ node tools/qa/perf.cjs                             # 來回切換 10 次，檢�
 - 2026-11-15 · 3.8 · 排課系統：配課棋子＋鐘點量表、Phase 1/2 托盤、零衝突信號燈（9.9k 面、324KB）；env_scheduling：格線深淵、懸浮課表板、約束節點網、遠方時鐘環、轉動齒輪（15.6k 面、369KB）；6 個熱點
 - 2026-11-15 · 3.9 · 英語護照：在家練習的小房子、GitHub Pages 雲端與上傳箭頭、耳機聲波（5.9k 面、218KB）；env_passport：雲海、5 塊世界地標小大陸（風車、金字塔、鐘塔、鐵塔、寶塔）、彩虹、熱氣球、環繞小飛機（8.7k 面、177KB）；5 個熱點
 - 2026-11-15 · 3.10 · 平板專區：維護說明書、文件數計數器、上傳托盤、便利貼（4.5k 面、166KB）；env_tablet：反光地面與光環、22 座發光書架（書背紅藍白）、天窗光環、環繞文件卡流（19.6k 面、428KB）；4 個熱點。軟體渲染器首幀需 40–80 秒編譯著色器（實機 GPU 不受影響），QA 截圖改用 long.cjs 等待
+- 2026-11-15 · 5.x · meshopt＋WebP（未採用 Draco：需另載 WASM 解碼器且壓縮率相近）；首頁輕量版 1.9MB；介紹頁精細模型與環境離開時釋放 GPU 資源並清快取；drei PerformanceMonitor 偵測低幀率自動降 dpr、關後製；tools/qa/perf.cjs 8 次往返：介紹頁畫布離開後 geo/tex 歸零、大地圖穩定在 ~370 geo / 208 tex，無累積

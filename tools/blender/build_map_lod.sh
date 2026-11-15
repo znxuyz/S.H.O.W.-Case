@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# 首頁群島用的輕量版模型：簡化幾何 + 貼圖縮到 128px
+# 用法：tools/blender/build_map_lod.sh [名稱 ...]（預設：所有非 env 模型）
+set -euo pipefail
+mkdir -p public/models/map
+names=("$@")
+if [ ${#names[@]} -eq 0 ]; then
+  for f in public/models/*.glb; do b=$(basename "$f" .glb); [[ $b == env_* ]] || names+=("$b"); done
+fi
+for n in "${names[@]}"; do
+  ./node_modules/.bin/gltf-transform optimize "public/models/$n.glb" "public/models/map/$n.glb" \
+    --compress meshopt --texture-compress webp --texture-size 128 \
+    --simplify true --simplify-ratio 0.2 --simplify-error 0.02 --join false --flatten false 2>&1 | tail -1
+done

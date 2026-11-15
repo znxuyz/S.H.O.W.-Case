@@ -443,12 +443,12 @@ function Workshop({ lights }: { lights: boolean }) {
   );
 }
 
-export function Diorama({ kind, accent, lights = false, model }: { kind: BuildingKind; accent: string; lights?: boolean; model?: string }) {
+export function Diorama({ kind, accent, lights = false, model, lod = false }: { kind: BuildingKind; accent: string; lights?: boolean; model?: string; lod?: boolean }) {
   // 有精細模型就使用；載入期間先顯示程式建構版
   if (model) {
     return (
       <Suspense fallback={<Diorama kind={kind} accent={accent} lights={lights} />}>
-        <ModelDiorama url={model} />
+        <ModelDiorama url={lod ? model.replace(/^models\//, 'models/map/') : model} release={!lod} />
         {lights && (
           <>
             <pointLight color="#9fd8ff" intensity={6} distance={6} position={[0, 1.6, 0.6]} />

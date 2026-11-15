@@ -9,7 +9,7 @@
  *     Billboard*   永遠面向鏡頭        Lit_N                   依序點亮（N 由 0 起）
  *     SpinR*       反向旋轉            Pulse*                  呼吸縮放
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -20,8 +20,33 @@ const tmpQ = new THREE.Quaternion();
 
 interface Rig { node: THREE.Object3D; base: THREE.Vector3; kind: string; index: number }
 
-export default function ModelDiorama({ url }: { url: string }) {
+/** 釋放一個 GLTF 的 GPU 資源（幾何、材質、貼圖）並移出快取 */
+function release(url: string, scene: THREE.Object3D) {
+  const textures = new Set<THREE.Texture>();
+  scene.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.geometry?.dispose();
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    mats.forEach((m) => {
+      Object.values(m).forEach((v) => { if (v instanceof THREE.Texture) textures.add(v); });
+      m.dispose();
+    });
+  });
+  textures.forEach((t) => t.dispose());
+  useGLTF.clear(modelUrl(url));
+}
+
+/**
+ * release：離開頁面時釋放資源（介紹頁的精細模型與環境用；首頁輕量版保留快取，返回時秒開）
+ */
+export default function ModelDiorama({ url, release: shouldRelease = false }: { url: string; release?: boolean }) {
   const gltf = useGLTF(modelUrl(url), false, true);
+  useEffect(() => {
+    if (!shouldRelease) return;
+    const src = gltf.scene;
+    return () => { release(url, src); };
+  }, [gltf.scene, url, shouldRelease]);
   const { scene, rigs } = useMemo(() => {
     const root = gltf.scene.clone(true);
     const rigs: Rig[] = [];
