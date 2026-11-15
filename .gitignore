@@ -5,3 +5,5 @@ dist
 .blender-venv
 __pycache__/
 *.pyc
+tools/qa/out/
+.blender-venv
