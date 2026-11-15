@@ -183,6 +183,40 @@ for (x, y, s) in [(1.72, 0.2, 0.42), (-1.75, -0.2, 0.38)]:
     cyl('pot', 0.12 * s / 0.4, 0.18 * s / 0.4, (x, y, 0.09 * s / 0.4), 'stamp_red', verts=14)
     kit.tree((x, y, 0.14), s=s, kind='round')
 
+# ── 細節：搜尋放大鏡、成員識別證架、結案檔案櫃、行事曆便利貼 ──
+kit.detail_materials()
+material('lens', srgb('#bfe6ff'), rough=0.05, alpha=0.4)
+material('cabinet', srgb('#9aa3ad'), rough=0.4, metal=0.6)
+material('note_y', srgb('#ffe27a'), rough=0.8)
+material('note_p', srgb('#ff9ec4'), rough=0.8)
+material('badge', rough=0.6, tex=kit.label_texture('badge', '成員', '#d9622b', size=(140, 190), font_size=52))
+# 放大鏡（環內）
+MGX, MGY = 0.55, 0.5
+kit.torus('magnifier_rim', 0.17, 0.025, (MGX, MGY, 0.06), 'pen', rot=(0.15, 0, 0), major=32, minor=8)
+cyl('magnifier_lens', 0.16, 0.012, (MGX, MGY, 0.06), 'lens', verts=24, rot=(0.15, 0, 0))
+kit.beam('magnifier_handle', (MGX + 0.17, MGY - 0.12, 0.05), (MGX + 0.42, MGY - 0.32, 0.04), 0.045, 'desk_dark', round_=True)
+# 成員識別證架（環內）
+BGX, BGY = -0.58, -0.55
+box('badge_stand', (0.36, 0.08, 0.04), (BGX, BGY, 0.02), 'pen', bevel=0.006)
+for k in range(3):
+    kit.beam('lanyard', (BGX - 0.12 + k * 0.12, BGY, 0.32), (BGX - 0.12 + k * 0.12, BGY, 0.24), 0.008, 'engine', round_=True)
+    kit.label_block(f'badge_{k}', (0.09, 0.012, 0.12), (BGX - 0.12 + k * 0.12, BGY - 0.01, 0.17), 'badge', bevel=0.003, face='front')
+box('badge_bar', (0.36, 0.02, 0.02), (BGX, BGY, 0.33), 'pen', bevel=0)
+for dx in (-0.17, 0.17):
+    cyl('badge_post', 0.01, 0.32, (BGX + dx, BGY, 0.17), 'pen', verts=6)
+# 結案檔案櫃（結案站旁）
+CBX, CBY = -1.15, 1.72
+box('cabinet', (0.42, 0.3, 0.5), (CBX, CBY, 0.25), 'cabinet', bevel=0.012)
+for k in range(3):
+    box('drawer', (0.36, 0.02, 0.13), (CBX, CBY - 0.16, 0.09 + k * 0.16), 'white', bevel=0.004)
+    box('drawer_handle', (0.1, 0.02, 0.02), (CBX, CBY - 0.175, 0.1 + k * 0.16), 'pen', bevel=0)
+box('drawer_open', (0.36, 0.2, 0.12), (CBX, CBY - 0.27, 0.41), 'cabinet', bevel=0.006)
+for k in range(4):
+    box('filed_folder', (0.3, 0.012, 0.16), (CBX, CBY - 0.2 - k * 0.04, 0.47), ['folder_b', 'folder_y', 'folder_g', 'folder_b'][k], bevel=0)
+# 行事曆便利貼
+for k, (dx, dz, m) in enumerate([(-0.12, 0.06, 'note_y'), (0.1, -0.06, 'note_p'), (0.0, -0.14, 'note_y')]):
+    box('sticky', (0.09, 0.01, 0.09), (1.48 + dx * 0.9, 1.44 + dx * 0.4, 0.26 + dz), m, rot=(0.25, 0, -0.5 + k * 0.1), bevel=0)
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'desk')
 kit.pivot(kit.merge_group('Spin0', 'train'), 'Spin0', (0, 0, 0))
