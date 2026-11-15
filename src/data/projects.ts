@@ -210,6 +210,7 @@ export const projects: Project[] = [
     category: 'campus',
     status: 'live',
     building: 'library',
+    model: 'models/admin.glb',
     links: {
       demo: 'https://znxuyz.github.io/School-Administration/',
       repo: 'https://github.com/znxuyz/School-Administration',

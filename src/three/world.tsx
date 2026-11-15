@@ -181,7 +181,7 @@ function Scenery({ kind }: { kind: WorldStyle['scenery'] }) {
       return (
         <group>
           {items.map((t) => (
-            <group key={t.i} position={[t.x, base, t.z]} rotation={[0, t.h * 6, 0]}>
+            <group key={t.i} position={[t.x * 1.45, base - 1, t.z * 1.45]} rotation={[0, t.h * 6, 0]}>
               {t.i % 4 === 0 && <P g="cyl6" c="#f2c230" p={[0, 0.5, 0]} s={[0.9, 10 * t.s, 0.9]} r={[Math.PI / 2, 0, 0]} />}
               {t.i % 4 === 1 && <P c={t.i % 8 === 1 ? '#4f86f7' : '#e45b5b'} p={[0, 0.3, 0]} s={[6 * t.s, 0.6, 4.4 * t.s]} />}
               {t.i % 4 === 2 && Array.from({ length: 5 }, (_, k) => <P key={k} c="#f4efe4" p={[(k % 2) * 0.2, 0.2 + k * 0.35, 0]} s={[4 * t.s, 0.3, 5 * t.s]} />)}
