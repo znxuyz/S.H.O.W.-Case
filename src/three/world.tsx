@@ -209,7 +209,7 @@ function Scenery({ kind }: { kind: WorldStyle['scenery'] }) {
       return (
         <group>
           {items.map((t) => (
-            <group key={t.i} position={[t.x, base, t.z]} rotation={[0, Math.atan2(-t.x, -t.z), 0]}>
+            <group key={t.i} position={[t.x * 1.6, base - 3, t.z * 1.6]} rotation={[0, Math.atan2(-t.x, -t.z), 0]}>
               <P c="#10283a" p={[0, 4, 0]} s={[3.2, 8, 0.6]} m={0.4} />
               {Array.from({ length: 4 }, (_, k) => (
                 <group key={k}>

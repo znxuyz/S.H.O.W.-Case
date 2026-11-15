@@ -312,6 +312,7 @@ export const projects: Project[] = [
     status: 'live',
     note: '已於學校帳號正式上線使用',
     building: 'school',
+    model: 'models/tablet.glb',
     links: {
       demo: 'https://hresnoc-lang.github.io/hres-tablet/',
       repo: 'https://github.com/hresnoc-lang/hres-tablet',
