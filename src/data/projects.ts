@@ -85,6 +85,7 @@ export const projects: Project[] = [
     theme: 'cyber',
     category: 'personal',
     status: 'live',
+    model: 'models/lplc.glb',
     links: {
       demo: 'https://znxuyz.github.io/L.P.S.D-System/#sim',
       repo: 'https://github.com/znxuyz/L.P.S.D-System',
