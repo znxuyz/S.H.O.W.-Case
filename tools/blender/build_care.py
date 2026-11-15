@@ -149,11 +149,41 @@ for i in range(30):
 for (x, y, r) in [(-0.95, 0.55, 0.16), (0.95, 0.6, 0.15), (-0.8, -0.9, 0.14)]:
     ico('bush', r, (x, y, r * 0.6), 'leaf', sub=2, scale=(1, 1, 0.75))
 
+# ── 細節：違規登錄桌（筆電）、三鈴門檻拱門、稽核紀錄簿 ──
+kit.detail_materials()
+material('laptop', srgb('#3a3f4a'), rough=0.35, metal=0.6)
+material('screen_teal', srgb('#bff3ea'), emit=srgb('#3fe0c8'), emit_strength=1.6)
+material('bell', srgb('#e8c872'), rough=0.25, metal=0.9)
+material('book_a', srgb('#0f9b8e'), rough=0.7)
+material('book_b', srgb('#f29b30'), rough=0.7)
+DX, DY = -0.62, -1.5
+box('desk_top', (0.5, 0.3, 0.03), (DX, DY, 0.36), 'wood_light', bevel=0.006)
+for sx in (-0.21, 0.21):
+    for sy in (-0.11, 0.11):
+        box('desk_leg', (0.025, 0.025, 0.34), (DX + sx, DY + sy, 0.17), 'white', bevel=0)
+box('laptop_base', (0.24, 0.16, 0.015), (DX, DY + 0.02, 0.385), 'laptop', bevel=0.004)
+box('laptop_lid', (0.24, 0.012, 0.16), (DX, DY + 0.1, 0.46), 'laptop', rot=(-0.25, 0, 0), bevel=0.004)
+box('laptop_screen', (0.21, 0.013, 0.13), (DX, DY + 0.094, 0.46), 'screen_teal', rot=(-0.25, 0, 0), bevel=0)
+box('stool', (0.16, 0.16, 0.2), (DX, DY - 0.28, 0.1), 'teal_light', bevel=0.02)
+# 三鈴門檻拱門（小徑入口）
+AX, AY = 0.0, -1.78
+for sx in (-0.32, 0.32):
+    cyl('arch_post', 0.035, 0.85, (AX + sx, AY, 0.425), 'white', verts=10)
+kit.beam('arch_top', (AX - 0.36, AY, 0.85), (AX + 0.36, AY, 0.85), 0.06, 'teal')
+for k, sx in enumerate((-0.18, 0.0, 0.18)):
+    kit.beam('bell_cord', (AX + sx, AY, 0.83), (AX + sx, AY, 0.72), 0.008, 'white', round_=True)
+    cone(f'bell_{k}', 0.06, 0.02, 0.1, (AX + sx, AY, 0.67), 'bell', verts=14, group=f'Bob{3 + k}')
+# 稽核紀錄簿（守望亭桌上）
+for k in range(4):
+    box('record_book', (0.16, 0.11, 0.035), (GX - 0.12, GY + 0.12, 0.4 + k * 0.035), 'book_a' if k % 2 else 'book_b', rot=(0, 0, k * 0.12), bevel=0.004)
+
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'garden')
 for i in range(15):
     a = math.pi / 2 - i * math.tau / 15
     kit.pivot(kit.merge_group(f'Lit_{i}', f'lit{i}'), f'Lit_{i}', (CX + math.cos(a) * R, CY + math.sin(a) * R, 0.012))
+for k, sx in enumerate((-0.18, 0.0, 0.18)):
+    kit.pivot(kit.merge_group(f'Bob{3 + k}', f'bell{k}'), f'Bob{3 + k}', (AX + sx, AY, 0.67))
 for i in range(3):
     a = i * math.tau / 3
     kit.pivot(kit.merge_group(f'Bob{i}', f'card{i}'), f'Bob{i}', (CX + math.cos(a) * 0.55, CY + math.sin(a) * 0.55 - 0.2, 1.3 + i * 0.12))
