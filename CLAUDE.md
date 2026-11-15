@@ -9,5 +9,8 @@
 ## 專案結構
 - 作品清單：`src/data/projects.ts`
 - 主題（背景、配色、字體）：`src/themes/`、`src/styles/themes.css`
-- 浮空大地圖（CSS 3D）：`src/map/`
-- 不使用 Three.js / WebGL；3D 效果以 CSS 3D、等距 SVG、Canvas 2D 實作。
+- 3D（Three.js + @react-three/fiber + drei）：`src/three/`
+  - `kit.tsx`：共用幾何體 / 材質快取與基礎零件（程序化 Low-Poly，不使用外部 .glb 模型）
+  - `dioramas.tsx`：各主題的微縮箱庭；`MapWorld.tsx`：首頁 3D 群島；`DioramaView.tsx`：介紹頁 360° 箱庭
+- 首頁 2D 疊層：`src/map/`；領域背景插畫：`src/themes/<主題>/Background.tsx`
+- 效能：Canvas `dpr={[1, 1.5]}`、幾何與材質共用、群島不使用點光源；2D 部分不用 filter / mix-blend-mode。

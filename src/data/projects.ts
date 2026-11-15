@@ -18,7 +18,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 import type { ThemeKey } from '../themes/types';
-import type { BuildingKind } from '../map/buildings';
+import type { BuildingKind } from '../three/kinds';
 
 export type ProjectStatus = 'live' | 'dev' | 'maintenance' | 'archived';
 

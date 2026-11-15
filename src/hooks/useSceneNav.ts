@@ -4,6 +4,11 @@ const LOCK_MS = 1050;
 const WHEEL_THRESHOLD = 40;
 const SWIPE_THRESHOLD = 50;
 
+/** 手勢落在 3D 畫布等區域時（data-nav-ignore），交給該元件處理，不切換作品 */
+function ignored(target: EventTarget | null) {
+  return target instanceof Element && !!target.closest('[data-nav-ignore]');
+}
+
 /** true when `el` (or an ancestor marked data-scroll) can still scroll in direction `dir` */
 function canScroll(target: EventTarget | null, dir: 1 | -1) {
   let el = target instanceof Element ? target.closest<HTMLElement>('[data-scroll]') : null;
@@ -50,7 +55,7 @@ export function useSceneNav(ids: string[], { enabled }: { enabled: boolean }) {
     let acc = 0;
     let accTimer = 0;
     const onWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) return;
+      if (e.ctrlKey || ignored(e.target)) return;
       const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
       const sign = (d > 0 ? 1 : -1) as 1 | -1;
       if (canScroll(e.target, sign)) return;
@@ -83,6 +88,7 @@ export function useSceneNav(ids: string[], { enabled }: { enabled: boolean }) {
     let sx = 0, sy = 0, st = 0, startTarget: EventTarget | null = null;
     const onTouchStart = (e: TouchEvent) => {
       sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = performance.now(); startTarget = e.target;
+      if (ignored(e.target)) st = -Infinity;
     };
     const onTouchEnd = (e: TouchEvent) => {
       const dx = e.changedTouches[0].clientX - sx;

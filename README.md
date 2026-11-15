@@ -2,7 +2,7 @@
 
 **Selected Hub Of Works** — 個人作品集與工具展示網站。
 
-首頁是一座以 CSS 3D 打造的**浮空群島**：每一件作品都是一座獨立的微型浮空島，地形與建築依作品主題客製，群島之間以流動光點的能量橋樑串連，整片群島會隨滑鼠立體偏轉。點擊建築，鏡頭會朝它俯衝拉近，進入該作品的全螢幕專屬世界；切換作品時，背景特效、字體、配色、UI 邊框與轉場動畫會整個換掉。
+首頁是以 Three.js 渲染的 **3D 浮空微縮群島**：每一件作品都是一座懸浮在星空中的低多邊形箱庭島嶼，可拖曳旋轉、滾輪縮放；懸停時島嶼浮起並顯示名稱，點擊後鏡頭飛向該島，進入作品的全螢幕專屬世界。介紹頁右側是可 360° 旋轉的微縮箱庭（也可切換成網站預覽）；切換作品時，背景特效、字體、配色、UI 邊框與轉場動畫會整個換掉。
 
 🔗 https://znxuyz.github.io/S.H.O.W.-Case/
 
@@ -10,7 +10,9 @@
 
 | 方式 | 動作 |
 |---|---|
-| 大地圖上點擊建築 | 鏡頭俯衝進入該作品 |
+| 首頁拖曳 / 滾輪 | 旋轉 / 縮放 3D 群島 |
+| 首頁點擊島嶼 | 鏡頭飛入該作品 |
+| 介紹頁右側拖曳 / 滾輪 | 360° 旋轉 / 縮放微縮箱庭 |
 | 右上「返回大地圖」 | 從作品縮小退回大地圖 |
 | 滾輪 / ↑ ↓ / PageUp PageDown / 空白鍵 | 上一個 / 下一個作品 |
 | 手機上下滑動 | 上一個 / 下一個作品 |
@@ -52,10 +54,10 @@
 
 | 值 | 造型 | 預設對應主題 |
 |---|---|---|
-| `tower` | 發光全息高塔 | cyber |
+| `tower` | 霓虹全息高塔 | cyber |
 | `altar` | 懸浮祭壇、靈晶與光環 | mythic |
-| `pagoda` | 飛簷重樓與燈籠 | oriental |
-| `treehouse` | 巨木樹屋與螢火 | guardian |
+| `pagoda` | 月夜飛簷樓閣、石拱橋與燈籠 | oriental |
+| `treehouse` | 森林樹屋與發光靈獸祭壇 | guardian |
 | `school` | 鐘樓學校 | campus |
 | `hall` | 列柱行政大樓 | — |
 | `library` | 圓頂圖書館 | — |
@@ -89,16 +91,17 @@ npm run dev      # 本機預覽
 npm run build    # 產出 dist/
 ```
 
-技術：Vite · React · TypeScript · Tailwind CSS v4 · Motion · GSAP（SplitText / ScrambleText）。
-3D 效果全部以 CSS 3D（`perspective` / `preserve-3d`）、等距 SVG 與 Canvas 2D 完成，不使用 WebGL 引擎。
+技術：Vite · React · TypeScript · Tailwind CSS v4 · Motion · GSAP（SplitText / ScrambleText）· Three.js · React Three Fiber · drei。
 
-大地圖相關程式在 `src/map/`：`layout.ts`（群島位置與橋樑）、`buildings.tsx`（等距建築繪製）、`MapScene.tsx`（沙盤、滑鼠傾斜、俯衝轉場）。
+3D 箱庭全部以 Three.js 基礎幾何體（Box / Cylinder / Cone / Sphere…）程序化堆疊，不需要任何外部模型檔，程式在 `src/three/`：
+`kit.tsx`（共用幾何與材質）、`dioramas.tsx`（各主題箱庭）、`MapWorld.tsx`（首頁群島）、`DioramaView.tsx`（介紹頁 360° 箱庭）。
 每個作品的全螢幕領域插畫在 `src/themes/<主題>/Background.tsx`，共用零件在 `src/themes/sceneKit.tsx`。
 
 ### 效能原則
 - 不使用 `filter` / `mix-blend-mode`，光影用漸層與 `box-shadow`。
 - 持續動畫只動 `transform` / `opacity`（GPU 合成，不重繪）。
-- 滑鼠傾斜與視差以 `requestAnimationFrame` 直接寫入 DOM，不觸發 React 重新渲染。
+- 滑鼠視差以 `requestAnimationFrame` 直接寫入 DOM，不觸發 React 重新渲染。
+- 3D 畫布 `dpr={[1, 1.5]}`，幾何體與材質全站共用，首頁群島不使用點光源。
 
 ## 部署
 

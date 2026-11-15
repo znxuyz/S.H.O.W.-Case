@@ -3,7 +3,7 @@ import { ArrowUpRight, Hammer, Wrench, Archive } from 'lucide-react';
 import type { Project } from '../data/projects';
 import { themes } from '../themes';
 import { playSceneIntro } from '../lib/titleFx';
-import { Showcase } from './Showcase';
+import { MediaPanel } from './MediaPanel';
 import { GitHubIcon } from './icons';
 
 const STATUS = {
@@ -87,16 +87,7 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
           </div>
           {project.note && <p className="sc-note reveal">※ {project.note}</p>}
         </div>
-        <div className="sc-media reveal">
-          {project.theme === 'mythic' && (
-            <svg className="soul-rings" viewBox="0 0 400 400" aria-hidden>
-              <circle cx="200" cy="200" r="190" />
-              <circle cx="200" cy="200" r="160" />
-              <circle cx="200" cy="200" r="130" />
-            </svg>
-          )}
-          <Showcase project={project} />
-        </div>
+        <MediaPanel project={project} reducedMotion={reducedMotion} />
       </div>
     </div>
   );
