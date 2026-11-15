@@ -15,7 +15,7 @@ export function ProjectStage({ project, reducedMotion }: { project: Project; red
     <div className="scene-stage" data-nav-ignore>
       <CanvasBoundary>
         <Suspense fallback={<div className="stage-loading">建構箱庭中…</div>}>
-          <DomainStage kind={kind} accent={accent} model={project.model} reducedMotion={reducedMotion} />
+          <DomainStage kind={kind} accent={accent} model={project.model} projectId={project.id} reducedMotion={reducedMotion} />
         </Suspense>
       </CanvasBoundary>
     </div>

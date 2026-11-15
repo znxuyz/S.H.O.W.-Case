@@ -347,3 +347,167 @@ def export(path):
         export_image_format='WEBP', export_materials='EXPORT', export_lights=False, export_cameras=False,
     )
     print('exported', path, os.path.getsize(path))
+
+
+# ───────────────────────── 進階零件（各專案共用） ─────────────────────────
+def hexrgb(h):
+    h = h.lstrip('#')
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def label_texture(key, text, bg, fg=(255, 255, 255), size=(256, 200), font_size=92, border=True, radius=18):
+    img = Image.new('RGB', size, hexrgb(bg) if isinstance(bg, str) else bg)
+    d = ImageDraw.Draw(img)
+    w, h = size
+    if border:
+        d.rounded_rectangle([10, 10, w - 10, h - 10], radius=radius, outline=tuple(min(255, c + 60) for c in img.getpixel((0, 0))), width=5)
+    font = ImageFont.truetype(CJK_FONT, font_size)
+    lines = text.split('\n')
+    heights = [d.textbbox((0, 0), ln, font=font)[3] for ln in lines]
+    total = sum(heights) + (len(lines) - 1) * 8
+    y = (h - total) / 2 - 4
+    for ln, lh in zip(lines, heights):
+        bb = d.textbbox((0, 0), ln, font=font)
+        d.text(((w - bb[2]) / 2, y), ln, font=font, fill=fg)
+        y += lh + 8
+    return save(f'label_{key}', np.asarray(img))
+
+
+def label_block(name, size, loc, mat, group='static', bevel=0.03, rot=(0, 0, 0), face='top'):
+    """一面顯示完整貼圖（top＝頂面、front＝朝鏡頭的 -Y 面），其餘面取貼圖邊緣純色"""
+    bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
+    o = bpy.context.active_object
+    o.name = name
+    o.scale = size
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    finalize(o, mat, group, bevel=bevel, segs=3, uv=False)
+    me = o.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    uvl = bm.loops.layers.uv.verify()
+    sx, sy, sz = size[0] / 2, size[1] / 2, size[2] / 2
+    for f in bm.faces:
+        hit = f.normal.z > 0.6 if face == 'top' else f.normal.y < -0.6
+        for lp in f.loops:
+            c = lp.vert.co
+            if hit and face == 'top':
+                lp[uvl].uv = (float(np.clip((c.x + sx) / (2 * sx), 0, 1)), float(np.clip((c.y + sy) / (2 * sy), 0, 1)))
+            elif hit:
+                lp[uvl].uv = (float(np.clip((c.x + sx) / (2 * sx), 0, 1)), float(np.clip((c.z + sz) / (2 * sz), 0, 1)))
+            else:
+                lp[uvl].uv = (0.015, 0.5)
+    bm.to_mesh(me)
+    bm.free()
+    o.rotation_euler = rot
+    return o
+
+
+def image_card(name, path, height, loc, group='static', rot=(0, 0, 0), crop_alpha=True):
+    """帶透明度的圖片看板（例如角色插畫），朝向 -Y（網站鏡頭方向）"""
+    im = Image.open(path).convert('RGBA')
+    if crop_alpha:
+        bb = im.getbbox()
+        if bb:
+            im = im.crop(bb)
+    w, h = im.size
+    tex = os.path.join(TEX_DIR, f'card_{name}.png')
+    im.save(tex)
+    m = bpy.data.materials.new(f'card_{name}')
+    m.use_nodes = True
+    nt = m.node_tree
+    bsdf = nt.nodes['Principled BSDF']
+    node = nt.nodes.new('ShaderNodeTexImage')
+    node.image = bpy.data.images.load(tex)
+    nt.links.new(node.outputs['Color'], bsdf.inputs['Base Color'])
+    nt.links.new(node.outputs['Alpha'], bsdf.inputs['Alpha'])
+    bsdf.inputs['Roughness'].default_value = 0.8
+    m.surface_render_method = 'DITHERED'
+    m.blend_method = 'CLIP' if hasattr(m, 'blend_method') else None
+    MATS[m.name] = m
+    width = height * w / h
+    bpy.ops.mesh.primitive_plane_add(size=1, location=loc, rotation=(math.pi / 2, 0, 0))
+    o = bpy.context.active_object
+    o.name = name
+    o.scale = (width, height, 1)
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+    me = o.data
+    uvl = me.uv_layers.active or me.uv_layers.new()
+    for poly in me.polygons:
+        for li in poly.loop_indices:
+            v = me.vertices[me.loops[li].vertex_index].co
+            uvl.data[li].uv = (v.x / width + 0.5, v.z / height + 0.5)
+    o.data.materials.append(m)
+    o.rotation_euler = rot
+    GROUPS.setdefault(group, []).append(o)
+    return o
+
+
+def sphere(name, r, loc, mat, seg=24, rings=14, scale=(1, 1, 1), group='static'):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=seg, ring_count=rings, radius=r, location=loc)
+    o = bpy.context.active_object
+    o.name = name
+    o.scale = scale
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    return finalize(o, mat, group)
+
+
+def torus(name, R, r, loc, mat, rot=(0, 0, 0), group='static', major=48, minor=10):
+    bpy.ops.mesh.primitive_torus_add(major_radius=R, minor_radius=r, location=loc, rotation=rot, major_segments=major, minor_segments=minor)
+    o = bpy.context.active_object
+    o.name = name
+    return finalize(o, mat, group)
+
+
+def capsule(name, length, r, loc, mat, group='static'):
+    """沿 X 軸的膠囊體（圓柱 + 兩端半球），平滑著色"""
+    bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=r, depth=length, location=loc, rotation=(0, math.pi / 2, 0))
+    body = bpy.context.active_object
+    parts = [body]
+    for s in (-1, 1):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=r, location=(loc[0] + s * length / 2, loc[1], loc[2]))
+        parts.append(bpy.context.active_object)
+    for p in parts:
+        bpy.ops.object.shade_smooth() if False else None
+        for poly in p.data.polygons:
+            poly.use_smooth = True
+    with bpy.context.temp_override(active_object=body, object=body, selected_objects=parts, selected_editable_objects=parts):
+        bpy.ops.object.join()
+    body.name = name
+    return finalize(body, mat, group)
+
+
+def plinth(top_mat, soil_mat='soil', rock_mat='rock', rim_mat='concrete', size=4.0, float_=True):
+    """與網站 Plinth 一致的 4×4 地塊（頂面 z=0），附倒錐浮島岩底"""
+    box('ground', (size - 0.16, size - 0.16, 0.28), (0, 0, -0.14), top_mat, bevel=0.02)
+    for (sx, sy, x, y) in [(size, 0.16, 0, size / 2 - 0.08), (size, 0.16, 0, -size / 2 + 0.08), (0.16, size - 0.32, size / 2 - 0.08, 0), (0.16, size - 0.32, -size / 2 + 0.08, 0)]:
+        box('rim', (sx, sy, 0.3), (x, y, -0.13), rim_mat, bevel=0.025)
+    box('soil', (size - 0.06, size - 0.06, 0.48), (0, 0, -0.52), soil_mat, bevel=0.03)
+    box('rockl', (size - 0.18, size - 0.18, 0.4), (0, 0, -0.96), rock_mat, bevel=0.04)
+    if float_:
+        bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=size * 0.65, radius2=0, depth=2, location=(0, 0, -2.15), rotation=(math.pi, 0, math.pi / 4))
+        o = bpy.context.active_object
+        for v in o.data.vertices:
+            if v.co.z < 0.9:
+                v.co.x += (rng.random() - 0.5) * 0.25
+                v.co.y += (rng.random() - 0.5) * 0.25
+        finalize(o, rock_mat)
+        for (x, y, z, r) in [(1.3, -0.7, -1.5, 0.38), (-1.1, 0.8, -1.8, 0.3), (0.4, 1.2, -2.6, 0.2)]:
+            ico('float_rock', r, (x, y, z), rock_mat)
+
+
+def tree(loc, s=1.0, kind='round', leaf='leaf', leaf2='leaf_dark', trunk='bark', group='static'):
+    x, y, z = loc
+    cyl('trunk', 0.06 * s, 0.6 * s, (x, y, z + 0.3 * s), trunk, verts=8, group=group)
+    if kind == 'round':
+        for (dx, dy, dz, r, m) in [(0, 0, 0.82, 0.32, leaf2), (-0.12, 0.05, 0.95, 0.24, leaf), (0.12, -0.06, 0.92, 0.23, leaf), (0.03, 0.03, 1.15, 0.2, leaf), (0.06, 0.12, 0.72, 0.18, leaf2)]:
+            ico('crown', r * s, (x + dx * s, y + dy * s, z + dz * s), m, sub=2, group=group)
+    else:
+        for i, (r, h, dz) in enumerate([(0.38, 0.5, 0.55), (0.3, 0.45, 0.85), (0.21, 0.4, 1.12), (0.12, 0.34, 1.35)]):
+            cone('pine', r * s, 0.0, h * s, (x, y, z + dz * s), leaf2 if i % 2 == 0 else leaf, verts=9, group=group)
+
+
+def nature_materials():
+    material('leaf', srgb('#4fbf73'), rough=0.85)
+    material('leaf_dark', srgb('#2f8f5b'), rough=0.9)
+    material('bark', srgb('#6b4423'), rough=0.95)
+    material('grass', rough=1.0, tex=save('grass', tint(noise(512, 8, 5, 21), (86, 150, 70), (130, 190, 96))))

@@ -6,6 +6,8 @@
  *     Gear*        繞自身軸旋轉        ClockHand / ClockHandH  時鐘分針 / 時針
  *     GantryBridge 沿深度方向來回      GantryHead              沿左右方向來回
  *     Drop_N       依序升起、落回格子  Spin* / Bob*            通用旋轉 / 上下浮動
+ *     Billboard*   永遠面向鏡頭        Lit_N                   依序點亮（N 由 0 起）
+ *     SpinR*       反向旋轉            Pulse*                  呼吸縮放
  */
 import { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -13,6 +15,8 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
 export const modelUrl = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+const tmpV = new THREE.Vector3();
+const tmpQ = new THREE.Quaternion();
 
 interface Rig { node: THREE.Object3D; base: THREE.Vector3; kind: string; index: number }
 
@@ -30,13 +34,14 @@ export default function ModelDiorama({ url }: { url: string }) {
         mesh.receiveShadow = !glowing;
         if (mat.transparent) mat.depthWrite = false;
       }
-      const m = /^(Gear|ClockHandH|ClockHand|GantryBridge|GantryHead|Drop_|Spin|Bob|Crane|Hook)(\d*)/.exec(o.name);
+      const m = /^(Gear|ClockHandH|ClockHand|GantryBridge|GantryHead|Drop_|SpinR|Spin|Bob|Crane|Hook|Billboard|Lit_|Pulse)(\d*)/.exec(o.name);
       if (m) rigs.push({ node: o, base: o.position.clone(), kind: m[1], index: Number(m[2] || 0) });
     });
     return { scene: root, rigs };
   }, [gltf.scene]);
 
-  useFrame(({ clock }, dt) => {
+  const litCount = useMemo(() => rigs.filter((r) => r.kind === 'Lit_').length, [rigs]);
+  useFrame(({ clock, camera }, dt) => {
     const t = clock.elapsedTime;
     for (const r of rigs) {
       const n = r.node;
@@ -54,8 +59,25 @@ export default function ModelDiorama({ url }: { url: string }) {
           n.position.y = r.base.y - 0.54 * (1 - ease) + Math.sin(t * 2 + r.index) * 0.03 * ease;
           break;
         }
-        case 'Spin': case 'Crane': n.rotation.y += dt * 0.12; break;
-        case 'Bob': case 'Hook': n.position.y = r.base.y + Math.sin(t * 0.9 + r.index) * 0.12; break;
+        case 'Spin': case 'Crane': n.rotation.y += dt * (0.12 + (r.index % 3) * 0.1); break;
+        case 'SpinR': n.rotation.y -= dt * (0.18 + (r.index % 3) * 0.08); break;
+        case 'Bob': case 'Hook': n.position.y = r.base.y + Math.sin(t * 0.9 + r.index * 1.3) * 0.1; break;
+        case 'Pulse': n.scale.setScalar(1 + Math.sin(t * 1.6 + r.index) * 0.06); break;
+        case 'Billboard': {
+          // 只繞垂直軸轉向鏡頭（保持直立）
+          n.parent?.updateWorldMatrix(true, false);
+          const wp = n.getWorldPosition(tmpV);
+          const yaw = Math.atan2(camera.position.x - wp.x, camera.position.z - wp.z);
+          const parentYaw = n.parent ? new THREE.Euler().setFromQuaternion(n.parent.getWorldQuaternion(tmpQ), 'YXZ').y : 0;
+          n.rotation.set(0, yaw - parentYaw, 0);
+          break;
+        }
+        case 'Lit_': {
+          // 依序點亮，全亮後重來（例如：被借用的教室、15 天的觀察期）
+          const step = Math.floor(t * 1.4) % (litCount + 3);
+          n.visible = r.index < step;
+          break;
+        }
       }
     }
   });

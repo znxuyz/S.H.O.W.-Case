@@ -9,7 +9,7 @@ import { ContactShadows, OrbitControls } from '@react-three/drei';
 import { PCFShadowMap, type PerspectiveCamera } from 'three';
 import { Diorama } from './dioramas';
 import type { BuildingKind } from './kinds';
-import { allowEffects, Effects, World, WORLD } from './world';
+import { allowEffects, Effects, World, worldFor } from './world';
 
 /** 依視窗比例把主體推到右側 / 下方 */
 function ViewShift() {
@@ -25,8 +25,8 @@ function ViewShift() {
   return null;
 }
 
-export default function DomainStage({ kind, accent, model, reducedMotion }: { kind: BuildingKind; accent: string; model?: string; reducedMotion: boolean }) {
-  const W = WORLD[kind];
+export default function DomainStage({ kind, accent, model, projectId, reducedMotion }: { kind: BuildingKind; accent: string; model?: string; projectId?: string; reducedMotion: boolean }) {
+  const W = worldFor(kind, projectId);
   const fx = allowEffects();
   // 直式螢幕畫面窄，鏡頭拉遠讓整座箱庭入鏡
   const far = typeof window !== 'undefined' && window.innerWidth / window.innerHeight < 1 ? 1.75 : 1;

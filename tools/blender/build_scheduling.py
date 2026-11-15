@@ -18,9 +18,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy  # noqa: E402
-import bmesh  # noqa: E402
 import kit  # noqa: E402
-from kit import Image, ImageDraw, ImageFont, beam, box, cyl, finalize, material, np, save, srgb  # noqa: E402
+from kit import Image, ImageDraw, beam, box, cyl, finalize, material, np, save, srgb  # noqa: E402
 
 OUT = sys.argv[-1] if sys.argv[-1].endswith('.glb') else 'scheduling.glb'
 kit.reset()
@@ -55,51 +54,13 @@ SUBJECTS = {
     '國語': '#e45b5b', '數學': '#4f86f7', '英語': '#f29b30', '自然': '#36b37e',
     '社會': '#9b6ce0', '體育': '#ef5d9c', '音樂': '#1fb6c9', '美勞': '#f2c230',
 }
-FONT = ImageFont.truetype(kit.CJK_FONT, 92)
-FONT_S = ImageFont.truetype(kit.CJK_FONT, 120)
-
-
-def label_texture(key, text, bg, fg=(255, 255, 255), font=FONT, size=(256, 200)):
-    img = Image.new('RGB', size, tuple(int(bg.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4)))
-    d = ImageDraw.Draw(img)
-    w, h = size
-    d.rounded_rectangle([10, 10, w - 10, h - 10], radius=18, outline=tuple(min(255, c + 60) for c in img.getpixel((0, 0))), width=5)
-    bbox = d.textbbox((0, 0), text, font=font)
-    d.text(((w - bbox[2] - bbox[0]) / 2, (h - bbox[3] - bbox[1]) / 2 - 6), text, font=font, fill=fg)
-    return save(f'label_{key}', np.asarray(img))
-
-
 for name, col in SUBJECTS.items():
-    material(f'subj_{name}', rough=0.42, tex=label_texture(name, name, col))
+    material(f'subj_{name}', rough=0.42, tex=kit.label_texture(name, name, col))
 for i, t in enumerate('一二三四五'):
-    material(f'day_{i}', rough=0.5, metal=0.2, tex=label_texture(f'day{i}', t, '#c9a24a', fg=(40, 30, 10), font=FONT_S, size=(200, 200)))
+    material(f'day_{i}', rough=0.5, metal=0.2, tex=kit.label_texture(f'day{i}', t, '#c9a24a', fg=(40, 30, 10), size=(200, 200), font_size=120))
 for i in range(6):
-    material(f'per_{i}', rough=0.5, tex=label_texture(f'per{i}', str(i + 1), '#22324a', fg=(207, 227, 255), font=FONT_S, size=(200, 200)))
-
-
-def label_block(name, size, loc, mat, group='static', bevel=0.03):
-    """頂面顯示完整標籤貼圖、側面取貼圖邊緣純色的積木"""
-    bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
-    o = bpy.context.active_object
-    o.name = name
-    o.scale = size
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    finalize(o, mat, group, bevel=bevel, segs=3, uv=False)
-    me = o.data
-    bm = bmesh.new()
-    bm.from_mesh(me)
-    uvl = bm.loops.layers.uv.verify()
-    sx, sy = size[0] / 2, size[1] / 2
-    for f in bm.faces:
-        top = f.normal.z > 0.6
-        for lp in f.loops:
-            if top:
-                lp[uvl].uv = (np.clip((lp.vert.co.x + sx) / (2 * sx), 0, 1), np.clip((lp.vert.co.y + sy) / (2 * sy), 0, 1))
-            else:
-                lp[uvl].uv = (0.015, 0.5)
-    bm.to_mesh(me)
-    bm.free()
-    return o
+    material(f'per_{i}', rough=0.5, tex=kit.label_texture(f'per{i}', str(i + 1), '#22324a', fg=(207, 227, 255), size=(200, 200), font_size=120))
+label_block = kit.label_block
 
 
 # ───────────────────────── 浮空引擎底座 ─────────────────────────

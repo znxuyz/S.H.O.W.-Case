@@ -131,6 +131,7 @@ export const projects: Project[] = [
     theme: 'oriental',
     category: 'personal',
     status: 'live',
+    model: 'models/tianmu.glb',
     links: {
       demo: 'https://github.com/znxuyz/TianMu-Island/releases/latest',
       demoLabel: '下載安裝',

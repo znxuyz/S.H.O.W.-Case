@@ -26,7 +26,7 @@ export interface WorldStyle {
   hemi: [string, string];
   /** 環境反射的主色（Lightformer） */
   env: [string, string];
-  scenery: 'city' | 'rocks' | 'mountains' | 'forest' | 'hills' | 'blueprint' | 'constraints';
+  scenery: 'city' | 'rocks' | 'mountains' | 'forest' | 'hills' | 'blueprint' | 'constraints' | 'desk' | 'clouds' | 'library';
 }
 
 const CAMPUS: WorldStyle = {
@@ -58,6 +58,26 @@ export const WORLD: Record<BuildingKind, WorldStyle> = {
     ambient: '#8fb4e8', ambientI: 0.5, sun: '#e6f0ff', sunI: 1.8, hemi: ['#9fd8ff', '#0a2244'], env: ['#9fd8ff', '#ffc24a'], scenery: 'constraints',
   },
 };
+
+/** 依專案指定的世界（覆寫依造型決定的預設世界） */
+export const WORLD_BY_PROJECT: Record<string, Partial<WorldStyle>> = {
+  care: { skyTop: '#9ccbe8', skyBottom: '#fdf3e4', fog: '#f1ede4', ground: '#a8cf86', sparkle: '#ffffff', scenery: 'hills', sun: '#ffe9c8' },
+  admin: {
+    skyTop: '#2a2018', skyBottom: '#6b5134', fog: '#4a3826', fogNear: 18, fogFar: 60, ground: '#7a5634', sparkle: '#ffe2a0', bloom: 0.6,
+    ambient: '#ffe6c4', ambientI: 0.55, sun: '#ffe0b0', sunI: 2.2, hemi: ['#ffe6c4', '#3a2a1a'], env: ['#ffe6c4', '#9fd0ff'], scenery: 'desk',
+  },
+  passport: {
+    skyTop: '#5aa7ea', skyBottom: '#fff1e2', fog: '#f4f6fa', fogNear: 20, fogFar: 70, ground: '#ffffff', sparkle: '#ffffff', bloom: 0.35, scenery: 'clouds',
+  },
+  tablet: {
+    skyTop: '#06121f', skyBottom: '#123a4a', fog: '#0a2230', fogNear: 18, fogFar: 62, ground: '#0b2433', sparkle: '#9fe8ff', bloom: 1,
+    ambient: '#9fd8e8', ambientI: 0.5, sun: '#e6f6ff', sunI: 1.6, hemi: ['#9fe8ff', '#0a1a24'], env: ['#9fe8ff', '#ffb070'], scenery: 'library',
+  },
+};
+
+export function worldFor(kind: BuildingKind, projectId?: string): WorldStyle {
+  return { ...WORLD[kind], ...(projectId ? WORLD_BY_PROJECT[projectId] : undefined) };
+}
 
 /** 漸層天空穹頂（不受霧影響） */
 export function SkyDome({ top, bottom }: { top: string; bottom: string }) {
@@ -156,6 +176,54 @@ function Scenery({ kind }: { kind: WorldStyle['scenery'] }) {
       );
     case 'constraints':
       return <Constraints />;
+    case 'desk':
+      // 辦公桌的微縮世界：遠方巨大的鉛筆、資料夾、文件堆與咖啡杯
+      return (
+        <group>
+          {items.map((t) => (
+            <group key={t.i} position={[t.x, base, t.z]} rotation={[0, t.h * 6, 0]}>
+              {t.i % 4 === 0 && <P g="cyl6" c="#f2c230" p={[0, 0.5, 0]} s={[0.9, 10 * t.s, 0.9]} r={[Math.PI / 2, 0, 0]} />}
+              {t.i % 4 === 1 && <P c={t.i % 8 === 1 ? '#4f86f7' : '#e45b5b'} p={[0, 0.3, 0]} s={[6 * t.s, 0.6, 4.4 * t.s]} />}
+              {t.i % 4 === 2 && Array.from({ length: 5 }, (_, k) => <P key={k} c="#f4efe4" p={[(k % 2) * 0.2, 0.2 + k * 0.35, 0]} s={[4 * t.s, 0.3, 5 * t.s]} />)}
+              {t.i % 4 === 3 && t.i % 3 === 0 && <P g="cyl" c="#ffffff" p={[0, 1.6, 0]} s={[3, 3.2, 3]} />}
+            </group>
+          ))}
+        </group>
+      );
+    case 'clouds':
+      // 雲海之上：大片雲朵、漂浮的小地球儀
+      return (
+        <group>
+          {items.map((t) => (
+            <group key={t.i} position={[t.x, base + (t.i % 3) * 2.2 - 1, t.z]} scale={1.6 + t.s * 1.4}>
+              <P g="ico1" c="#ffffff" s={[2.8, 1.2, 1.8]} ro={1} />
+              <P g="ico1" c="#ffffff" p={[1.3, 0.35, 0]} s={[1.8, 1.3, 1.3]} ro={1} />
+              <P g="ico1" c="#f2f5fa" p={[-1.2, 0.2, 0.3]} s={[1.6, 1.1, 1.2]} ro={1} />
+            </group>
+          ))}
+          <P g="sphere" c="#ffe7b0" e ei={1.2} p={[18, 18, -32]} s={6} />
+        </group>
+      );
+    case 'library':
+      // 數位圖書館：環繞的發光書架，架上是文件卡
+      return (
+        <group>
+          {items.map((t) => (
+            <group key={t.i} position={[t.x, base, t.z]} rotation={[0, Math.atan2(-t.x, -t.z), 0]}>
+              <P c="#10283a" p={[0, 4, 0]} s={[3.2, 8, 0.6]} m={0.4} />
+              {Array.from({ length: 4 }, (_, k) => (
+                <group key={k}>
+                  <P c="#5fd8ff" e ei={1.2} p={[0, 1.2 + k * 2, 0.32]} s={[3.1, 0.05, 0.05]} />
+                  {Array.from({ length: 5 }, (_, j) => (
+                    <P key={j} c={(j + k + t.i) % 3 === 0 ? '#e45b5b' : (j + k) % 2 ? '#4f86f7' : '#e8f4ff'} e ei={0.5} p={[-1.2 + j * 0.6, 1.8 + k * 2, 0.32]} s={[0.4, 1.0, 0.04]} />
+                  ))}
+                </group>
+              ))}
+            </group>
+          ))}
+          <gridHelper args={[140, 70, '#2f8fb8', '#123447']} position={[0, -3.99, 0]} />
+        </group>
+      );
     case 'blueprint':
       return (
         <group>
