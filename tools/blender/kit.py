@@ -156,7 +156,7 @@ def tex_rock():
 MATS = {}
 
 
-def material(name, color=(0.8, 0.8, 0.8), rough=0.8, metal=0.0, tex=None, emit=None, emit_strength=0.0, alpha=1.0):
+def material(name, color=(0.8, 0.8, 0.8), rough=0.8, metal=0.0, tex=None, emit=None, emit_strength=0.0, alpha=1.0, emit_tex=False):
     m = bpy.data.materials.new(name)
     m.use_nodes = True
     nt = m.node_tree
@@ -168,6 +168,9 @@ def material(name, color=(0.8, 0.8, 0.8), rough=0.8, metal=0.0, tex=None, emit=N
         node = nt.nodes.new('ShaderNodeTexImage')
         node.image = bpy.data.images.load(tex)
         nt.links.new(node.outputs['Color'], bsdf.inputs['Base Color'])
+        if emit_tex:
+            nt.links.new(node.outputs['Color'], bsdf.inputs['Emission Color'])
+            bsdf.inputs['Emission Strength'].default_value = emit_strength or 2.0
     if emit:
         bsdf.inputs['Emission Color'].default_value = (*emit, 1)
         bsdf.inputs['Emission Strength'].default_value = emit_strength
@@ -422,7 +425,8 @@ def image_card(name, path, height, loc, group='static', rot=(0, 0, 0), crop_alph
     nt.links.new(node.outputs['Alpha'], bsdf.inputs['Alpha'])
     bsdf.inputs['Roughness'].default_value = 0.8
     m.surface_render_method = 'DITHERED'
-    m.blend_method = 'CLIP' if hasattr(m, 'blend_method') else None
+    if hasattr(m, 'blend_method'):
+        m.blend_method = 'CLIP'
     MATS[m.name] = m
     width = height * w / h
     bpy.ops.mesh.primitive_plane_add(size=1, location=loc, rotation=(math.pi / 2, 0, 0))

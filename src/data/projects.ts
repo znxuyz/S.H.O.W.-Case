@@ -156,6 +156,7 @@ export const projects: Project[] = [
     theme: 'guardian',
     category: 'personal',
     status: 'live',
+    model: 'models/guardian.glb',
     links: {
       demo: 'https://znxuyz.github.io/ClassroomManagementSystem2.0/',
       repo: 'https://github.com/znxuyz/ClassroomManagementSystem2.0',

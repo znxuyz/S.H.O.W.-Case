@@ -30,8 +30,16 @@ export default function ModelDiorama({ url }: { url: string }) {
       if (mesh.isMesh) {
         const mat = mesh.material as THREE.MeshStandardMaterial;
         const glowing = mat.emissive && mat.emissive.getHex() !== 0;
-        mesh.castShadow = !mat.transparent && !glowing;
-        mesh.receiveShadow = !glowing;
+        // 角色插畫看板（card_*）：以 alphaTest 裁切透明背景，清晰且不需排序
+        const card = mat.name.startsWith('card_');
+        if (card) {
+          mat.transparent = false;
+          mat.alphaTest = 0.5;
+          mat.depthWrite = true;
+          mat.side = THREE.DoubleSide;
+        }
+        mesh.castShadow = !mat.transparent && !glowing && !card;
+        mesh.receiveShadow = !glowing && !card;
         if (mat.transparent) mat.depthWrite = false;
       }
       const m = /^(Gear|ClockHandH|ClockHand|GantryBridge|GantryHead|Drop_|SpinR|Spin|Bob|Crane|Hook|Billboard|Lit_|Pulse)(\d*)/.exec(o.name);
