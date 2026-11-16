@@ -29,7 +29,7 @@ const tex = (name) => {
   if (!cache.has(name)) cache.set(name, doc.createTexture(name).setMimeType('image/png').setImage(new Uint8Array(fs.readFileSync(path.join(DIR, `${name}.png`)))).setURI(`${name}.png`));
   return cache.get(name);
 };
-const count = { stone: 0, wood: 0, metal: 0, plaster: 0, skip: 0, roughOnly: 0 };
+const count = { stone: 0, wood: 0, metal: 0, plaster: 0, skip: 0 };
 // 每個材質底下的網格是否都有可用 UV（標牌的側面、未展 UV 的零件都是退化 UV → 不掛法線貼圖）
 const uvOk = new Map();
 for (const mesh of root.listMeshes()) for (const prim of mesh.listPrimitives()) {
@@ -50,10 +50,12 @@ for (const mesh of root.listMeshes()) for (const prim of mesh.listPrimitives()) 
 for (const m of root.listMaterials()) {
   const name = m.getName() || '';
   const emissive = Math.max(...m.getEmissiveFactor()) > 0.05;
-  if (m.getAlphaMode() !== 'OPAQUE' || name.startsWith('card_') || SKIP.test(name) || (emissive && !m.getBaseColorTexture())) { count.skip++; continue; }
+  // 本身已有貼圖的材質（木紋、石紋、文字標牌）已有紋理細節，不再疊加；只給純色材質（純色＋細節＝一種著色器組合）
+  if (m.getAlphaMode() !== 'OPAQUE' || name.startsWith('card_') || SKIP.test(name) || emissive || m.getBaseColorTexture()) { count.skip++; continue; }
   const fam = m.getMetallicFactor() >= 0.5 ? 'metal' : WOOD.test(name) ? 'wood' : STONE.test(name) ? 'stone' : 'plaster';
+  // UV 不完整的材質完全不掛細節（不做「只有粗糙度貼圖」的半套組合：每多一種貼圖組合就多一支著色器要編譯）
+  if (uvOk.get(m) === false) { count.skip++; continue; }
   m.setMetallicRoughnessTexture(tex(`${fam}_rough`));
-  if (uvOk.get(m) === false) { count.roughOnly++; continue; }
   m.setNormalTexture(tex(`${fam}_normal`)).setNormalScale(SCALE[fam]);
   count[fam]++;
 }

@@ -17,11 +17,12 @@
   - R3F `<Canvas>` 一律加 `resize={{ offsetSize: true }}`：轉場會對外層做 CSS scale，用 getBoundingClientRect 量測會讓畫布尺寸錯誤而黑屏
 - 精細模型：`public/models/<id>.glb`（`build_<id>.py`）、3D 環境 `env_<id>.glb`（`build_env_<id>.py`）、首頁輕量版 `models/map/<id>.glb`（`build_map_lod.sh`）；在 `projects.ts` 以 `model` / `env` 指定
 - 建模：`BLENDER_PY=.blender-venv/bin/python tools/blender/build.sh <名稱>`；改了主模型後記得重跑 `build_map_lod.sh <id>`
-- 模型管線：Blender 匯出 → `detail_maps.mjs`（主模型掛上共用細節貼圖：`tools/blender/detail/` 由 `bake_details.py` 以 Noise／ColorRamp／Bump 節點烘焙的石材／木紋／金屬拉絲／灰泥法線＋粗糙度，512px 無縫）→ gltf-transform **Draco** 壓縮＋WebP；網站用自架解碼器 `public/draco/`（`assets.ts` 的 `DRACO_PATH`）；倒角一律 1 段（`kit.box`／`label_block`），圓環／球體分段有上限；`node tools/qa/glbstats.cjs` 檢查預算（主模型 ≤ 15k 三角面、≤ 1.5MB；環境 ≤ 1.5MB；首頁版 ≤ 200KB）；`TRI_STATS` 會在建模輸出 `tris-top` 列出最吃面數的零件
+- 模型管線：Blender 匯出 → `detail_maps.mjs`（主模型掛上共用細節貼圖：`tools/blender/detail/` 由 `bake_details.py` 以 Noise／ColorRamp／Bump 節點烘焙的石材／木紋／金屬拉絲／灰泥法線＋粗糙度，512px 無縫）→ 只套在純色、不透明、UV 完整的材質上，並以 MikkTSpace 預先計算切線（手機 GPU 不走導數推算，避免彩色雜點；不做「只有粗糙度」的半套組合以免多出著色器變體）→ gltf-transform **Draco** 壓縮＋WebP；網站用自架解碼器 `public/draco/`（`assets.ts` 的 `DRACO_PATH`）；倒角一律 1 段（`kit.box`／`label_block`），圓環／球體分段有上限；`node tools/qa/glbstats.cjs` 檢查預算（主模型 ≤ 15k 三角面、≤ 1.5MB；環境 ≤ 1.5MB；首頁版 ≤ 200KB）；`TRI_STATS` 會在建模輸出 `tris-top` 列出最吃面數的零件
 - 演示影片：原片由專案 README 擷取，`tools/make_highlight.sh <原片> <id>` 用 ffmpeg 剪成 20 秒精華（4 段 × 5 秒、720p H.264 CRF 22、無音軌、faststart，單檔 ≤ 4MB）→ `public/videos/<id>.mp4／.jpg`；`projects.ts` 的 `videoUrl`／`videoPoster` 指向精華片段、`videoFullUrl` 為原始完整影片（燈箱角落連結）；螢幕類熱點加 `video: true`；`VideoModal` 延遲載入、只在開啟時建立 `<video>`，第一幀前顯示讀取動畫與進度；QA：`node tools/qa/video.cjs <id>`
 - 點擊動畫：熱點的 `fx` 指定模型節點與「結構動作」（hinge/slide/stretch/flap/whirl/reveal/sweep/stamp/press/pulse/flash，定義見 `projects.ts` 的 FxKind；軸向為網站座標）；不要用整塊發光＋跳動的通用動畫，每個物件拆出子網格各自動
 - Blender 端：`group='Fx_<名稱>'` 收集零件後 `kit.fx_node(名稱, 樞紐)`（樞紐＝轉軸/鉸鏈位置）；`FxHide_*` 節點平常隱藏、只在 reveal 時出現；掛在會動的節點下用 `kit.reparent`；檢查：`node tools/qa/fx.cjs <id>`（加索引會以 ?fxslow 放慢截圖）
 - 主島底座：各 `build_env_<id>.py` 呼叫 `env.cradle(...)`（mound / tiers / tower / books / cloud）
+- 精緻度：`kit.plinth(rich=True)` 自動加分段壓頂石、四角柱墩、土層岩線、草叢（草地頂面）、垂吊岩錐；`kit.tree` 為三層樹冠＋枝幹＋樹根；要加細節優先用低面數結構配件（小零件 `bevel=0` 只有 12 面），不要提高曲面細分；面數不夠時拿看不出差別的小球體／小方塊減面換取
 - 空間導覽熱點：`projects.ts` 的 `hotspots`（座標為網站場景座標，Y 朝上；Blender 座標 (x, y, z) → 網站 (x, z - 0.4, -y)）
 - 自動導覽：`ProjectScene` 的 `auto` 狀態（底部導覽列最前面的播放鈕），每站停留 6–11 秒（依說明字數）；使用者拖曳、滾輪、點按鈕或按鍵即暫停；QA：`node tools/qa/autotour.cjs <id>`
 - 品牌素材：`public/favicon.svg`（浮島圖示）、`apple-touch-icon.png`、社群分享封面 `og-cover.jpg`／`.webp`（1200×630，由 `node tools/qa/og.cjs` 從首頁渲染後以 Python 加字）；`index.html` 的 OG／Twitter 標籤用絕對網址
@@ -29,7 +30,7 @@
 - 手機版（< 768px，CSS `max-width: 767px`、JS `>= 768` 為桌機）：標題卡 `pointer-events: none`（只有按鈕可點）以免攔截 3D 手勢；模型上平常不顯示任何熱點圓點，只有選中的那一顆（`.hs-anchor.is-active`）以高亮標記出現；直接點模型會選取螢幕上 70px 內最近的熱點（`DomainStage` 的 `pickNearest`）；隱藏右側 `.dotnav`；聚焦時 `.tour.is-focused` 收起標語與按鈕；桌機維持全部帶標題的標籤
 - 首頁 2D 疊層：`src/map/`；終章背景：`src/components/OutroBackground.tsx`（唯一的 2D 背景插畫）
 - 載入流程：`ModelDiorama` 先 `compileAsync` 編譯著色器、分批上傳貼圖，完成後才放進場景並浮上淡入；`DomainStage` 的 `StageLoader` 顯示進度，主模型與環境都就緒才收起並顯示熱點；就緒後在空檔預載前後作品，首頁預載所有輕量版、滑過島嶼時預載精細版
-- 效能（2026-11-16 徹查後的原則，量測工具 `node tools/qa/probe.cjs [hash]`）：不使用後製（EffectComposer）；不要加點光源（每個 PBR 像素都要多算）；3D 環境用 Lambert 材質；首頁不開陰影、介紹頁陰影按需更新（`ShadowOnDemand`）；抗鋸齒只在 dpr < 1.5 的桌機開；新增會動態出現的材質要納入預熱（`compileAsync`＋`finishPrograms`），否則第一次出現時會卡頓；`gl.debug.checkShaderErrors` 只在開發模式開；首頁輕量版由 `map_lod_strip.mjs` 去掉 Fx 節點並合併網格；
+- 效能（2026-11-16 徹查後的原則，量測工具 `node tools/qa/probe.cjs [hash]`；WebGL 一律 `GL_OPTS`：highp＋抗鋸齒，自訂著色器開頭加 `precision highp float;`）：不使用後製（EffectComposer）；不要加點光源（每個 PBR 像素都要多算）；3D 環境用 Lambert 材質；首頁不開陰影、介紹頁陰影按需更新（`ShadowOnDemand`）；抗鋸齒只在 dpr < 1.5 的桌機開；新增會動態出現的材質要納入預熱（`compileAsync`＋`finishPrograms`），否則第一次出現時會卡頓；`gl.debug.checkShaderErrors` 只在開發模式開；首頁輕量版由 `map_lod_strip.mjs` 去掉 Fx 節點並合併網格；
 - 其他：Canvas `dpr={[1, 1.5]}`、陰影貼圖 1024、環境模型不參與陰影；幾何與材質共用、群島不使用點光源、觸控裝置關閉後製；熱點投影只在數值改變時寫 DOM、不每幀量測；2D 部分不用 filter / mix-blend-mode（說明卡的 backdrop-filter 為使用者指定的例外）。
 
 ## 新增作品 SOP（使用者丟 GitHub 網址時照做；也可輸入 `/add-project <網址>`）
