@@ -135,7 +135,7 @@ for si, (x0, y0, w, h, bias) in enumerate(SECTORS):
         t = tier(bias)
         gap = 0.035
         cx, cy = tx + tw / 2, ty + th / 2
-        box('stock', (tw - gap, th - gap, height), (cx, cy, height / 2), f'heat_{t}', bevel=0.012, segs=1, group=f'Fx_sector{si}')
+        box('stock', (tw - gap, th - gap, height), (cx, cy, height / 2), f'heat_{t}', bevel=0, group=f'Fx_sector{si}')
         box('stock_cap', (tw - gap - 0.02, th - gap - 0.02, 0.012), (cx, cy, height + 0.006), f'cap_{t}', bevel=0, group=f'Fx_sector{si}')
     label_block(f'sector_label_{si}', (min(0.62, w * 0.6), 0.02, 0.22), (x0 + w / 2, y0 - 0.02, 0.15), f'sector_{si}', bevel=0.004, face='front')
 

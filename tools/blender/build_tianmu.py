@@ -167,7 +167,7 @@ kit.beam('plum_branch_b', (MX - 0.08, MY, 0.45), (MX + 0.1, MY - 0.12, 0.66), 0.
 for k in range(22):
     a = k * 2.39996
     r = 0.08 + (k % 5) * 0.045
-    kit.sphere('plum_flower', 0.03, (MX - 0.1 + math.cos(a) * r * 1.6, MY + math.sin(a) * r, 0.55 + (k % 4) * 0.05), 'plum' if k % 3 else 'plum_core', seg=8, rings=5)
+    kit.sphere('plum_flower', 0.03, (MX - 0.1 + math.cos(a) * r * 1.6, MY + math.sin(a) * r, 0.55 + (k % 4) * 0.05), 'plum' if k % 3 else 'plum_core', seg=6, rings=4)
 # 錦鯉
 for k, (fx, fy, ang) in enumerate([(0.6, -0.55, 0.4), (1.25, -1.1, 2.2), (0.9, -1.3, 4.0)]):
     kit.sphere('koi', 0.06, (fx, fy, 0.03), 'koi' if k % 2 == 0 else 'koi_w', seg=10, rings=6, scale=(2.2, 0.8, 0.5))
@@ -197,7 +197,7 @@ label_block('cap_display', (L * 0.72, 0.02, R * 0.95), (CX, CY - R - 0.005, CZ),
 kit.sphere('cap_pip', 0.035, (CX - L * 0.48, CY - R + 0.02, CZ + 0.06), 'warm', seg=12, rings=8, group='Bob_0')
 
 # 十二時辰環（Spin_0）
-kit.torus('hour_ring', 1.45, 0.014, (CX, CY, CZ), 'gold', group='Spin_0', major=96, minor=8)
+kit.torus('hour_ring', 1.45, 0.014, (CX, CY, CZ), 'gold', group='Spin_0', major=64, minor=6)
 for i in range(12):
     a = i / 12 * math.tau
     x, y = CX + math.cos(a) * 1.45, CY + math.sin(a) * 1.45
@@ -210,7 +210,7 @@ for i in range(4):
     a = i / 4 * math.tau + 0.4
     x, y, z = CX + math.cos(a) * 0.95, CY + math.sin(a) * 0.95, CZ + 0.45 + (i % 2) * 0.15
     NOTES.append((x, y, z))
-    kit.sphere('note_head', 0.06, (x, y, z), 'note', seg=12, rings=8, scale=(1.25, 1, 0.9), group=f'Fx_note{i}')
+    kit.sphere('note_head', 0.06, (x, y, z), 'note', seg=8, rings=6, scale=(1.25, 1, 0.9), group=f'Fx_note{i}')
     box('note_stem', (0.016, 0.016, 0.26), (x + 0.06, y, z + 0.13), 'note', group=f'Fx_note{i}', bevel=0)
     box('note_flag', (0.1, 0.016, 0.04), (x + 0.11, y, z + 0.24), 'note', rot=(0, 0.5, 0), group=f'Fx_note{i}', bevel=0)
 # 傳音符紙（Bob_1；每張符紙獨立，點擊時像被風吹動般翻飛）

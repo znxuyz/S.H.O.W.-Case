@@ -116,6 +116,14 @@ for k in range(4):
 for k in range(3):
     box('sticky', (0.13, 0.13, 0.008), (-0.95 + k * 0.17, 0.95, 0.12), 'note', rot=(0, 0, k * 0.2 - 0.2), bevel=0)
 
+# ── 精緻配件：側邊實體按鍵、底部喇叭孔、充電孔 ──
+for k, (dy, L) in enumerate([(0.45, 0.22), (0.15, 0.12), (-0.02, 0.12)]):
+    box('side_button', (0.02, L, 0.03), (TX + TW / 2 + 0.005, TY + dy, 0.06), 'alu', bevel=0)
+for k in range(10):
+    box('speaker_hole', (0.025, 0.012, 0.012), (TX - 0.35 + k * 0.05, TY - TD / 2 - 0.002, 0.06), 'bezel', bevel=0)
+    box('speaker_hole', (0.025, 0.012, 0.012), (TX + 0.12 + k * 0.05, TY - TD / 2 - 0.002, 0.06), 'bezel', bevel=0)
+box('usb_port', (0.12, 0.012, 0.025), (TX, TY - TD / 2 - 0.002, 0.06), 'bezel', bevel=0)
+
 # ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
 kit.fx_node('Fx_dbeam', (TX - 0.2, TY - 0.2, 0.12))
 kit.fx_node('Fx_pencil', (TX + 1.5, TY, 0.04))

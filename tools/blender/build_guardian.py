@@ -110,7 +110,7 @@ for (x, y, m, s) in [(1.7, -0.25, 'mush_cyan', 1.0), (1.55, -0.45, 'mush_pink', 
 for i in range(22):
     a = kit.rng.random() * math.tau
     r = 1.2 + kit.rng.random() * 0.6
-    kit.sphere('flower', 0.025, (math.cos(a) * r, math.sin(a) * r, 0.03), 'flower_y' if i % 2 else 'flower_w', seg=8, rings=6)
+    kit.sphere('flower', 0.025, (math.cos(a) * r, math.sin(a) * r, 0.03), 'flower_y' if i % 2 else 'flower_w', seg=5, rings=4)
 for (x, y, s, k) in [(-1.6, 1.55, 0.8, 'pine'), (1.65, 1.5, 0.7, 'round'), (-1.75, -1.65, 0.55, 'round'), (1.75, -1.7, 0.5, 'pine')]:
     kit.tree((x, y, 0), s=s, kind=k)
 for (x, y, r) in [(-0.95, 1.65, 0.22), (1.2, 1.1, 0.2), (-1.65, 0.95, 0.24)]:
@@ -120,7 +120,7 @@ for (x, y, r) in [(-0.95, 1.65, 0.22), (1.2, 1.1, 0.2), (-1.65, 0.95, 0.24)]:
 for i in range(14):
     a = i / 14 * math.tau
     r = 0.9 + (i % 3) * 0.35
-    kit.sphere('firefly', 0.025, (TX + math.cos(a) * r, TY - 0.4 + math.sin(a) * r, 0.6 + (i % 5) * 0.35), 'firefly', seg=8, rings=6, group='Spin_1')
+    kit.sphere('firefly', 0.025, (TX + math.cos(a) * r, TY - 0.4 + math.sin(a) * r, 0.6 + (i % 5) * 0.35), 'firefly', seg=6, rings=4, group='Spin_1')
 
 # ── 細節：照護站（健康機制）、獎品商店、領地旗、餵食碗、招牌 ──
 kit.detail_materials()
@@ -169,6 +169,15 @@ for k, (bx, by) in enumerate([(-0.95, -1.2), (0.0, -1.62), (0.9, -1.55)]):
 # 招牌
 cyl('sign_post', 0.025, 0.5, (-1.75, -1.4, 0.25), 'stall', verts=6)
 kit.label_block('sign', (0.5, 0.03, 0.17), (-1.62, -1.45, 0.48), 'sign_board', bevel=0.006, face='front', rot=(0, 0, 0.35))
+
+# ── 精緻配件：繞著千年巨木的螺旋踏板與扶手（低面數、層次豐富） ──
+for k in range(9):
+    a = k / 9 * math.tau * 1.15 + 0.6
+    z = 0.32 + k * 0.13
+    px, py = TX + math.cos(a) * 0.5, TY + math.sin(a) * 0.5
+    box('spiral_plank', (0.24, 0.11, 0.03), (px, py, z), 'wood_light', rot=(0, 0, a + math.pi / 2), bevel=0.008)
+    if k % 2 == 0:
+        cyl('spiral_post', 0.012, 0.18, (TX + math.cos(a) * 0.6, TY + math.sin(a) * 0.6, z + 0.1), 'bark', verts=5)
 
 # ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
 for i, (x, y, ph) in enumerate(SPOTS):

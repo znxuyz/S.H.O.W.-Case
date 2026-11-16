@@ -96,7 +96,7 @@ for f in range(2):
         for row in range(2):
             for col in (-1, 1):
                 dx, dy = col * RW * 0.2, SY + 0.05 - row * 0.32
-                box('desk', (0.18, 0.12, 0.02), (cx + dx, dy, z0 + 0.2), 'desk', bevel=0.003)
+                box('desk', (0.18, 0.12, 0.02), (cx + dx, dy, z0 + 0.2), 'desk', bevel=0)
                 box('desk_leg', (0.16, 0.1, 0.15), (cx + dx, dy, z0 + 0.12), 'chair', bevel=0)
         # 借用燈：整間教室亮起（Lit）
         box(f'room_glow_{idx}', (RW - 0.1, 0.02, FH - 0.14), (cx, SY + D / 2 - 0.1, z0 + FH / 2 + 0.02), f'room_{idx}', bevel=0, group=f'Lit_{idx}')

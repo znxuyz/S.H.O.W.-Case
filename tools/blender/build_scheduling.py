@@ -211,6 +211,14 @@ cyl('beacon_pole', 0.025, 0.6, (1.85, -1.2, 0.3), 'steel_dark', verts=8)
 kit.sphere('beacon_lamp', 0.07, (1.85, -1.2, 0.64), 'ok_lamp', seg=14, rings=8, group='Pulse0')
 label_block('zero_sign', (0.36, 0.02, 0.15), (1.85, -1.32, 0.42), 'zero', bevel=0.004, face='front')
 
+# ── 精緻配件：龍門軌道鉚釘、柱腳斜撐 ──
+for x in (-1.75, 1.75):
+    for k in range(10):
+        y = -1.7 + k * 0.38
+        box('rail_rivet', (0.05, 0.05, 0.02), (x, y, GZ + 0.06), 'brass_dark', bevel=0)
+    for y in (-1.75, 1.75):
+        beam('gantry_brace', (x, y, 0.35), (x, y - math.copysign(0.45, y), 0.02), 0.035, 'steel_dark')
+
 # ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
 kit.fx_node('Fx_thread', (0.0, 0.0, BH))
 for d in range(5):

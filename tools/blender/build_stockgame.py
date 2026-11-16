@@ -212,6 +212,16 @@ label_block('task_scroll', (0.02, 0.26, 0.6), (SCX, SCY, 0.92), 'scroll', bevel=
 kit.beam('scroll_rod_b', (SCX, SCY - 0.14, 0.6), (SCX, SCY + 0.14, 0.6), 0.03, 'gold', round_=True, group='Fx_rodb')
 kit.beam('scroll_pole', (SCX - 0.05, SCY, 0), (SCX - 0.05, SCY, 1.3), 0.025, 'violet')
 
+# ── 精緻配件：四座階梯兩側的石燈（燈罩自發光、低面數） ──
+for k in range(4):
+    a = k * math.pi / 2
+    for side in (-1, 1):
+        px = math.cos(a) * 1.72 - math.sin(a) * side * 0.36
+        py = math.sin(a) * 1.72 + math.cos(a) * side * 0.36
+        cyl('lamp_post', 0.025, 0.32, (px, py, 0.16), 'violet', verts=6)
+        box('lamp_head', (0.08, 0.08, 0.08), (px, py, 0.36), 'spirit_gold', bevel=0)
+        cone('lamp_roof', 0.075, 0.0, 0.06, (px, py, 0.43), 'gold', verts=4, rot=(0, 0, math.pi / 4))
+
 # ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
 kit.fx_node('Fx_sigil', (0, 0, TOP))
 kit.fx_node('Fx_beam', (0, 0, TOP))

@@ -489,13 +489,45 @@ def capsule(name, length, r, loc, mat, group='static'):
     return finalize(body, mat, group)
 
 
-def plinth(top_mat, soil_mat='soil', rock_mat='rock', rim_mat='concrete', size=4.0, float_=True):
-    """與網站 Plinth 一致的 4×4 地塊（頂面 z=0），附倒錐浮島岩底"""
+NATURAL_TOPS = {'lawn', 'moss', 'forest_floor', 'grass'}
+
+
+def plinth(top_mat, soil_mat='soil', rock_mat='rock', rim_mat='concrete', size=4.0, float_=True, rich=True):
+    """與網站 Plinth 一致的 4×4 地塊（頂面 z=0），附倒錐浮島岩底。
+    rich：低面數結構配件——分段壓頂石、四角柱墩、土層岩線、草叢（草地類頂面）、垂吊岩錐與碎石"""
     box('ground', (size - 0.16, size - 0.16, 0.28), (0, 0, -0.14), top_mat, bevel=0.02)
     for (sx, sy, x, y) in [(size, 0.16, 0, size / 2 - 0.08), (size, 0.16, 0, -size / 2 + 0.08), (0.16, size - 0.32, size / 2 - 0.08, 0), (0.16, size - 0.32, -size / 2 + 0.08, 0)]:
-        box('rim', (sx, sy, 0.3), (x, y, -0.13), rim_mat, bevel=0.025)
+        box('rim', (sx, sy, 0.3), (x, y, -0.13) if not rich else (x, y, -0.15), rim_mat, bevel=0.025)
     box('soil', (size - 0.06, size - 0.06, 0.48), (0, 0, -0.52), soil_mat, bevel=0.03)
     box('rockl', (size - 0.18, size - 0.18, 0.4), (0, 0, -0.96), rock_mat, bevel=0.04)
+    if rich:
+        h = size / 2
+        # 分段壓頂石：每邊 6 塊、留細縫，邊緣有倒角能接住高光（比一整條長方塊更有手作感）
+        n = 6
+        seg = (size - 0.44) / n
+        for side in range(4):
+            for k in range(n):
+                t = -h + 0.22 + seg * (k + 0.5)
+                x, y = [(t, h - 0.08), (t, -h + 0.08), (h - 0.08, t), (-h + 0.08, t)][side]
+                L = seg - 0.035
+                box('capstone', (L, 0.19, 0.05) if side < 2 else (0.19, L, 0.05), (x, y, 0.025), rim_mat, bevel=0.012)
+        # 四角柱墩＋尖頂
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                box('corner_post', (0.24, 0.24, 0.16), (sx * (h - 0.12), sy * (h - 0.12), 0.06), rim_mat, bevel=0.015)
+                cone('corner_cap', 0.17, 0.0, 0.08, (sx * (h - 0.12), sy * (h - 0.12), 0.18), rim_mat, verts=4, rot=(0, 0, math.pi / 4))
+        # 土層岩線（兩條深色分層帶，讓側面不再是一整片）
+        for z in (-0.42, -0.66):
+            for (sx, sy, x, y) in [(size - 0.02, 0.02, 0, h - 0.02), (size - 0.02, 0.02, 0, -h + 0.02), (0.02, size - 0.02, h - 0.02, 0), (0.02, size - 0.02, -h + 0.02, 0)]:
+                box('strata', (sx, sy, 0.035), (x, y, z), rock_mat, bevel=0)
+        # 草地類頂面：沿邊緣內側散佈小草叢
+        if top_mat in NATURAL_TOPS:
+            for i in range(22):
+                side = i % 4
+                t = -h + 0.45 + rng.random() * (size - 0.9)
+                d = h - 0.3 - rng.random() * 0.12
+                x, y = [(t, d), (t, -d), (d, t), (-d, t)][side]
+                cone('tuft', 0.035, 0.0, 0.09 + rng.random() * 0.05, (x, y, 0.04), 'leaf_dark' if i % 2 else 'leaf', verts=3, rot=(0, 0, rng.random() * 3))
     if float_:
         bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=size * 0.65, radius2=0, depth=2, location=(0, 0, -2.15), rotation=(math.pi, 0, math.pi / 4))
         o = bpy.context.active_object
@@ -506,6 +538,14 @@ def plinth(top_mat, soil_mat='soil', rock_mat='rock', rim_mat='concrete', size=4
         finalize(o, rock_mat)
         for (x, y, z, r) in [(1.3, -0.7, -1.5, 0.38), (-1.1, 0.8, -1.8, 0.3), (0.4, 1.2, -2.6, 0.2)]:
             ico('float_rock', r, (x, y, z), rock_mat)
+        if rich:
+            # 垂吊岩錐與小碎石：浮島底部更有重量感
+            for k in range(6):
+                a = k / 6 * math.tau + 0.3
+                r = 1.3 + (k % 2) * 0.35
+                cone('stalactite', 0.13 + (k % 3) * 0.04, 0.0, 0.45 + (k % 3) * 0.2, (math.cos(a) * r, math.sin(a) * r, -1.35 - (k % 3) * 0.1), rock_mat, verts=4, rot=(math.pi, 0, a))
+            for (x, y, z, r) in [(-1.6, -1.2, -2.2, 0.12), (1.7, 1.0, -2.0, 0.1), (0.2, -1.8, -3.0, 0.09)]:
+                ico('pebble', r, (x, y, z), rock_mat, sub=0)
 
 
 def tree(loc, s=1.0, kind='round', leaf='leaf', leaf2='leaf_dark', trunk='bark', group='static', detail=2):
@@ -513,8 +553,13 @@ def tree(loc, s=1.0, kind='round', leaf='leaf', leaf2='leaf_dark', trunk='bark',
     x, y, z = loc
     cyl('trunk', 0.06 * s, 0.6 * s, (x, y, z + 0.3 * s), trunk, verts=8 if detail > 1 else 5, group=group)
     if kind == 'round':
-        for (dx, dy, dz, r, m) in [(0, 0, 0.82, 0.32, leaf2), (-0.12, 0.05, 0.95, 0.24, leaf), (0.12, -0.06, 0.92, 0.23, leaf), (0.03, 0.03, 1.15, 0.2, leaf), (0.06, 0.12, 0.72, 0.18, leaf2)]:
-            ico('crown', r * s, (x + dx * s, y + dy * s, z + dz * s), m, sub=detail, group=group)
+        # 多層次樹冠：寬扁的底層＋中層＋頂層，加兩團側枝葉；底部有樹根、兩根分枝
+        cone('root_flare', 0.12 * s, 0.05 * s, 0.1 * s, (x, y, z + 0.05 * s), trunk, verts=6, group=group)
+        for (bx, by, bz) in [(0.14, 0.04, 0.78), (-0.12, -0.06, 0.74)]:
+            beam('branch', (x, y, z + 0.5 * s), (x + bx * s, y + by * s, z + bz * s), 0.035 * s, trunk, group=group)
+        for (dx, dy, dz, r, m, sq) in [(0, 0, 0.78, 0.36, leaf2, 0.62), (0.02, 0.02, 1.0, 0.28, leaf, 0.7), (0, 0, 1.2, 0.18, leaf, 0.85),
+                                       (-0.2, 0.06, 0.86, 0.17, leaf, 0.8), (0.19, -0.07, 0.9, 0.16, leaf2, 0.8)]:
+            ico('crown', r * s, (x + dx * s, y + dy * s, z + dz * s), m, sub=max(0, detail - 1) if r < 0.2 else detail, scale=(1, 1, sq), group=group)
     else:
         for i, (r, h, dz) in enumerate([(0.38, 0.5, 0.55), (0.3, 0.45, 0.85), (0.21, 0.4, 1.12), (0.12, 0.34, 1.35)]):
             cone('pine', r * s, 0.0, h * s, (x, y, z + dz * s), leaf2 if i % 2 == 0 else leaf, verts=9, group=group)

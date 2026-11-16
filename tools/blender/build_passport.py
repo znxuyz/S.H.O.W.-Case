@@ -190,6 +190,15 @@ cyl('btn_ring', 0.2, 0.03, (BTX, BTY, 0.08), 'gold', verts=28)
 cyl('btn_top', 0.16, 0.08, (BTX, BTY, 0.13), 'headphone_pad', verts=28, bevel=0.02, group='Fx_btn')
 label_block('btn_face', (0.22, 0.22, 0.006), (BTX, BTY, 0.172), 'go_btn', bevel=0, group='Fx_btn')
 
+# ── 精緻配件：書頁側邊的頁緣紋理線、第二條書籤緞帶 ──
+material('page_line', srgb('#e2d4b4'), rough=0.95)
+for s in (-1, 1):
+    for k in range(3):
+        z = -0.17 + k * 0.05
+        box('page_line', (BW - 0.1, 0.006, 0.008), (s * (BW / 2 + 0.02), -(BD - 0.02) / 2 - 0.003, z), 'page_line', bevel=0)
+        box('page_line', (BW - 0.1, 0.006, 0.008), (s * (BW / 2 + 0.02), (BD - 0.02) / 2 + 0.003, z), 'page_line', bevel=0)
+box('ribbon2', (0.06, 0.02, 0.75), (-0.35, -BD / 2 - 0.02, -0.4), 'gold', bevel=0)
+
 # ── 點擊動畫節點 ──
 kit.fx_node('Fx_stamp', (STX + 0.17, STY, 0.44))
 kit.fx_node('Fx_btn', (BTX, BTY, 0.09))
