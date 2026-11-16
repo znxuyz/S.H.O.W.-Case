@@ -47,12 +47,12 @@ check() { # 檔案 上限KB
   local kb=$(( $(stat -c %s "$1") / 1024 ))
   if [ "$kb" -le "$2" ]; then echo "PASS $1 ${kb}KB ≤ $2KB"; else echo "FAIL $1 ${kb}KB > $2KB"; fi
 }
-check "public/models/${ID}.glb" 700
-check "public/models/env_${ID}.glb" 600
-check "public/models/map/${ID}.glb" 300
+check "public/models/${ID}.glb" 1536
+check "public/models/env_${ID}.glb" 1536
+check "public/models/map/${ID}.glb" 200
 node -e '
 const fs = require("fs");
-for (const [f, max] of [[process.argv[1], 25000], [process.argv[2], 20000]]) {
+for (const [f, max] of [[process.argv[1], 15000], [process.argv[2], 40000]]) {
   const b = fs.readFileSync(f); const n = b.readUInt32LE(12); const j = JSON.parse(b.slice(20, 20 + n).toString());
   let tris = 0; for (const m of j.meshes || []) for (const p of m.primitives) { const a = j.accessors[p.indices ?? p.attributes.POSITION]; tris += (p.indices !== undefined ? a.count : a.count) / 3; }
   console.log(`${tris <= max ? "PASS" : "FAIL"} ${f} ${Math.round(tris)} 面 ≤ ${max}`);

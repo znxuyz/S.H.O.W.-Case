@@ -13,5 +13,5 @@ for n in "${names[@]}"; do
   node tools/blender/map_lod_strip.mjs "public/models/$n.glb" "$tmp/$n.glb" | grep '^strip'
   ./node_modules/.bin/gltf-transform optimize "$tmp/$n.glb" "public/models/map/$n.glb" \
     --compress draco --texture-compress webp --texture-size 128 \
-    --simplify true --simplify-ratio 0.2 --simplify-error 0.02 --join false --flatten false 2>&1 | tail -1
+    --simplify true --simplify-ratio 0.2 --simplify-error 0.02 --join true --flatten false 2>&1 | tail -1
 done

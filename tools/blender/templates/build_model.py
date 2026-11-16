@@ -8,7 +8,7 @@
      樞紐＝轉軸或鉸鏈位置（掀蓋放在蓋子後緣、門放在門軸、吊臂放在旋轉中心）
   4. 平常看不到、點擊才出現的零件放 group='FxHide_<名稱>'（例如蓋印後的印記、雷射掃描線）
   5. 常駐動畫用節點命名：Spin*/SpinR*/Bob*/Pulse*/Billboard*/Lit_N（見 ModelDiorama.tsx 開頭說明）
-  6. 預算：≤ 25k 面、壓縮後 ≤ 700KB；不要用點光源（網站端已全面移除）
+  6. 預算：≤ 15k 三角面（看建模輸出的 tris-top 找最吃面數的零件）、Draco 壓縮後 ≤ 1.5MB；不要用點光源（網站端已全面移除）
 """
 import math
 import os

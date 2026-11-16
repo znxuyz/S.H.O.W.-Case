@@ -17,6 +17,8 @@
   - R3F `<Canvas>` 一律加 `resize={{ offsetSize: true }}`：轉場會對外層做 CSS scale，用 getBoundingClientRect 量測會讓畫布尺寸錯誤而黑屏
 - 精細模型：`public/models/<id>.glb`（`build_<id>.py`）、3D 環境 `env_<id>.glb`（`build_env_<id>.py`）、首頁輕量版 `models/map/<id>.glb`（`build_map_lod.sh`）；在 `projects.ts` 以 `model` / `env` 指定
 - 建模：`BLENDER_PY=.blender-venv/bin/python tools/blender/build.sh <名稱>`；改了主模型後記得重跑 `build_map_lod.sh <id>`
+- 模型管線：Blender 匯出 → `detail_maps.mjs`（主模型掛上共用細節貼圖：`tools/blender/detail/` 由 `bake_details.py` 以 Noise／ColorRamp／Bump 節點烘焙的石材／木紋／金屬拉絲／灰泥法線＋粗糙度，512px 無縫）→ gltf-transform **Draco** 壓縮＋WebP；網站用自架解碼器 `public/draco/`（`assets.ts` 的 `DRACO_PATH`）；倒角一律 1 段（`kit.box`／`label_block`），圓環／球體分段有上限；`node tools/qa/glbstats.cjs` 檢查預算（主模型 ≤ 15k 三角面、≤ 1.5MB；環境 ≤ 1.5MB；首頁版 ≤ 200KB）；`TRI_STATS` 會在建模輸出 `tris-top` 列出最吃面數的零件
+- 演示影片：`projects.ts` 的 `videoUrl`／`videoPoster`（從專案 README 擷取，mp4 用 GitHub Pages 或 jsDelivr 串流網址）；螢幕類熱點加 `video: true`；`VideoModal` 延遲載入、只在開啟時建立 `<video>`；QA：`node tools/qa/video.cjs <id>`
 - 點擊動畫：熱點的 `fx` 指定模型節點與「結構動作」（hinge/slide/stretch/flap/whirl/reveal/sweep/stamp/press/pulse/flash，定義見 `projects.ts` 的 FxKind；軸向為網站座標）；不要用整塊發光＋跳動的通用動畫，每個物件拆出子網格各自動
 - Blender 端：`group='Fx_<名稱>'` 收集零件後 `kit.fx_node(名稱, 樞紐)`（樞紐＝轉軸/鉸鏈位置）；`FxHide_*` 節點平常隱藏、只在 reveal 時出現；掛在會動的節點下用 `kit.reparent`；檢查：`node tools/qa/fx.cjs <id>`（加索引會以 ?fxslow 放慢截圖）
 - 主島底座：各 `build_env_<id>.py` 呼叫 `env.cradle(...)`（mound / tiers / tower / books / cloud）
@@ -33,7 +35,8 @@
 ## 新增作品 SOP（使用者丟 GitHub 網址時照做；也可輸入 `/add-project <網址>`）
 不需要中途詢問，依序完成後再一次回報。
 
-1. **讀專案**：用 `add_repo` 加入該 repo（只讀），讀 README、`package.json`／主要原始碼、GitHub Pages 網址（repo 的 homepage 或 README 中的連結）。
+1. **讀專案**：用 `add_repo` 加入該 repo（只讀，或 `git clone --depth 1`），讀 README、`package.json`／主要原始碼、GitHub Pages 網址（repo 的 homepage 或 README 中的連結）。
+   README 裡若有展示影片（.mp4、YouTube、GitHub 附件），填入 `videoUrl`（mp4 改用 GitHub Pages 或 `cdn.jsdelivr.net/gh/<owner>/<repo>@main/<路徑>` 串流網址，單檔 < 50MB）與 `videoPoster`。
    整理出：作品名、一句話標語、3–4 個亮點、技術、狀態（live / dev / maintenance / archived）、分類（campus / personal）。
 2. **決定風格與 id**：id 用小寫英數（例 `newapp`）；`theme` 從 brand / cyber / mythic / oriental / guardian / campus / blueprint 選最貼近的；`accent` 取作品本身的主色。
 3. **設計模型概念（最重要）**：模型要表達「作品在做什麼」，不一定是建築（例：信箱＝反思卡回收、護照書＝英聽練習、平板＝文件下載）。
@@ -45,7 +48,7 @@
 5. **寫入 `src/data/projects.ts`**：依現有作品的欄位格式新增一筆（`model`、`env`、`links.repo`、`links.demo`、`showcase`、`hotspots`）。
    熱點座標＝Blender 座標 (x, y, z) → 網站 (x, z − 0.4, −y)；每個熱點的 `fx` 指向步驟 4 的節點，軸向為網站座標。
 6. **檢測**：`tools/new_project.sh <id>`（不加 `--skip-qa`）會檢查檔案大小／面數並跑 `probe.cjs`（BUDGET=1）與 `fx.cjs`：
-   - 預算：主模型 ≤ 25k 面、≤ 700KB；環境 ≤ 20k 面、≤ 600KB；首頁輕量版 ≤ 300KB
+   - 預算：主模型 ≤ 15k 三角面、≤ 1.5MB；環境 ≤ 1.5MB；首頁輕量版 ≤ 200KB；全部 Draco（`node tools/qa/glbstats.cjs <id>`）
    - 介紹頁：繪製呼叫 ≤ 160、著色器 ≤ 20、三角面 ≤ 60k、載入長任務總和 ≤ 800ms
    - `fx.cjs`：所有熱點節點都找得到（missing nodes 0）、沒有錯誤
    任何一項 FAIL 就修到 PASS（常見手段：合併零件、減少材質種類、降低散佈數量）。再用 `tools/qa/shot.cjs <id>` 與 `tools/qa/tour.cjs <id> 390x844` 看桌機與手機畫面。
