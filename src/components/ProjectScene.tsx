@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Hammer, Wrench, Archive, ChevronLeft, ChevronRight, X, Info, MonitorSmartphone, Maximize2, Play, Pause } from 'lucide-react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ArrowUpRight, Hammer, Wrench, Archive, ChevronLeft, ChevronRight, X, Info, MonitorSmartphone, Maximize2, Play, Pause, Clapperboard } from 'lucide-react';
 import type { Project } from '../data/projects';
 import { themes } from '../themes';
 import { playSceneIntro } from '../lib/titleFx';
@@ -7,6 +7,9 @@ import { ProjectStage } from './MediaPanel';
 import type { CardRefs } from '../three/Hotspots';
 import { Showcase } from './Showcase';
 import { GitHubIcon } from './icons';
+
+// 影片燈箱延遲載入：連播放器程式碼都等使用者按下按鈕才下載
+const VideoModal = lazy(() => import('./VideoModal').then((m) => ({ default: m.VideoModal })));
 
 const STATUS = {
   live: { label: '上線中', icon: null },
@@ -36,6 +39,8 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
 
   // ── 自動導覽：依序聚焦每個熱點（觸發專屬動畫＋說明卡），停留後切到下一個；播完回全景 ──
   const [auto, setAuto] = useState(false);
+  const [video, setVideo] = useState(false);
+  const closeVideo = useCallback(() => setVideo(false), []);
   const dwellMs = (i: number | null) => (i === null || !hotspots[i] ? 0 : Math.min(11000, Math.max(6000, 4500 + hotspots[i].body.length * 55)));
   const toggleAuto = useCallback(() => {
     if (auto) { setAuto(false); return; }
@@ -91,7 +96,7 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
 
   return (
     <>
-      <ProjectStage project={project} reducedMotion={reducedMotion} active={active} onPick={pick} markers={markers} cardRefs={cardRefs} pulse={pulse} onReady={onStageReady} />
+      <ProjectStage project={project} reducedMotion={reducedMotion} active={active} onPick={pick} markers={markers} cardRefs={cardRefs} pulse={pulse} onReady={onStageReady} paused={video} />
       {/* 3D 熱點標記（位置由舞台每幀投影寫入） */}
       <div className={`hs-layer ${stageReady ? 'is-ready' : ''}`} aria-label="模型上的導覽標記">
         {hotspots.map((hs, i) => (
@@ -136,6 +141,11 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
             <a className="sc-btn sc-btn-secondary" href={project.links.repo} target="_blank" rel="noopener noreferrer">
               <GitHubIcon /><span>Source Code</span>
             </a>
+            {project.videoUrl && (
+              <button className="sc-btn sc-btn-secondary sc-btn-video" onClick={() => setVideo(true)}>
+                <Clapperboard className="h-4 w-4" aria-hidden /><span>觀看演示影片</span>
+              </button>
+            )}
           </div>
           <div className="tour-links reveal">
             <button className={panel === 'about' ? 'is-on' : ''} onClick={() => { setPanel(panel === 'about' ? 'none' : 'about'); setActive(null); }}>
@@ -184,6 +194,11 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
             </div>
             <h3>{h.title}</h3>
             <p>{h.body}</p>
+            {h.video && project.videoUrl && (
+              <button className="tour-card-video" onClick={() => setVideo(true)}>
+                <Play className="h-3.5 w-3.5" aria-hidden /> 觀看演示影片
+              </button>
+            )}
             <div className="tour-card-nav">
               <button onClick={() => step(-1)} aria-label="上一個"><ChevronLeft className="h-4 w-4" /> 上一個</button>
               <button onClick={() => step(1)} aria-label="下一個">下一個 <ChevronRight className="h-4 w-4" /></button>
@@ -211,6 +226,11 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
           </aside>
         )}
       </div>
+      {video && project.videoUrl && (
+        <Suspense fallback={null}>
+          <VideoModal url={project.videoUrl} poster={project.videoPoster} title={project.title} onClose={closeVideo} />
+        </Suspense>
+      )}
     </>
   );
 }

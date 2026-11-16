@@ -81,6 +81,8 @@ export interface Hotspot {
   cam?: [number, number, number];
   /** 點擊時觸發的模型動畫 */
   fx?: FxStep[];
+  /** 這個熱點是螢幕／投影／展示台：說明卡上顯示「觀看演示影片」 */
+  video?: boolean;
 }
 
 export interface Project {
@@ -117,6 +119,13 @@ export interface Project {
   model?: string;
   /** （選填）介紹頁的 3D 環境模型（.glb，放在 public/models/），取代程式產生的遠景 */
   env?: string;
+  /**
+   * 演示影片（從專案 README 擷取：.mp4 直連、YouTube 或 GIF）。只在使用者按「觀看演示影片」開啟燈箱時才載入，頁面初始不預載。
+   * mp4 請用支援 Range 串流的網址（GitHub Pages 或 jsDelivr；GitHub raw 不適合）。
+   */
+  videoUrl?: string;
+  /** 影片封面（燈箱開啟、影片緩衝時顯示） */
+  videoPoster?: string;
   /** 3D 空間導覽熱點（建議 3–5 個） */
   hotspots?: Hotspot[];
   hidden?: boolean;
@@ -141,6 +150,8 @@ export const projects: Project[] = [
     category: 'personal',
     status: 'live',
     env: 'models/env_lplc.glb',
+    videoUrl: 'https://znxuyz.github.io/L.P.S.D-System/media/lplc-intro.mp4',
+    videoPoster: 'https://znxuyz.github.io/L.P.S.D-System/media/lplc-intro-poster.jpg',
     hotspots: [
       {
         title: '資金流向熱力圖',
@@ -157,6 +168,7 @@ export const projects: Project[] = [
       },
       {
         title: '拉普拉斯之眼・市場情報',
+        video: true,
         body: '產業資金流排行、加權指數與台指期、每 5 分鐘的資金輪動、國內外大事件與重大訊息，以及融資維持率等大盤風險指標。',
         at: [0, 2.2, -0.1],
         fx: [
@@ -349,9 +361,12 @@ export const projects: Project[] = [
     category: 'personal',
     status: 'live',
     env: 'models/env_tianmu.glb',
+    videoUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/TianMu-Island@main/docs/media/tianmu-island-tour-720p.mp4',
+    videoPoster: 'https://cdn.jsdelivr.net/gh/znxuyz/TianMu-Island@main/docs/media/tour-poster.jpg',
     hotspots: [
       {
         title: '天幕膠囊：靈液彈簧',
+        video: true,
         body: '常駐在螢幕頂端正中的玄黑膠囊——無邊框、置頂、滑鼠穿透。懸停或點擊時以阻尼彈簧物理演算，像果凍般拉伸、回彈、流轉。',
         at: [0.25, 2.2, 0],
         fx: [
@@ -449,6 +464,8 @@ export const projects: Project[] = [
     category: 'personal',
     status: 'live',
     env: 'models/env_guardian.glb',
+    videoUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/ClassroomManagementSystem2.0@main/docs/demo.mp4',
+    videoPoster: 'https://cdn.jsdelivr.net/gh/znxuyz/ClassroomManagementSystem2.0@main/docs/preview.gif',
     hotspots: [
       {
         title: '從蛋到守護神獸',
@@ -471,6 +488,7 @@ export const projects: Project[] = [
       },
       {
         title: '樹屋教室・課堂工具',
+        video: true,
         body: '點名出席、抽籤機（可以優先抽到「需要關心」的孩子）、計時器、聯絡簿自動匯整——老師上課需要的工具都在這裡。',
         at: [-0.2, 1.45, -0.35],
         fx: [
@@ -548,6 +566,8 @@ export const projects: Project[] = [
     status: 'live',
     building: 'hall',
     env: 'models/env_care.glb',
+    videoUrl: 'https://znxuyz.github.io/C.A.R.E.-System/media/care-system-intro.mp4',
+    videoPoster: 'https://cdn.jsdelivr.net/gh/znxuyz/C.A.R.E.-System@main/docs/images/preview.gif',
     hotspots: [
       {
         title: '違規登錄',
@@ -610,6 +630,7 @@ export const projects: Project[] = [
       },
       {
         title: '公開唯讀看板',
+        video: true,
         body: '其他老師不需帳號就能查看每日概況——預設只顯示統計數字，不含姓名、學號與個別明細。',
         at: [-1.3, 0.35, -1.25],
         fx: [
@@ -655,6 +676,8 @@ export const projects: Project[] = [
     status: 'live',
     building: 'library',
     env: 'models/env_admin.glb',
+    videoUrl: 'https://znxuyz.github.io/School-Administration/docs/demo.mp4',
+    videoPoster: 'https://znxuyz.github.io/School-Administration/docs/demo-poster.jpg',
     hotspots: [
       {
         title: '四階段公文鐵道',
@@ -680,6 +703,7 @@ export const projects: Project[] = [
       },
       {
         title: '處室總覽',
+        video: true,
         body: '主任看得到同處室本學年度「還要辦」的進度看板：進行中 / 逾期 / 待更新 / 已完成 / 公文卡關，一打開就是現在該看的東西。',
         at: [0, 1.05, 0],
         fx: [
@@ -750,9 +774,12 @@ export const projects: Project[] = [
     building: 'school',
     env: 'models/env_hcrs.glb',
     model: 'models/hcrs.glb',
+    videoUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/H.C.R.S-HRES-Classroom-Reservation-System@main/public/media/hcrs-intro.mp4',
+    videoPoster: 'https://cdn.jsdelivr.net/gh/znxuyz/H.C.R.S-HRES-Classroom-Reservation-System@main/docs/media/poster.jpg',
     hotspots: [
       {
         title: '公開借用月曆',
+        video: true,
         body: '不用登入就能查看「借用狀況」月曆，只顯示已核准的借用。可依教室篩選，點一下日期就能看到當天各教室 × 節次的使用表。',
         at: [-0.1, -0.3, 0.85],
         fx: [

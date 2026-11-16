@@ -14,9 +14,11 @@ function neighbors(id: string) {
 }
 
 /** 全螢幕 3D 舞台：鋪滿整個視窗，位於導覽介面之下 */
-export function ProjectStage({ project, reducedMotion, active, onPick, markers, cardRefs, pulse, onReady }: {
+export function ProjectStage({ project, reducedMotion, active, onPick, markers, cardRefs, pulse, onReady, paused = false }: {
   project: Project; reducedMotion: boolean; active: number | null; onPick: (i: number | null) => void; markers: MutableRefObject<(HTMLElement | null)[]>;
   cardRefs: MutableRefObject<CardRefs>; pulse: number; onReady?: () => void;
+  /** 影片燈箱開啟時暫停 3D 渲染，把 GPU 讓給影片解碼 */
+  paused?: boolean;
 }) {
   // 頁面離場（轉場中）時讓 3D 停止渲染，不與下一頁搶 GPU
   const present = useIsPresent();
@@ -29,7 +31,7 @@ export function ProjectStage({ project, reducedMotion, active, onPick, markers, 
           <DomainStage
             kind={kind} accent={accent} model={project.model} env={project.env} projectId={project.id} reducedMotion={reducedMotion}
             hotspots={project.hotspots} active={active} onPick={onPick} markers={markers} cardRefs={cardRefs} pulse={pulse}
-            preload={neighbors(project.id)} onReady={onReady} live={present}
+            preload={neighbors(project.id)} onReady={onReady} live={present && !paused}
           />
         </Suspense>
       </CanvasBoundary>
