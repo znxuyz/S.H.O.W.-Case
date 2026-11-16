@@ -18,7 +18,7 @@
 - 精細模型：`public/models/<id>.glb`（`build_<id>.py`）、3D 環境 `env_<id>.glb`（`build_env_<id>.py`）、首頁輕量版 `models/map/<id>.glb`（`build_map_lod.sh`）；在 `projects.ts` 以 `model` / `env` 指定
 - 建模：`BLENDER_PY=.blender-venv/bin/python tools/blender/build.sh <名稱>`；改了主模型後記得重跑 `build_map_lod.sh <id>`
 - 模型管線：Blender 匯出 → `detail_maps.mjs`（主模型掛上共用細節貼圖：`tools/blender/detail/` 由 `bake_details.py` 以 Noise／ColorRamp／Bump 節點烘焙的石材／木紋／金屬拉絲／灰泥法線＋粗糙度，512px 無縫）→ 只套在純色、不透明、UV 完整的材質上，並以 MikkTSpace 預先計算切線（手機 GPU 不走導數推算，避免彩色雜點；不做「只有粗糙度」的半套組合以免多出著色器變體）→ gltf-transform **Draco** 壓縮＋WebP；網站用自架解碼器 `public/draco/`（`assets.ts` 的 `DRACO_PATH`）；倒角一律 1 段（`kit.box`／`label_block`），圓環／球體分段有上限；`node tools/qa/glbstats.cjs` 檢查預算（主模型 ≤ 15k 三角面、≤ 1.5MB；環境 ≤ 1.5MB；首頁版 ≤ 200KB）；`TRI_STATS` 會在建模輸出 `tris-top` 列出最吃面數的零件
-- 演示影片：原片由專案 README 擷取，`tools/make_highlight.sh <原片> <id>` 用 ffmpeg 剪成 20 秒精華（4 段 × 5 秒、720p H.264 CRF 22、無音軌、faststart，單檔 ≤ 4MB）→ `public/videos/<id>.mp4／.jpg`；`projects.ts` 的 `videoUrl`／`videoPoster` 指向精華片段、`videoFullUrl` 為原始完整影片（燈箱角落連結）；螢幕類熱點加 `video: true`；`VideoModal` 延遲載入、只在開啟時建立 `<video>`，第一幀前顯示讀取動畫與進度；QA：`node tools/qa/video.cjs <id>`
+- 演示影片（全部本站託管、只在開啟燈箱時載入）：原片由專案 README 擷取（`git show HEAD:<路徑>`）。`tools/make_fullvideo.sh <原片> <id>` → 完整介紹 `public/videos/<id>-full.mp4`（720p H.264＋AAC 96k、每 2 秒關鍵畫格、**faststart 索引在檔頭**，下載幾百 KB 即開播、其餘邊播邊載；原片若索引在檔尾必須整支下載完才能播）；`tools/make_highlight.sh <原片> <id>` → 20 秒精華 `<id>.mp4／.jpg`（無聲循環）。`projects.ts`：`videoUrl`＝完整介紹、`videoHighlightUrl`＝精華、`videoPoster`、`videoOriginalUrl`＝外部原始檔；螢幕類熱點加 `video: true`；`VideoModal` 預設播完整介紹（有聲，被擋時靜音＋「開啟聲音」），可切換精華，第一幀前顯示讀取動畫與進度；QA：`node tools/qa/video.cjs <id>`（量測按下到開播時間）
 - 點擊動畫：熱點的 `fx` 指定模型節點與「結構動作」（hinge/slide/stretch/flap/whirl/reveal/sweep/stamp/press/pulse/flash，定義見 `projects.ts` 的 FxKind；軸向為網站座標）；不要用整塊發光＋跳動的通用動畫，每個物件拆出子網格各自動
 - Blender 端：`group='Fx_<名稱>'` 收集零件後 `kit.fx_node(名稱, 樞紐)`（樞紐＝轉軸/鉸鏈位置）；`FxHide_*` 節點平常隱藏、只在 reveal 時出現；掛在會動的節點下用 `kit.reparent`；檢查：`node tools/qa/fx.cjs <id>`（加索引會以 ?fxslow 放慢截圖）
 - 主島底座：各 `build_env_<id>.py` 呼叫 `env.cradle(...)`（mound / tiers / tower / books / cloud）
@@ -38,7 +38,7 @@
 不需要中途詢問，依序完成後再一次回報。
 
 1. **讀專案**：用 `add_repo` 加入該 repo（只讀，或 `git clone --depth 1`），讀 README、`package.json`／主要原始碼、GitHub Pages 網址（repo 的 homepage 或 README 中的連結）。
-   README 裡若有展示影片（.mp4、YouTube、GitHub 附件）：用 `git show HEAD:<路徑>` 取得原片 → `tools/make_highlight.sh` 產生 20 秒精華，`videoUrl: 'videos/<id>.mp4'`、`videoPoster: 'videos/<id>.jpg'`，`videoFullUrl` 填原片串流網址（GitHub Pages 或 `cdn.jsdelivr.net/gh/<owner>/<repo>@main/<路徑>`）。
+   README 裡若有展示影片（.mp4、YouTube、GitHub 附件）：用 `git show HEAD:<路徑>` 取得原片 → `tools/make_fullvideo.sh` 與 `tools/make_highlight.sh`，填 `videoUrl: 'videos/<id>-full.mp4'`、`videoHighlightUrl: 'videos/<id>.mp4'`、`videoPoster: 'videos/<id>.jpg'`、`videoOriginalUrl`（原片網址：GitHub Pages 或 `cdn.jsdelivr.net/gh/<owner>/<repo>@main/<路徑>`）。
    整理出：作品名、一句話標語、3–4 個亮點、技術、狀態（live / dev / maintenance / archived）、分類（campus / personal）。
 2. **決定風格與 id**：id 用小寫英數（例 `newapp`）；`theme` 從 brand / cyber / mythic / oriental / guardian / campus / blueprint 選最貼近的；`accent` 取作品本身的主色。
 3. **設計模型概念（最重要）**：模型要表達「作品在做什麼」，不一定是建築（例：信箱＝反思卡回收、護照書＝英聽練習、平板＝文件下載）。

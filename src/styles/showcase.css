@@ -270,8 +270,8 @@
 @keyframes vm-pop { from { opacity: 0; transform: translateY(14px) scale(0.97); } }
 .video-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.6rem; color: #f5f3ee; font-weight: 600; }
 .video-modal-head small { font-weight: 400; color: #b9b5ad; }
-.video-modal-head button { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; color: #fff; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.06); cursor: pointer; }
-.video-modal-head button:hover { background: rgba(255, 255, 255, 0.16); }
+.video-modal-tools > button { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; color: #fff; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.06); cursor: pointer; }
+.video-modal-tools > button:hover { background: rgba(255, 255, 255, 0.16); }
 .video-modal-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 0.9rem; overflow: hidden; background: #000; box-shadow: 0 40px 120px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.14); }
 .video-modal-frame video, .video-modal-frame iframe, .video-modal-frame img { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; object-fit: contain; background: #000; }
 @media (max-width: 767px) { .video-modal { padding: 0.5rem; } .video-modal-frame { border-radius: 0.6rem; } }
