@@ -157,9 +157,10 @@ const DRAW: Record<SigilKind, { main: (ctx: Ctx, c: string) => void; alt: (ctx: 
     alt(ctx, c) {
       for (let k = 0; k < 18; k++) {
         const [x, y] = polar(150 + (k % 4) * 18, k * 1.37);
-        const g = ctx.createRadialGradient(x, y, 0, x, y, 16);
-        g.addColorStop(0, '#ffffff'); g.addColorStop(0.3, rgba(c, 0.9)); g.addColorStop(1, rgba(c, 0));
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 16, 0, 7); ctx.fill();
+        // 螢光：同心純色圓（不用 Canvas 漸層——iOS Safari 會對漸層加彩色抖動雜點）
+        ctx.fillStyle = rgba(c, 0.18); ctx.beginPath(); ctx.arc(x, y, 14, 0, 7); ctx.fill();
+        ctx.fillStyle = rgba(c, 0.55); ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill();
       }
     },
   },

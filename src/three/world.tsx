@@ -2,7 +2,7 @@
  * 3D 世界環境：天空穹頂、指數霧、柔光層、漂浮粒子、程序化環境反射與後製。
  * 介紹頁的全螢幕舞台與首頁群島共用。
  */
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Environment, Lightformer, Sparkles } from '@react-three/drei';
@@ -74,26 +74,34 @@ export function worldFor(kind: BuildingKind, projectId?: string): WorldStyle {
   return { ...WORLD[kind], ...(projectId ? WORLD_BY_PROJECT[projectId] : undefined) };
 }
 
-/** 柔和光暈：永遠位於主體正後方（相對鏡頭）的徑向漸層，讓視覺焦點鎖定在中央 */
-const haloTexture = (() => {
-  if (typeof document === 'undefined') return null;
-  const c = document.createElement('canvas');
-  c.width = c.height = 256;
-  const g = c.getContext('2d')!;
-  const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-  grd.addColorStop(0, 'rgba(255,255,255,0.9)');
-  grd.addColorStop(0.35, 'rgba(255,255,255,0.35)');
-  grd.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = grd;
-  g.fillRect(0, 0, 256, 256);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-})();
+/**
+ * 柔和光暈：永遠位於主體正後方（相對鏡頭）的徑向漸層，讓視覺焦點鎖定在中央。
+ * 用著色器即時計算平滑漸層，不用 Canvas 2D 漸層貼圖——iOS Safari 畫 Canvas 漸層時會加入逐像素的彩色抖動
+ * （dithering），貼圖放大後在手機上變成一圈五顏六色的雜點。
+ */
+const HALO_VERT = /* glsl */ `precision highp float;
+varying vec2 vUv;
+void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const HALO_FRAG = /* glsl */ `precision highp float;
+uniform vec3 uColor;
+uniform float uOpacity;
+varying vec2 vUv;
+void main() {
+  float d = clamp(length(vUv - 0.5) * 2.0, 0.0, 1.0);
+  // 與原本的漸層一致：中心 0.9 → 0.35 處 0.35 → 邊緣 0，再用 smoothstep 讓邊緣更柔
+  float a = d < 0.35 ? mix(0.9, 0.35, d / 0.35) : mix(0.35, 0.0, smoothstep(0.0, 1.0, (d - 0.35) / 0.65));
+  gl_FragColor = vec4(uColor, a * uOpacity);
+  #include <colorspace_fragment>
+}`;
 
 function HaloLayer({ color, opacity = 0.42 }: { color: string; opacity?: number }) {
   const ref = useRef<THREE.Mesh>(null);
-  const mat = useMemo(() => new THREE.MeshBasicMaterial({ map: haloTexture, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }), [color, opacity]);
+  const mat = useMemo(() => new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color(color) }, uOpacity: { value: opacity } },
+    vertexShader: HALO_VERT, fragmentShader: HALO_FRAG,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false,
+  }), [color, opacity]);
+  useEffect(() => () => mat.dispose(), [mat]);
   const dir = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera }) => {
     const m = ref.current;
