@@ -2,9 +2,9 @@
  * 介紹頁的全螢幕 3D 舞台：Canvas 佔滿整個視窗，箱庭不會被任何邊框裁切。
  * 空間導覽：熱點標記綁在模型各部位，點擊後鏡頭聚焦（Hotspots.tsx）。
  */
-import { lazy, Suspense, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { ContactShadows, OrbitControls, PerformanceMonitor } from '@react-three/drei';
+import { OrbitControls, PerformanceMonitor, useProgress } from '@react-three/drei';
 import { PCFShadowMap, type Group } from 'three';
 import type { Hotspot } from '../data/projects';
 import type { MutableRefObject } from 'react';
@@ -12,7 +12,8 @@ import { CameraFocus, MarkerProjector, StageShift, type CardRefs } from './Hotsp
 import type { FxTrigger } from './ModelDiorama';
 
 const ModelDiorama = lazy(() => import('./ModelDiorama'));
-import { Diorama } from './dioramas';
+import { Diorama } from './Diorama';
+import { preloadModels } from './assets';
 import type { BuildingKind } from './kinds';
 import { allowEffects, Effects, World, worldFor } from './world';
 
@@ -23,10 +24,27 @@ export interface DomainStageProps {
   cardRefs?: MutableRefObject<CardRefs>;
   /** 每次點擊熱點都會遞增，用來重播動畫 */
   pulse?: number;
+  /** 主模型與環境都預熱完成、開始淡入時呼叫 */
+  onReady?: () => void;
+  /** 本頁就緒後，趁空檔在背景預載的模型（相鄰作品） */
+  preload?: string[];
 }
 
-export default function DomainStage({ kind, accent, model, env, projectId, reducedMotion, hotspots = [], active = null, onPick, markers, cardRefs, pulse = 0 }: DomainStageProps) {
+export default function DomainStage({ kind, accent, model, env, projectId, reducedMotion, hotspots = [], active = null, onPick, markers, cardRefs, pulse = 0, onReady, preload = [] }: DomainStageProps) {
   const W = worldFor(kind, projectId);
+  // 主模型與環境各自預熱完成後才算就緒；就緒後在瀏覽器空檔預載相鄰作品
+  const [mainReady, setMainReady] = useState(false);
+  const [envReady, setEnvReady] = useState(!env);
+  const onMain = useCallback(() => setMainReady(true), []);
+  const onEnv = useCallback(() => setEnvReady(true), []);
+  const ready = mainReady && envReady;
+  useEffect(() => {
+    if (!ready) return;
+    onReady?.();
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1200));
+    idle(() => preloadModels(...preload));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
   const modelRef = useRef<Group>(null);
   // 自動品質：幀率持續偏低時降低解析度並關閉後製
   const [low, setLow] = useState(false);
@@ -37,6 +55,8 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
   const focused = active !== null && !!hotspots[active];
   const fx = useMemo<FxTrigger | null>(() => (focused && hotspots[active!].fx ? { steps: hotspots[active!].fx!.map((s) => ({ ...s })), key: pulse, color: accent } : null), [focused, active, pulse, hotspots, accent]);
   return (
+    <>
+    <StageLoader done={ready} />
     <Canvas
       resize={{ offsetSize: true }}
       shadows={{ type: PCFShadowMap }}
@@ -47,10 +67,10 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
       gl={{ antialias: !post, powerPreference: 'high-performance' }}
     >
       <PerformanceMonitor flipflops={2} onDecline={() => setLow(true)} />
-      <World style={W} landscape={!env} />
+      <World style={W} />
       {env && (
         <Suspense fallback={null}>
-          <group position={[0, -0.4, 0]}><ModelDiorama url={env} release shadows="none" /></group>
+          <group position={[0, -0.4, 0]}><ModelDiorama url={env} release shadows="none" onReady={onEnv} /></group>
         </Suspense>
       )}
       <ambientLight color={W.ambient} intensity={W.ambientI} />
@@ -71,9 +91,8 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
         shadow-camera-far={34}
       />
       <group position={[0, -0.4, 0]} ref={modelRef}>
-        <Diorama kind={kind} accent={accent} model={model} lights fx={fx} />
+        {model && <Diorama model={model} lights fx={fx} onReady={onMain} />}
       </group>
-      {!env && <ContactShadows position={[0, -3.98, 0]} scale={18} blur={2.6} far={7} opacity={0.55} resolution={512} color="#000000" />}
       {markers && <MarkerProjector hotspots={hotspots} markers={markers} active={active} cardRefs={cardRefs} occluders={modelRef} />}
       <CameraFocus hotspot={focused ? hotspots[active!] : null} home={home} homeTarget={[0, 0.8, 0]} />
       <StageShift focused={focused} />
@@ -92,5 +111,30 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
       />
       {post && <Effects bloom={W.bloom} />}
     </Canvas>
+    </>
+  );
+}
+
+/**
+ * 載入遮罩：下載進度（drei useProgress）＋微光進度條；模型預熱完成後淡出並卸載。
+ * 下載完成但著色器仍在預熱時，進度條停在 100% 並持續微光，不會先露出半成品。
+ */
+export function StageLoader({ done }: { done: boolean }) {
+  const { progress, active } = useProgress();
+  const [gone, setGone] = useState(false);
+  useEffect(() => {
+    if (!done) { setGone(false); return; }
+    const t = window.setTimeout(() => setGone(true), 700);
+    return () => window.clearTimeout(t);
+  }, [done]);
+  if (gone) return null;
+  const pct = Math.round(active ? progress : 100);
+  return (
+    <div className={`stage-loader ${done ? 'is-done' : ''}`} role="status" aria-live="polite">
+      <div className="stage-loader-box">
+        <span className="stage-loader-label">{pct < 100 ? `載入島嶼 ${pct}%` : '點亮島嶼中'}</span>
+        <span className="stage-loader-bar"><i style={{ transform: `scaleX(${Math.max(0.04, pct / 100)})` }} /></span>
+      </div>
+    </div>
   );
 }

@@ -13,12 +13,13 @@ import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import type { Project } from '../data/projects';
 import { themes } from '../themes';
-import { Diorama } from './dioramas';
-import { ACCENT, DEFAULT_BUILDING } from './kinds';
+import { Diorama } from './Diorama';
+import { mapModel, preloadModels } from './assets';
+import { ACCENT } from './kinds';
 import { allowEffects, Effects } from './world';
 import { DustLayers, NebulaDome, WorldFragments } from './cosmos';
 import { Sigil, SIGIL_FOR_THEME, type SigilKind } from './sigils';
-import { mulberry32 } from '../lib/useCanvasLoop';
+import { mulberry32 } from '../lib/random';
 
 export interface MapWorldProps {
   projects: Project[];
@@ -70,7 +71,6 @@ function Island({
   project: Project; body: Body; hovered: boolean; sigil: SigilKind;
   onOver: (id: string) => void; onOut: () => void; onDown: (id: string, e: ThreeEvent<PointerEvent>) => void;
 }) {
-  const kind = project.building ?? DEFAULT_BUILDING[project.theme];
   const accent = project.accent ?? ACCENT[project.theme];
   const theme = themes[project.theme];
   return (
@@ -81,7 +81,7 @@ function Island({
       onPointerDown={(e) => onDown(project.id, e)}
     >
       <group rotation={[0, body.yaw, 0]}>
-        <Diorama kind={kind} accent={accent} model={project.model} lod />
+        {project.model && <Diorama model={project.model} lod />}
       </group>
       {hovered && (
         <>
@@ -227,6 +227,12 @@ function DragController({ drag, bodies, controls, onTap, onRelease }: {
 
 export default function MapWorld({ projects, portrait, reducedMotion, onEnter, onMeasure }: MapWorldProps) {
   const [hovered, setHovered] = useState<string | null>(null);
+  // 首頁一開就把所有島嶼的輕量版一起下載解析（各 100–300KB）；滑過某座島時預載它的精細模型與環境，點進去幾乎秒開
+  useMemo(() => preloadModels(...projects.map((p) => p.model && mapModel(p.model))), [projects]);
+  useEffect(() => {
+    const p = projects.find((x) => x.id === hovered);
+    if (p) preloadModels(p.model, p.env);
+  }, [hovered, projects]);
   const [flying, setFlying] = useState(false);
   const controls = useRef<OrbitControlsImpl | null>(null);
   const flight = useRef<{ target: THREE.Vector3; t: number; done: () => void } | null>(null);

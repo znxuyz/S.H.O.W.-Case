@@ -10,8 +10,8 @@
 - 作品清單：`src/data/projects.ts`
 - 主題（背景、配色、字體）：`src/themes/`、`src/styles/themes.css`
 - 3D（Three.js + @react-three/fiber + drei）：`src/three/`
-  - `kit.tsx`：共用幾何體 / 材質快取與基礎零件（程序化 Low-Poly，不使用外部 .glb 模型）
-  - `dioramas.tsx`：各主題的微縮箱庭；`world.tsx`：天空/地面/遠景/粒子/環境反射/後製
+  - `Diorama.tsx`：島嶼主模型（只載入 .glb，Suspense fallback 為 null，不再有程序化替代模型）；`assets.ts`：模型路徑與 `useGLTF.preload` 預載
+  - `world.tsx`：天空/霧/柔光/粒子/環境反射/後製（地形與遠景由 `env_<id>.glb` 提供）
   - `MapWorld.tsx`：首頁漂浮群島（拖曳、慣性）；`cosmos.tsx`：星雲背景；`sigils.tsx`：各風格選取法陣
   - `DomainStage.tsx`：介紹頁全螢幕 3D 舞台；`Hotspots.tsx`：熱點投影、鏡頭聚焦；`ModelDiorama.tsx`：載入 .glb、依節點名稱驅動動畫、離開時釋放資源
   - R3F `<Canvas>` 一律加 `resize={{ offsetSize: true }}`：轉場會對外層做 CSS scale，用 getBoundingClientRect 量測會讓畫布尺寸錯誤而黑屏
@@ -22,5 +22,6 @@
 - 主島底座：各 `build_env_<id>.py` 呼叫 `env.cradle(...)`（mound / tiers / tower / books / cloud）
 - 空間導覽熱點：`projects.ts` 的 `hotspots`（座標為網站場景座標，Y 朝上；Blender 座標 (x, y, z) → 網站 (x, z - 0.4, -y)）
 - 長任務進度：`UPGRADE_ROADMAP.md`（中斷後從未打勾項目續做）；QA 腳本在 `tools/qa/`（需先 `npx vite preview --port 4173`）
-- 首頁 2D 疊層：`src/map/`；領域背景插畫：`src/themes/<主題>/Background.tsx`
+- 首頁 2D 疊層：`src/map/`；終章背景：`src/components/OutroBackground.tsx`（唯一的 2D 背景插畫）
+- 載入流程：`ModelDiorama` 先 `compileAsync` 編譯著色器、分批上傳貼圖，完成後才放進場景並浮上淡入；`DomainStage` 的 `StageLoader` 顯示進度，主模型與環境都就緒才收起並顯示熱點；就緒後在空檔預載前後作品，首頁預載所有輕量版、滑過島嶼時預載精細版
 - 效能：Canvas `dpr={[1, 1.5]}`、陰影貼圖 1024、環境模型不參與陰影、後製 MSAA 2＋半解析度 Bloom；幾何與材質共用、群島不使用點光源、觸控裝置關閉後製；熱點投影只在數值改變時寫 DOM、不每幀量測；2D 部分不用 filter / mix-blend-mode（說明卡的 backdrop-filter 為使用者指定的例外）。

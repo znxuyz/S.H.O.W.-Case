@@ -1,5 +1,3 @@
-import type { ComponentType, LazyExoticComponent } from 'react';
-
 export type ThemeKey = 'brand' | 'cyber' | 'mythic' | 'oriental' | 'guardian' | 'campus' | 'blueprint';
 
 /** How the scene content enters / leaves. Implemented in components/transitions.ts */
@@ -7,13 +5,6 @@ export type EnterFx = 'veil' | 'glitch' | 'nebula' | 'ink' | 'bounce' | 'paper' 
 
 /** How the big title is revealed. Implemented in lib/titleFx.ts */
 export type TitleFx = 'rise' | 'scramble' | 'ember' | 'brush' | 'pop' | 'type';
-
-export interface BackgroundProps {
-  accent?: string;
-  /** false while the layer is fading out — backgrounds may stop animating */
-  active: boolean;
-  reducedMotion: boolean;
-}
 
 export interface ThemeDef {
   key: ThemeKey;
@@ -24,5 +15,4 @@ export interface ThemeDef {
   chrome: string;
   enter: EnterFx;
   title: TitleFx;
-  Background: LazyExoticComponent<ComponentType<BackgroundProps>>;
 }

@@ -21,15 +21,10 @@
   --wm-accent: #22e4ff;
 }
 [data-theme='cyber'] .sc-title { text-shadow: 0 0 28px rgba(34, 228, 255, 0.55), 2px 0 0 rgba(255, 61, 242, 0.35), -2px 0 0 rgba(34, 228, 255, 0.35); }
-[data-theme='cyber'] .sc-copy { padding: clamp(1.2rem, 3vw, 2rem); }
+
 [data-theme='cyber'] .sc-btn { clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); text-transform: uppercase; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; }
 [data-theme='cyber'] .sc-btn-primary { box-shadow: none; }
 [data-theme='cyber'] .sc-btn-primary:hover { box-shadow: 0 0 22px #22e4ff; }
-.cyber-corners i { position: absolute; width: 14px; height: 14px; border-color: var(--accent); border-style: solid; border-width: 0; }
-.cyber-corners i:nth-child(1) { left: 6px; top: 6px; border-left-width: 2px; border-top-width: 2px; }
-.cyber-corners i:nth-child(2) { right: 30px; top: 6px; border-right-width: 2px; border-top-width: 2px; display: none; }
-.cyber-corners i:nth-child(3) { right: 6px; bottom: 6px; border-right-width: 2px; border-bottom-width: 2px; }
-.cyber-corners i:nth-child(4) { left: 30px; bottom: 6px; border-left-width: 2px; border-bottom-width: 2px; display: none; }
 
 /* ── 神話神獸 · Mythic ─────────────────────────────── */
 [data-theme='mythic'] {
@@ -41,13 +36,9 @@
   --wm-accent: #ffc76b;
 }
 [data-theme='mythic'] .sc-title { font-family: 'Noto Serif TC', 'Cinzel', serif; font-weight: 900; color: #ffe3a6; text-shadow: 0 0 2px #fff4dc, 0 0 28px rgba(255, 170, 80, 0.65), 0 0 70px rgba(185, 140, 255, 0.45), 0 3px 0 #7a3a12; }
-[data-theme='mythic'] .sc-code { font-family: 'Cinzel', serif; letter-spacing: 0.2em; }
+
 [data-theme='mythic'] .sc-btn-secondary { border-color: #b98cff66; }
-.soul-rings { animation: ring-spin 50s linear infinite; will-change: transform; position: absolute; width: min(130%, 34rem); aspect-ratio: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; fill: none; }
-.soul-rings circle { stroke-linecap: round; transform-origin: center; }
-.soul-rings circle:nth-child(1) { stroke: #ffc76b66; stroke-width: 1.2; stroke-dasharray: 2 10 30 10; }
-.soul-rings circle:nth-child(2) { stroke: #b98cff66; stroke-width: 2; stroke-dasharray: 60 20; }
-.soul-rings circle:nth-child(3) { stroke: #7fd8ff55; stroke-width: 1; stroke-dasharray: 1 6; }
+
 @keyframes ring { to { transform: rotate(360deg); } }
 
 /* ── 古典中式 · Oriental（玄漆描金）─────────────────── */
@@ -63,10 +54,6 @@
 [data-theme='oriental'] .sc-highlights li::before { content: ''; width: 6px; height: 6px; top: 0.6em; border: 1px solid var(--accent); transform: rotate(45deg); }
 [data-theme='oriental'] .sc-btn-secondary { border-color: #c8a86966; }
 [data-theme='oriental'] .sc-kicker-sep { background: var(--accent-2); height: 2px; }
-.oriental-vertical { position: absolute; left: calc(-1 * clamp(2.5rem, 5vw, 4.5rem)); top: 0; display: none; flex-direction: column; align-items: center; gap: 1.2rem; }
-@media (min-width: 1280px) { .oriental-vertical { display: flex; } }
-.vertical-text { writing-mode: vertical-rl; font-family: 'LXGW WenKai TC', serif; letter-spacing: 0.45em; font-size: 0.95rem; color: #e8c872b3; }
-.seal { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; writing-mode: vertical-rl; font-family: 'Noto Serif TC', serif; font-weight: 900; font-size: 0.95rem; line-height: 1; color: #f4dfc0; background: #b5432f; border-radius: 4px; box-shadow: inset 0 0 0 2px #b5432f, inset 0 0 0 3px #f4dfc066; transform: rotate(-4deg); }
 
 /* ── 守護獸森林 · Guardian ────────────────────────── */
 [data-theme='guardian'] {
@@ -96,7 +83,7 @@
 [data-theme='campus'] .sc-tagline { font-family: 'LXGW WenKai TC', 'Caveat', cursive; font-size: clamp(1.15rem, 2.4vw, 1.5rem); font-weight: 700; }
 [data-theme='campus'] .sc-status-live { color: #15803d; border-color: #15803d55; }
 [data-theme='campus'] .sc-status-dev { color: #1d4ed8; }
-[data-theme='campus'] .sc-copy { transition: color 0.5s; }
+
 [data-theme='campus'] .sc-btn-primary { box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 60%, black), 0 14px 30px -12px var(--accent); }
 
 /* ── 工程藍圖 · Blueprint ───────────────────────── */
@@ -111,10 +98,9 @@
 [data-theme='blueprint'] .sc-title { font-family: 'Noto Sans TC', sans-serif; }
 [data-theme='blueprint'] .sc-title::after { content: '_'; color: var(--accent); animation: caret 1s steps(1) infinite; margin-left: 0.1em; }
 @keyframes caret { 50% { opacity: 0; } }
-[data-theme='blueprint'] .sc-copy { padding-left: 1.4rem; border-left: 1px dashed var(--line-strong); }
+
 [data-theme='blueprint'] .sc-btn-primary, [data-theme='blueprint'] .sc-btn-disabled { font-family: 'JetBrains Mono', monospace; }
 
-@keyframes ring-spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
 
 /* ── 3D 舞台上的文字遮罩（無底框，只做淡淡的漸層） ── */
 [data-theme] { --stage-veil: rgba(4, 4, 8, 0.72); --stage-veil-mid: rgba(4, 4, 8, 0.32); }

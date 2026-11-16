@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { Project } from '../data/projects';
-import { mulberry32 } from '../lib/useCanvasLoop';
+import { mulberry32 } from '../lib/random';
 
 const asset = (p: string) => `${import.meta.env.BASE_URL}${p}`;
 

@@ -30,7 +30,7 @@ npx gltf-transform optimize /tmp/scheduling-raw.glb public/models/scheduling.glb
 
 ## 腳本慣例
 
-- 地塊 4×4、頂面 z = 0，與 `src/three/kit.tsx` 的 `Plinth` 一致；Blender 的 -Y 方向 = 網站鏡頭正面。
+- 地塊 4×4、頂面 z = 0（`kit.plinth`）；Blender 的 -Y 方向 = 網站鏡頭正面。
 - 所有零件加倒角並烘焙成實際幾何，世界座標方盒投影 UV，貼圖由 Python 程序化產生。
 - 同材質零件合併成一個網格以減少繪製次數。
 - 共用工具在 `kit.py`（貼圖、材質、倒角、UV、合併、匯出）。

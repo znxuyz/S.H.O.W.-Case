@@ -86,9 +86,9 @@
 
 ### 新增風格
 
-1. 建立 `src/themes/<名稱>/Background.tsx`（全螢幕背景元件）
-2. 在 `src/styles/themes.css` 加上 `[data-theme='<名稱>']` 的配色、字體與元件樣式
-3. 在 `src/themes/types.ts` 的 `ThemeKey` 與 `src/themes/index.ts` 註冊，選擇轉場 (`enter`) 與標題特效 (`title`)
+1. 在 `src/styles/themes.css` 加上 `[data-theme='<名稱>']` 的配色、字體與元件樣式
+2. 在 `src/themes/types.ts` 的 `ThemeKey` 與 `src/themes/index.ts` 註冊，選擇轉場 (`enter`) 與標題特效 (`title`)
+3. 作品頁的背景由該作品的 3D 環境（`env_<id>.glb`）與 `src/three/world.tsx` 的天空／霧色提供
 
 ## 開發
 
@@ -100,12 +100,12 @@ npm run build    # 產出 dist/
 
 技術：Vite · React · TypeScript · Tailwind CSS v4 · Motion · GSAP（SplitText / ScrambleText）· Three.js · React Three Fiber · drei。
 
-3D 箱庭全部以 Three.js 基礎幾何體（Box / Cylinder / Cone / Sphere…）程序化堆疊，不需要任何外部模型檔，程式在 `src/three/`：
-`kit.tsx`（共用幾何與材質）、`dioramas.tsx`（各主題箱庭）、`world.tsx`（天空、地面、遠景、粒子、環境反射與光暈後製）、`MapWorld.tsx`（首頁群島）、`DomainStage.tsx`（介紹頁全螢幕 3D 舞台）。
-每個作品的全螢幕領域插畫在 `src/themes/<主題>/Background.tsx`，共用零件在 `src/themes/sceneKit.tsx`。
+3D 程式在 `src/three/`：`Diorama.tsx`（島嶼主模型）、`ModelDiorama.tsx`（載入 .glb、預熱著色器後淡入、節點動畫與點擊動作）、`assets.ts`（模型路徑與預載）、
+`world.tsx`（天空、霧、柔光、粒子、環境反射與後製）、`MapWorld.tsx`（首頁群島）、`DomainStage.tsx`（介紹頁全螢幕 3D 舞台與載入遮罩）、`Hotspots.tsx`（熱點投影與鏡頭聚焦）。
+終章的星空背景在 `src/components/OutroBackground.tsx`（全站唯一的 2D 背景插畫）。
 
 ### 精細模型、3D 環境與首頁輕量版（.glb）
-作品可在 `projects.ts` 設定 `model: 'models/xxx.glb'`，以 Blender 建模（或 AI 生成）的精細箱庭取代程式建構版。
+作品在 `projects.ts` 以 `model: 'models/xxx.glb'` 指定 Blender 建模的島嶼（必填；載入期間不顯示替代模型，只顯示載入遮罩）。
 10 個作品都有 Blender 程序化建模的主模型（`build_<id>.py`）與 3D 環境（`build_env_<id>.py`），首頁使用 `tools/blender/build_map_lod.sh` 產生的輕量版（`models/map/`）。流程見 `tools/blender/README.md`，長期升級進度見 `UPGRADE_ROADMAP.md`。
 
 ### 效能原則

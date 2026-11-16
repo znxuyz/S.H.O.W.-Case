@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ChevronDown, ChevronUp, LayoutGrid, Map as MapIcon } from 'lucide-react';
 import { visibleProjects, type Project } from './data/projects';
@@ -11,6 +11,8 @@ import { MapScene, diveOrigin } from './map/MapScene';
 import { OutroScene } from './components/OutroScene';
 import { ProjectScene } from './components/ProjectScene';
 import { IndexOverlay } from './components/IndexOverlay';
+
+const OutroBackground = lazy(() => import('./components/OutroBackground'));
 
 type Scene =
   | { kind: 'map'; id: 'map'; theme: ThemeKey; label: string }
@@ -35,7 +37,6 @@ export default function App() {
   const scene = scenes[index];
   const theme = themes[scene.theme];
   const accent = scene.kind === 'project' ? scene.project.accent : undefined;
-  const Bg = theme.Background;
 
   const navItems = useMemo<NavItem[]>(
     () => scenes.map((s) => ({ id: s.id, label: s.label, group: s.kind === 'project' ? s.project.category : 'brand' })),
@@ -82,7 +83,7 @@ export default function App() {
             {/* 大地圖與作品頁的背景都在 3D 舞台裡；這層只在載入 / 轉場瞬間露出，用主題色漸層即可 */}
             {scene.kind === 'outro' ? (
               <Suspense fallback={<div className="absolute inset-0" style={{ background: theme.chrome }} />}>
-                <Bg accent={accent} active reducedMotion={reducedMotion} />
+                <OutroBackground reducedMotion={reducedMotion} />
               </Suspense>
             ) : (
               <div className="absolute inset-0" style={{ background: `radial-gradient(120% 90% at 60% 40%, color-mix(in srgb, ${theme.chrome} 70%, #ffffff 10%), ${theme.chrome})` }} />

@@ -14,13 +14,13 @@
  * 每個動作都是「結構動作」（掀、滑、伸、拍、轉、顯現、掃描、蓋印），只有指定 glow 的零件才會增亮，
  * 指定 ring 才擴散能量波；FxHide_* 節點平常隱藏，只在 reveal 時出現。
  */
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FxKind, FxStep } from '../data/projects';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
-export const modelUrl = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+import { modelUrl } from './assets';
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
 
@@ -100,7 +100,32 @@ function release(url: string, scene: THREE.Object3D) {
  * shadows：full＝主模型（投射＋接收，但漂浮/旋轉/看板/發光零件不投射）；
  *          cast＝首頁輕量版（只投射）；none＝3D 環境（大面積地形不進陰影計算）
  */
-export default function ModelDiorama({ url, release: shouldRelease = false, fx = null, shadows = 'full' }: { url: string; release?: boolean; fx?: FxTrigger | null; shadows?: 'full' | 'cast' | 'none' }) {
+/**
+ * 預熱：先在背景把著色器編譯好（compileAsync，用目標場景的燈光與霧，不阻塞畫面），
+ * 再把貼圖每幀上傳 3 張到 GPU；全部完成才把模型放進場景並淡入，避免「出現瞬間」卡頓。
+ */
+async function warmUp(gl: THREE.WebGLRenderer, obj: THREE.Object3D, camera: THREE.Camera, target: THREE.Scene) {
+  try { await gl.compileAsync(obj, camera, target); } catch { /* 舊瀏覽器：退回首幀同步編譯 */ }
+  const textures = new Set<THREE.Texture>();
+  obj.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (!m) return;
+    [m.map, m.emissiveMap, m.normalMap, m.roughnessMap, m.metalnessMap, m.alphaMap].forEach((t) => t && textures.add(t));
+  });
+  const list = [...textures];
+  for (let i = 0; i < list.length; i += 3) {
+    list.slice(i, i + 3).forEach((t) => gl.initTexture(t));
+    await new Promise((r) => requestAnimationFrame(r));
+  }
+}
+
+const easeOutBackSoft = (x: number) => { const c = Math.min(1, Math.max(0, x)); const k = 1.2; return 1 + (k + 1) * Math.pow(c - 1, 3) + k * Math.pow(c - 1, 2); };
+
+export default function ModelDiorama({ url, release: shouldRelease = false, fx = null, shadows = 'full', onReady }: {
+  url: string; release?: boolean; fx?: FxTrigger | null; shadows?: 'full' | 'cast' | 'none';
+  /** 著色器與貼圖都準備好、開始淡入時呼叫（介紹頁用來收起載入遮罩） */
+  onReady?: () => void;
+}) {
   const gltf = useGLTF(modelUrl(url), false, true);
   useEffect(() => {
     if (!shouldRelease) return;
@@ -153,6 +178,26 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
     return { scene: root, rigs, named, rings, hidden };
   }, [gltf.scene, shadows]);
 
+  // ── 預熱與進場動畫 ──
+  const { gl, camera, scene: stageScene } = useThree();
+  const [ready, setReady] = useState(false);
+  const revealRef = useRef<THREE.Group>(null);
+  const revealT = useRef(-1);
+  const readyCb = useRef(onReady);
+  readyCb.current = onReady;
+  useEffect(() => {
+    let alive = true;
+    setReady(false);
+    warmUp(gl, scene, camera, stageScene).then(() => {
+      if (!alive) return;
+      revealT.current = -1;
+      setReady(true);
+      readyCb.current?.();
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scene]);
+
   /** 依名稱找節點（支援結尾 * 萬用字元，例如 Lit_*） */
   const find = (name: string) => {
     if (!name.endsWith('*')) return named.get(name) ?? [];
@@ -201,6 +246,15 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
   const litCount = useMemo(() => rigs.filter((r) => r.kind === 'Lit_').length, [rigs]);
   useFrame(({ clock, camera }, dt) => {
     const t = clock.elapsedTime;
+    // 進場：0.9 秒由小到大（略帶回彈）並從下方浮上來
+    const rg = revealRef.current;
+    if (rg && revealT.current < 1) {
+      if (revealT.current < 0) revealT.current = 0;
+      revealT.current = Math.min(1, revealT.current + dt / 0.9);
+      const k = easeOutBackSoft(revealT.current);
+      rg.scale.setScalar(Math.max(0.001, 0.86 + 0.14 * k) * (revealT.current < 0.02 ? 0.001 : 1));
+      rg.position.y = (1 - Math.min(1, k)) * -0.35;
+    }
     // 1) 撤銷上一幀的動畫增量
     applied.current.forEach((d, n) => {
       n.position.x -= d.p[0]; n.position.y -= d.p[1]; n.position.z -= d.p[2];
@@ -324,5 +378,5 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
     });
   });
 
-  return <primitive object={scene} />;
+  return ready ? <group ref={revealRef} scale={0.001}><primitive object={scene} /></group> : null;
 }

@@ -30,6 +30,9 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
   const markers = useRef<(HTMLElement | null)[]>([]);
   const cardRefs = useRef<CardRefs>({ card: null, line: null });
   const [pulse, setPulse] = useState(0);
+  // 3D 島嶼預熱完成前不顯示熱點標記（避免標籤浮在空中、壓住載入遮罩）
+  const [stageReady, setStageReady] = useState(false);
+  const onStageReady = useCallback(() => setStageReady(true), []);
   const accent = project.accent ?? 'var(--accent)';
 
   useLayoutEffect(() => {
@@ -60,9 +63,9 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
 
   return (
     <>
-      <ProjectStage project={project} reducedMotion={reducedMotion} active={active} onPick={pick} markers={markers} cardRefs={cardRefs} pulse={pulse} />
+      <ProjectStage project={project} reducedMotion={reducedMotion} active={active} onPick={pick} markers={markers} cardRefs={cardRefs} pulse={pulse} onReady={onStageReady} />
       {/* 3D 熱點標記（位置由舞台每幀投影寫入） */}
-      <div className="hs-layer" aria-label="模型上的導覽標記">
+      <div className={`hs-layer ${stageReady ? 'is-ready' : ''}`} aria-label="模型上的導覽標記">
         {hotspots.map((hs, i) => (
           <div key={i} ref={(el) => { markers.current[i] = el; }} className="hs-anchor" style={{ visibility: 'hidden' }}>
             <button

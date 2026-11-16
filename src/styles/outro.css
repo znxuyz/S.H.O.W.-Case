@@ -1,0 +1,13 @@
+/* ═════════ 終章背景（OutroBackground）：靜態 SVG 星雲＋上升微塵；只動 transform / opacity，不用 filter ═════════ */
+.outro-bg { position: absolute; inset: 0; overflow: hidden; background: #0b0a09; }
+.outro-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.drift-field { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.drift { position: absolute; display: block; will-change: transform; animation-timing-function: linear; animation-iteration-count: infinite; }
+.drift-rise { bottom: -40px; animation-name: drift-rise; }
+@keyframes drift-rise {
+  0% { transform: translate3d(0, 0, 0) scale(var(--s)); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 0.8; }
+  100% { transform: translate3d(var(--sway), -95vh, 0) scale(var(--s)); opacity: 0; }
+}
+.b-dust i { display: block; width: 4px; height: 4px; border-radius: 50%; background: radial-gradient(closest-side, #f3dfaa, rgba(236, 214, 160, 0)); }
