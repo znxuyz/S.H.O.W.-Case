@@ -1,1 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b0a09"/><rect x="5" y="5" width="54" height="54" rx="10" fill="none" stroke="#c8a869" stroke-width="1.5"/><text x="32" y="41" text-anchor="middle" font-family="Georgia,serif" font-size="26" fill="#ecdcb4" letter-spacing="1">S.</text><line x1="18" y1="48" x2="46" y2="48" stroke="#c8a869" stroke-width="1"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- S.H.O.W. Case 品牌圖示：墨黑星空裡的一座金色浮島（每件作品都是一座島） -->
+  <defs>
+    <radialGradient id="sky" cx="0.5" cy="0.38" r="0.7">
+      <stop offset="0" stop-color="#2a2048"/>
+      <stop offset="0.55" stop-color="#14101f"/>
+      <stop offset="1" stop-color="#0b0a09"/>
+    </radialGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6e2a8"/>
+      <stop offset="1" stop-color="#d9b56a"/>
+    </linearGradient>
+    <linearGradient id="rock" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b8894a"/>
+      <stop offset="1" stop-color="#5a3c22"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffe7a8" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#ffe7a8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#sky)"/>
+  <rect x="3.5" y="3.5" width="57" height="57" rx="11" fill="none" stroke="#c8a869" stroke-opacity="0.55" stroke-width="1.2"/>
+  <!-- 星點 -->
+  <circle cx="13" cy="15" r="0.9" fill="#f3e6c8"/>
+  <circle cx="50" cy="12" r="0.7" fill="#f3e6c8" opacity="0.8"/>
+  <circle cx="9" cy="35" r="0.6" fill="#f3e6c8" opacity="0.6"/>
+  <circle cx="55" cy="40" r="0.8" fill="#f3e6c8" opacity="0.7"/>
+  <!-- 星芒 -->
+  <path d="M47 18 L48.2 21.8 L52 23 L48.2 24.2 L47 28 L45.8 24.2 L42 23 L45.8 21.8 Z" fill="#ffe7a8"/>
+  <!-- 塔頂光暈 -->
+  <circle cx="30" cy="22" r="9" fill="url(#glow)"/>
+  <!-- 浮島：岩底（倒三角，低面數兩色）＋金色頂面 -->
+  <path d="M14 38 L32 58 L32 40 Z" fill="url(#rock)"/>
+  <path d="M50 38 L32 58 L32 40 Z" fill="#7a5530"/>
+  <path d="M12 36 L32 30 L52 36 L32 42 Z" fill="url(#top)"/>
+  <path d="M12 36 L32 42 L32 44 L12 38 Z" fill="#a8803f"/>
+  <path d="M52 36 L32 42 L32 44 L52 38 Z" fill="#8a6533"/>
+  <!-- 島上的小塔（作品的「建築」） -->
+  <path d="M27 35 L27 24 L33 24 L33 35 Z" fill="#fff4dc"/>
+  <path d="M33 24 L36 26 L36 33.5 L33 35 Z" fill="#e2c48a"/>
+  <path d="M26 24 L30 17 L34 24 Z" fill="#c8a869"/>
+  <path d="M34 24 L30 17 L37 26 Z" fill="#9c7a42"/>
+  <rect x="29" y="27" width="2.4" height="3.2" rx="0.6" fill="#ffd27a"/>
+</svg>

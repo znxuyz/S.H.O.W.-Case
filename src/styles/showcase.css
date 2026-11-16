@@ -249,3 +249,16 @@
   }
 }
 @media (max-width: 767px) and (prefers-reduced-motion: reduce) { .hs-dot.is-active { animation: none; } }
+
+/* 自動導覽播放鈕：播放中以底部細條顯示本站停留進度 */
+.tour-strip .tour-play { position: sticky; left: 0; z-index: 2; flex-shrink: 0; overflow: hidden; padding: 0.42rem 0.85rem; gap: 0.4rem; font-weight: 600; color: var(--btn-fg, #0b0a09); background: var(--accent); }
+.tour-strip .tour-play:hover { background: color-mix(in srgb, var(--accent) 85%, white); }
+.tour-strip .tour-play.is-playing { color: #fff; background: color-mix(in srgb, var(--accent) 62%, #0b0a09); }
+.tour-strip .tour-play.is-playing .tour-play-bar { background: #fff; }
+/* 捲動時播放鈕固定在左、全景鈕固定在右（不透明底，避免與底下項目疊字） */
+.tour-strip .tour-home { position: sticky; right: 0; z-index: 2; flex-shrink: 0; color: var(--btn-fg, #0b0a09); background: var(--accent); }
+.tour-strip .tour-home:hover { background: color-mix(in srgb, var(--accent) 85%, white); }
+.tour-play-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--accent); transform-origin: 0 50%; transform: scaleX(0); animation: tour-dwell linear forwards; }
+@keyframes tour-dwell { to { transform: scaleX(1); } }
+@media (max-width: 767px) { .tour-strip .tour-hint { display: none; } }
+@media (prefers-reduced-motion: reduce) { .tour-play-bar { animation-duration: 0s !important; } }

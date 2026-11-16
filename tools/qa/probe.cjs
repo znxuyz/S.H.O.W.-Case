@@ -1,5 +1,5 @@
 // 效能剖析：量測每頁的繪製呼叫、三角面、陰影投射物件、材質/著色器數，並錄 6 秒 CPU profile 列出主執行緒最耗時的函式
-// 用法：node tools/qa/probe.cjs [hash，預設大地圖]
+// 用法：node tools/qa/probe.cjs [hash，預設大地圖]   加 BUDGET=1 會依效能預算判定 PASS / FAIL（新增作品時使用）
 const { launch, collect, BASE } = require('./_launch.cjs');
 (async () => {
   const id = process.argv[2] || '';
@@ -29,6 +29,14 @@ const { launch, collect, BASE } = require('./_launch.cjs');
   }, [glKey, sceneKey]);
   console.log(JSON.stringify(stats, null, 1));
   const longs = await p.evaluate(() => window.__long);
+  if (process.env.BUDGET) {
+    // 效能預算（2026-11-16 徹查後的基準：現有作品頁約 70–150 次繪製、15–18 支著色器、載入長任務 < 0.5 秒）
+    const longSum = longs.reduce((a, x) => a + x[1], 0);
+    const limits = id ? { calls: 160, programs: 20, tris: 60000, longSum: 800 } : { calls: 400, programs: 26, tris: 130000, longSum: 1200 };
+    const got = { calls: stats.frame.calls, programs: stats.programs, tris: stats.frame.tris, longSum };
+    const bad = Object.keys(limits).filter((k) => got[k] > limits[k]);
+    console.log(`BUDGET ${bad.length ? 'FAIL' : 'PASS'} ` + Object.keys(limits).map((k) => `${k}=${got[k]}/${limits[k]}`).join(' '));
+  }
   console.log('long tasks during load (start ms, dur ms):', JSON.stringify(longs.filter((x) => x[1] > 100).slice(0, 25)), 'total', longs.length, 'sum', longs.reduce((a, x) => a + x[1], 0));
   // 穩定狀態 CPU profile
   const cdp = await p.context().newCDPSession(p);

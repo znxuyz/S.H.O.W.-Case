@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Hammer, Wrench, Archive, ChevronLeft, ChevronRight, X, Info, MonitorSmartphone, Rotate3d, Maximize2 } from 'lucide-react';
+import { ArrowUpRight, Hammer, Wrench, Archive, ChevronLeft, ChevronRight, X, Info, MonitorSmartphone, Maximize2, Play, Pause } from 'lucide-react';
 import type { Project } from '../data/projects';
 import { themes } from '../themes';
 import { playSceneIntro } from '../lib/titleFx';
@@ -33,6 +33,34 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
   // 3D 島嶼預熱完成前不顯示熱點標記（避免標籤浮在空中、壓住載入遮罩）
   const [stageReady, setStageReady] = useState(false);
   const onStageReady = useCallback(() => setStageReady(true), []);
+
+  // ── 自動導覽：依序聚焦每個熱點（觸發專屬動畫＋說明卡），停留後切到下一個；播完回全景 ──
+  const [auto, setAuto] = useState(false);
+  const dwellMs = (i: number | null) => (i === null || !hotspots[i] ? 0 : Math.min(11000, Math.max(6000, 4500 + hotspots[i].body.length * 55)));
+  const toggleAuto = useCallback(() => {
+    if (auto) { setAuto(false); return; }
+    setAuto(true);
+    setPanel('none');
+    if (active === null) { setActive(0); setPulse((p) => p + 1); }
+  }, [auto, active]);
+  useEffect(() => {
+    if (!auto || !stageReady || active === null) return;
+    const t = window.setTimeout(() => {
+      if (active >= hotspots.length - 1) { setAuto(false); setActive(null); return; }
+      setActive(active + 1);
+      setPulse((p) => p + 1);
+    }, dwellMs(active));
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto, stageReady, active, hotspots.length]);
+  // 使用者一旦拖曳、滾輪縮放、點任何按鈕或按鍵 → 自動暫停（播放按鈕本身除外）
+  useEffect(() => {
+    if (!auto) return;
+    const stop = (e: Event) => { if ((e.target as HTMLElement | null)?.closest?.('.tour-play')) return; setAuto(false); };
+    const opts = { capture: true, passive: true } as const;
+    ['pointerdown', 'wheel', 'keydown', 'touchstart'].forEach((n) => window.addEventListener(n, stop, opts));
+    return () => ['pointerdown', 'wheel', 'keydown', 'touchstart'].forEach((n) => window.removeEventListener(n, stop, opts));
+  }, [auto]);
   const accent = project.accent ?? 'var(--accent)';
 
   useLayoutEffect(() => {
@@ -124,7 +152,17 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
         {/* 底部：導覽列 */}
         {hotspots.length > 0 && (
           <nav className="tour-strip reveal" aria-label="空間導覽">
-            <span className="tour-hint"><Rotate3d className="h-3.5 w-3.5" aria-hidden /> 探索模型</span>
+            <button
+              className={`tour-play ${auto ? 'is-playing' : ''}`}
+              onClick={toggleAuto}
+              aria-pressed={auto}
+              aria-label={auto ? '暫停自動導覽' : '自動導覽：依序介紹每個功能'}
+              title={auto ? '暫停自動導覽' : '自動導覽'}
+            >
+              {auto ? <Pause className="h-3.5 w-3.5" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}
+              <span>{auto ? '暫停' : '自動導覽'}</span>
+              {auto && active !== null && <i key={`${active}-${pulse}`} className="tour-play-bar" style={{ animationDuration: `${dwellMs(active)}ms` }} aria-hidden />}
+            </button>
             {hotspots.map((hs, i) => (
               <button key={i} className={active === i ? 'is-on' : ''} onClick={() => pick(active === i ? null : i)} aria-pressed={active === i}>
                 <b>{i + 1}</b><span>{hs.title}</span>
