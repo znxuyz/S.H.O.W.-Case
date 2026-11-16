@@ -110,6 +110,7 @@ npm run build    # 產出 dist/
 
 ### 效能原則
 - 不使用 `filter` / `mix-blend-mode`，光影用漸層與 `box-shadow`。
+- 3D：不用後製與點光源、環境用 Lambert、著色器在載入遮罩後預熱完成；以 `node tools/qa/probe.cjs [hash]` 量測繪製呼叫、著色器數與載入長任務。
 - 持續動畫只動 `transform` / `opacity`（GPU 合成，不重繪）。
 - 滑鼠視差以 `requestAnimationFrame` 直接寫入 DOM，不觸發 React 重新渲染。
 - 3D 畫布 `dpr={[1, 1.5]}`，幾何體與材質全站共用，首頁群島不使用點光源。

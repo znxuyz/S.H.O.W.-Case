@@ -1,3 +1,4 @@
+import { useIsPresent } from 'motion/react';
 import { lazy, Suspense, type MutableRefObject } from 'react';
 import { visibleProjects, type Project } from '../data/projects';
 import { ACCENT, DEFAULT_BUILDING } from '../three/kinds';
@@ -17,6 +18,8 @@ export function ProjectStage({ project, reducedMotion, active, onPick, markers, 
   project: Project; reducedMotion: boolean; active: number | null; onPick: (i: number | null) => void; markers: MutableRefObject<(HTMLElement | null)[]>;
   cardRefs: MutableRefObject<CardRefs>; pulse: number; onReady?: () => void;
 }) {
+  // 頁面離場（轉場中）時讓 3D 停止渲染，不與下一頁搶 GPU
+  const present = useIsPresent();
   const kind = project.building ?? DEFAULT_BUILDING[project.theme];
   const accent = project.accent ?? ACCENT[project.theme];
   return (
@@ -26,7 +29,7 @@ export function ProjectStage({ project, reducedMotion, active, onPick, markers, 
           <DomainStage
             kind={kind} accent={accent} model={project.model} env={project.env} projectId={project.id} reducedMotion={reducedMotion}
             hotspots={project.hotspots} active={active} onPick={onPick} markers={markers} cardRefs={cardRefs} pulse={pulse}
-            preload={neighbors(project.id)} onReady={onReady}
+            preload={neighbors(project.id)} onReady={onReady} live={present}
           />
         </Suspense>
       </CanvasBoundary>

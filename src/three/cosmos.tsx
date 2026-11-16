@@ -5,8 +5,8 @@
  * - WorldFragments：遠方漂浮的各風格「世界碎片」剪影（塔、亭、樹、水晶、書、齒輪），緩慢公轉
  * 全部只用 1 個 Shader 球 + 2 組 Points + 1 組 InstancedMesh，成本極低。
  */
-import { useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useEffect, useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mulberry32 } from '../lib/random';
 
@@ -49,21 +49,59 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }`;
 
+/**
+ * 星雲穹頂（效能版）：fbm 噪聲很貴（每個像素要算上百次雜湊），
+ * 所以只在第一幀把它「烘焙」成一張 1024×512 的等距柱狀貼圖，之後穹頂每像素只取樣一次貼圖，並以極慢速度自轉。
+ */
+const BAKE_VERT = /* glsl */ `
+varying vec2 vUv;
+void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+const DOME_FRAG = /* glsl */ `
+uniform sampler2D map;
+varying vec3 vDir;
+void main() {
+  vec3 d = normalize(vDir);
+  vec2 uv = vec2(atan(d.x, -d.z) / 6.2831853 + 0.5, asin(clamp(d.y, -1.0, 1.0)) / 3.1415927 + 0.5);
+  gl_FragColor = vec4(texture2D(map, uv).rgb, 1.0);
+}`;
+
 export function NebulaDome() {
-  const mat = useMemo(
-    () => new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 } },
-      vertexShader: NEBULA_VERT,
-      fragmentShader: NEBULA_FRAG,
-      side: THREE.BackSide,
-      depthWrite: false,
-      fog: false,
-    }),
-    [],
+  const { gl } = useThree();
+  const rt = useMemo(() => new THREE.WebGLRenderTarget(1024, 512, { generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false }), []);
+  const baked = useRef(false);
+  const mesh = useRef<THREE.Mesh>(null);
+  const domeMat = useMemo(
+    () => new THREE.ShaderMaterial({ uniforms: { map: { value: rt.texture } }, vertexShader: NEBULA_VERT, fragmentShader: DOME_FRAG, side: THREE.BackSide, depthWrite: false, fog: false }),
+    [rt],
   );
-  useFrame((_, dt) => { mat.uniforms.uTime.value += dt; });
+  useEffect(() => () => { rt.dispose(); domeMat.dispose(); }, [rt, domeMat]);
+  useFrame((_, dt) => {
+    if (!baked.current) {
+      // 以全螢幕三角形把每個 uv 換成方向，跑一次原本的星雲 shader
+      const mat = new THREE.ShaderMaterial({
+        uniforms: { uTime: { value: 0 } },
+        vertexShader: BAKE_VERT,
+        fragmentShader: NEBULA_FRAG.replace('varying vec3 vDir;', 'varying vec2 vUv;').replace(
+          'vec3 d = normalize(vDir);',
+          'float lon = (vUv.x - 0.5) * 6.2831853; float lat = (vUv.y - 0.5) * 3.1415927; vec3 d = vec3(cos(lat) * sin(lon), sin(lat), -cos(lat) * cos(lon));',
+        ),
+        depthTest: false, depthWrite: false,
+      });
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3));
+      geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0, 0, 2, 0, 0, 2]), 2));
+      const quad = new THREE.Mesh(geo, mat);
+      quad.frustumCulled = false;
+      const sc = new THREE.Scene(); sc.add(quad);
+      const prev = gl.getRenderTarget();
+      gl.setRenderTarget(rt); gl.render(sc, new THREE.Camera()); gl.setRenderTarget(prev);
+      geo.dispose(); mat.dispose();
+      baked.current = true;
+    }
+    if (mesh.current) mesh.current.rotation.y += dt * 0.004;
+  });
   return (
-    <mesh material={mat} renderOrder={-1}>
+    <mesh ref={mesh} material={domeMat} renderOrder={-1}>
       <sphereGeometry args={[150, 48, 24]} />
     </mesh>
   );

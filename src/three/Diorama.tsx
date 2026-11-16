@@ -9,18 +9,12 @@ import { mapModel } from './assets';
 
 const ModelDiorama = lazy(() => import('./ModelDiorama'));
 
-export function Diorama({ model, lights = false, lod = false, fx = null, onReady }: {
-  model: string; lights?: boolean; lod?: boolean; fx?: FxTrigger | null; onReady?: () => void;
+export function Diorama({ model, lod = false, fx = null, onReady }: {
+  model: string; lod?: boolean; fx?: FxTrigger | null; onReady?: () => void;
 }) {
   return (
     <Suspense fallback={null}>
-      <ModelDiorama url={lod ? mapModel(model) : model} release={!lod} fx={fx} shadows={lod ? 'cast' : 'full'} onReady={onReady} />
-      {lights && (
-        <>
-          <pointLight color="#9fd8ff" intensity={6} distance={6} position={[0, 1.6, 0.6]} />
-          <pointLight color="#ffc24a" intensity={8} distance={4} position={[0, -1.7, 0]} />
-        </>
-      )}
+      <ModelDiorama url={lod ? mapModel(model) : model} release={!lod} fx={fx} shadows={lod ? 'none' : 'full'} onReady={onReady} />
     </Suspense>
   );
 }

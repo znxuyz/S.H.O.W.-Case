@@ -3,7 +3,7 @@
  * 空間導覽：熱點標記綁在模型各部位，點擊後鏡頭聚焦（Hotspots.tsx）。
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, PerformanceMonitor, useProgress } from '@react-three/drei';
 import { PCFShadowMap, type Group } from 'three';
 import type { Hotspot } from '../data/projects';
@@ -15,7 +15,7 @@ const ModelDiorama = lazy(() => import('./ModelDiorama'));
 import { Diorama } from './Diorama';
 import { preloadModels } from './assets';
 import type { BuildingKind } from './kinds';
-import { allowEffects, Effects, World, worldFor } from './world';
+import { wantAntialias, World, worldFor } from './world';
 
 export interface DomainStageProps {
   kind: BuildingKind; accent: string; model?: string; env?: string; projectId?: string; reducedMotion: boolean;
@@ -26,11 +26,13 @@ export interface DomainStageProps {
   pulse?: number;
   /** 主模型與環境都預熱完成、開始淡入時呼叫 */
   onReady?: () => void;
+  /** 頁面正在離場（轉場動畫中）時停止渲染，不與新頁面搶 GPU */
+  live?: boolean;
   /** 本頁就緒後，趁空檔在背景預載的模型（相鄰作品） */
   preload?: string[];
 }
 
-export default function DomainStage({ kind, accent, model, env, projectId, reducedMotion, hotspots = [], active = null, onPick, markers, cardRefs, pulse = 0, onReady, preload = [] }: DomainStageProps) {
+export default function DomainStage({ kind, accent, model, env, projectId, reducedMotion, hotspots = [], active = null, onPick, markers, cardRefs, pulse = 0, onReady, preload = [], live = true }: DomainStageProps) {
   const W = worldFor(kind, projectId);
   // 主模型與環境各自預熱完成後才算就緒；就緒後在瀏覽器空檔預載相鄰作品
   const [mainReady, setMainReady] = useState(false);
@@ -48,7 +50,6 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
   const modelRef = useRef<Group>(null);
   // 自動品質：幀率持續偏低時降低解析度並關閉後製
   const [low, setLow] = useState(false);
-  const post = allowEffects() && !low;
   // 直式螢幕畫面窄，鏡頭拉遠讓整座箱庭入鏡
   const far = typeof window !== 'undefined' && window.innerWidth / window.innerHeight < 1 ? 1.75 : 1;
   const home: [number, number, number] = [10.5 * far, 6.5 * far, 10.5 * far];
@@ -63,10 +64,12 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
       dpr={low ? 1 : [1, 1.5]}
       camera={{ position: home, fov: 32, near: 0.1, far: 300 }}
       onPointerMissed={() => onPick?.(null)}
-      onCreated={({ gl }) => { (window as unknown as { __stageGL?: unknown }).__stageGL = gl; }}
-      gl={{ antialias: !post, powerPreference: 'high-performance' }}
+      onCreated={({ gl, scene }) => { gl.debug.checkShaderErrors = import.meta.env.DEV; const w = window as unknown as { __stageGL?: unknown; __stageScene?: unknown }; w.__stageGL = gl; w.__stageScene = scene; }}
+      gl={{ antialias: wantAntialias(), powerPreference: 'high-performance' }}
+      frameloop={live ? 'always' : 'never'}
     >
       <PerformanceMonitor flipflops={2} onDecline={() => setLow(true)} />
+      <ShadowOnDemand ready={ready} pulse={pulse} />
       <World style={W} />
       {env && (
         <Suspense fallback={null}>
@@ -91,7 +94,7 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
         shadow-camera-far={34}
       />
       <group position={[0, -0.4, 0]} ref={modelRef}>
-        {model && <Diorama model={model} lights fx={fx} onReady={onMain} />}
+        {model && <Diorama model={model} fx={fx} onReady={onMain} />}
       </group>
       {markers && <MarkerProjector hotspots={hotspots} markers={markers} active={active} cardRefs={cardRefs} occluders={modelRef} />}
       <CameraFocus hotspot={focused ? hotspots[active!] : null} home={home} homeTarget={[0, 0.8, 0]} />
@@ -109,7 +112,6 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
         autoRotate={!reducedMotion && !focused}
         autoRotateSpeed={0.5}
       />
-      {post && <Effects bloom={W.bloom} />}
     </Canvas>
     </>
   );
@@ -137,4 +139,17 @@ export function StageLoader({ done }: { done: boolean }) {
       </div>
     </div>
   );
+}
+
+/**
+ * 陰影按需更新：會投射陰影的都是靜態零件（漂浮/旋轉的小零件不投射），光源也不動，
+ * 所以平常不必每幀重畫陰影貼圖；只在模型進場與點擊動畫期間（約 4 秒）更新。
+ */
+function ShadowOnDemand({ ready, pulse }: { ready: boolean; pulse: number }) {
+  const gl = useThree((s) => s.gl);
+  const until = useRef(0);
+  useEffect(() => { gl.shadowMap.autoUpdate = false; gl.shadowMap.needsUpdate = true; return () => { gl.shadowMap.autoUpdate = true; }; }, [gl]);
+  useEffect(() => { until.current = performance.now() + 4000; }, [ready, pulse]);
+  useFrame(() => { if (performance.now() < until.current) gl.shadowMap.needsUpdate = true; });
+  return null;
 }

@@ -14,9 +14,9 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import type { Project } from '../data/projects';
 import { themes } from '../themes';
 import { Diorama } from './Diorama';
-import { mapModel, preloadModels } from './assets';
+import { finishPrograms, mapModel, preloadModels } from './assets';
 import { ACCENT } from './kinds';
-import { allowEffects, Effects } from './world';
+import { wantAntialias } from './world';
 import { DustLayers, NebulaDome, WorldFragments } from './cosmos';
 import { Sigil, SIGIL_FOR_THEME, type SigilKind } from './sigils';
 import { mulberry32 } from '../lib/random';
@@ -29,6 +29,8 @@ export interface MapWorldProps {
   onEnter: (id: string, screen: { x: number; y: number }) => void;
   /** 回報每座島在螢幕上的位置（返回大地圖時的鏡頭焦點） */
   onMeasure: (id: string, screen: { x: number; y: number }) => void;
+  /** 離場轉場中停止渲染（凍結最後一幀），把 GPU 讓給正在載入的介紹頁 */
+  live?: boolean;
 }
 
 /* ───────────────── 群島佈局：自然錯落的 3D 散佈 ───────────────── */
@@ -61,6 +63,8 @@ interface Body {
 }
 
 const tmp = new THREE.Vector3();
+const FLY_OFFSET = new THREE.Vector3(0, 3.2, 6.5);
+const LIFT_UP = new THREE.Vector3(0, 1.2, 0);
 const plane = new THREE.Plane();
 const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
@@ -159,7 +163,7 @@ function CameraRig({ flight, controls }: { flight: MutableRefObject<{ target: TH
     if (!f) return;
     f.t += dt;
     const k = 1 - Math.pow(0.0025, dt);
-    const dest = tmp.copy(f.target).add(new THREE.Vector3(0, 3.2, 6.5));
+    const dest = tmp.copy(f.target).add(FLY_OFFSET);
     camera.position.lerp(dest, k);
     controls.current?.target.lerp(f.target, k);
     if (f.t > 0.85) {
@@ -180,7 +184,7 @@ function Projector({ bodies, ids, onMeasure }: { bodies: Body[]; ids: string[]; 
     last.current = clock.elapsedTime;
     bodies.forEach((b, i) => {
       if (!b.group) return;
-      tmp.copy(b.group.position).add(new THREE.Vector3(0, 1.2, 0)).project(camera);
+      tmp.copy(b.group.position).add(LIFT_UP).project(camera);
       onMeasure(ids[i], { x: (tmp.x * 0.5 + 0.5) * size.width, y: (-tmp.y * 0.5 + 0.5) * size.height });
     });
   });
@@ -225,7 +229,7 @@ function DragController({ drag, bodies, controls, onTap, onRelease }: {
   return null;
 }
 
-export default function MapWorld({ projects, portrait, reducedMotion, onEnter, onMeasure }: MapWorldProps) {
+export default function MapWorld({ projects, portrait, reducedMotion, onEnter, onMeasure, live = true }: MapWorldProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   // 首頁一開就把所有島嶼的輕量版一起下載解析（各 100–300KB）；滑過某座島時預載它的精細模型與環境，點進去幾乎秒開
   useMemo(() => preloadModels(...projects.map((p) => p.model && mapModel(p.model))), [projects]);
@@ -287,26 +291,26 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
   bodies.forEach((b, i) => { if (b.group) b.group.userData.id = ids[i]; });
 
   const [low, setLow] = useState(false);
-  const fx = allowEffects() && !low;
   const camPos: [number, number, number] = portrait ? [0, 46, 17] : [1.2, 19, 30];
 
   return (
     <Canvas
       // 以 offsetWidth/Height 量測：轉場中的 CSS scale 不會把畫布量成數倍大（先前首頁變黑的原因）
       resize={{ offsetSize: true }}
-      shadows={{ type: THREE.PCFShadowMap }}
       dpr={low ? 1 : [1, 1.5]}
       camera={{ position: camPos, fov: portrait ? 52 : 40, near: 0.5, far: 320 }}
-      gl={{ antialias: !fx, powerPreference: 'high-performance' }}
-      onCreated={({ camera, gl }) => { cameraRef.current = camera; (window as unknown as { __mapGL?: unknown }).__mapGL = gl; }}
+      gl={{ antialias: wantAntialias(), powerPreference: 'high-performance' }}
+      frameloop={live ? 'always' : 'never'}
+      onCreated={({ camera, gl, scene }) => { cameraRef.current = camera; gl.debug.checkShaderErrors = import.meta.env.DEV; const w = window as unknown as { __mapGL?: unknown; __mapScene?: unknown }; w.__mapGL = gl; w.__mapScene = scene; }}
       onPointerMissed={() => setHovered(null)}
       style={{ cursor: hovered ? 'grab' : 'default' }}
     >
       <PerformanceMonitor flipflops={2} onDecline={() => setLow(true)} />
       <NebulaDome />
+      <SigilWarmup items={projects.map((p) => ({ kind: SIGIL_FOR_THEME[p.theme], color: p.accent ?? ACCENT[p.theme] }))} />
       <fog attach="fog" args={['#0b0918', 55, 140]} />
       <ambientLight color="#8a90b8" intensity={0.55} />
-      <Environment resolution={128} frames={1} environmentIntensity={0.5}>
+      <Environment resolution={64} frames={1} environmentIntensity={0.5}>
         <Lightformer form="rect" intensity={2.2} color="#ffe2b0" position={[0, 8, -10]} scale={[14, 4, 1]} />
         <Lightformer form="rect" intensity={1.4} color="#9fb4ff" position={[10, 3, 6]} rotation={[0, -Math.PI / 2, 0]} scale={[8, 3, 1]} />
       </Environment>
@@ -315,15 +319,6 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
         color="#fff1d6"
         intensity={2}
         position={[14, 22, 10]}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
-        shadow-bias={-0.0008}
-        shadow-camera-left={-26}
-        shadow-camera-right={26}
-        shadow-camera-top={26}
-        shadow-camera-bottom={-26}
-        shadow-camera-near={1}
-        shadow-camera-far={80}
       />
       <DustLayers />
       <WorldFragments />
@@ -361,7 +356,40 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
         autoRotate={!reducedMotion && !hovered && !flying}
         autoRotateSpeed={0.2}
       />
-      {fx && <Effects bloom={0.9} />}
     </Canvas>
+  );
+}
+
+/**
+ * 選取法陣預熱：首頁載入約 3 秒後，在背景把每座島的法陣貼圖畫好、著色器編譯好並上傳 GPU，
+ * 第一次滑過島嶼時就不會因為同步編譯或繪製 512px 貼圖而卡一下。完成後卸載。
+ */
+function SigilWarmup({ items }: { items: { kind: SigilKind; color: string }[] }) {
+  const { gl, camera, scene } = useThree();
+  const ref = useRef<THREE.Group>(null);
+  const [phase, setPhase] = useState<'wait' | 'mount' | 'done'>('wait');
+  useEffect(() => {
+    if (phase === 'wait') { const t = window.setTimeout(() => setPhase('mount'), 3000); return () => window.clearTimeout(t); }
+    if (phase !== 'mount' || !ref.current) return;
+    const g = ref.current;
+    let alive = true;
+    // compile 只收集「可見」物件：呼叫的瞬間設為可見（收集是同步的），之後立刻藏回去，不會被畫出來
+    g.visible = true;
+    const job = gl.compileAsync(g, camera, scene);
+    g.visible = false;
+    job.catch(() => {}).then(() => {
+      if (!alive) return;
+      g.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined; if (m?.map) gl.initTexture(m.map); });
+      finishPrograms(gl as unknown as Parameters<typeof finishPrograms>[0]);
+      setPhase('done');
+    });
+    return () => { alive = false; };
+  }, [phase, gl, camera, scene]);
+  if (phase !== 'mount') return null;
+  const seen = new Set<string>();
+  return (
+    <group ref={ref} visible={false}>
+      {items.filter((it) => { const k = it.kind + it.color; if (seen.has(k)) return false; seen.add(k); return true; }).map((it) => <Sigil key={it.kind + it.color} kind={it.kind} color={it.color} />)}
+    </group>
   );
 }

@@ -20,9 +20,10 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
-import { modelUrl } from './assets';
+import { finishPrograms, modelUrl } from './assets';
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
+const tmpE = new THREE.Euler();
 
 interface Rig { node: THREE.Object3D; base: THREE.Vector3; kind: string; index: number }
 
@@ -77,6 +78,19 @@ function delta(s: FxStep, u: number, dur: number): Delta {
 const ringGeo = new THREE.RingGeometry(0.88, 1, 56).rotateX(-Math.PI / 2);
 
 /** 釋放一個 GLTF 的 GPU 資源（幾何、材質、貼圖）並移出快取 */
+const lambertCache = new WeakMap<THREE.Material, THREE.MeshLambertMaterial>();
+const lambertDone = new WeakSet<THREE.Object3D>();
+function toLambert(m: THREE.MeshStandardMaterial): THREE.MeshLambertMaterial {
+  const hit = lambertCache.get(m);
+  if (hit) return hit;
+  const l = new THREE.MeshLambertMaterial({
+    name: m.name, color: m.color, map: m.map, emissive: m.emissive, emissiveMap: m.emissiveMap, emissiveIntensity: m.emissiveIntensity,
+    vertexColors: m.vertexColors, transparent: m.transparent, opacity: m.opacity, alphaTest: m.alphaTest, side: m.side, depthWrite: m.depthWrite,
+  });
+  lambertCache.set(m, l);
+  return l;
+}
+
 function release(url: string, scene: THREE.Object3D) {
   const textures = new Set<THREE.Texture>();
   scene.traverse((o) => {
@@ -86,6 +100,7 @@ function release(url: string, scene: THREE.Object3D) {
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     mats.forEach((m) => {
       Object.values(m).forEach((v) => { if (v instanceof THREE.Texture) textures.add(v); });
+      lambertCache.get(m)?.dispose();
       m.dispose();
     });
   });
@@ -105,7 +120,14 @@ function release(url: string, scene: THREE.Object3D) {
  * 再把貼圖每幀上傳 3 張到 GPU；全部完成才把模型放進場景並淡入，避免「出現瞬間」卡頓。
  */
 async function warmUp(gl: THREE.WebGLRenderer, obj: THREE.Object3D, camera: THREE.Camera, target: THREE.Scene) {
-  try { await gl.compileAsync(obj, camera, target); } catch { /* 舊瀏覽器：退回首幀同步編譯 */ }
+  // compile 只收集可見物件：暫時打開隱藏零件（FxHide_*，點擊時才出現），讓它們的著色器也先編譯好
+  const hidden: THREE.Object3D[] = [];
+  obj.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+  let job: Promise<unknown> = Promise.resolve();
+  try { job = gl.compileAsync(obj, camera, target); } catch { /* 舊瀏覽器：退回首幀同步編譯 */ }
+  hidden.forEach((o) => { o.visible = false; });
+  try { await job; } catch { /* 同上 */ }
+  finishPrograms(gl as unknown as Parameters<typeof finishPrograms>[0]);
   const textures = new Set<THREE.Texture>();
   obj.traverse((o) => {
     const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
@@ -137,6 +159,11 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
     const rigs: Rig[] = [];
     root.traverse((o) => {
       const mesh = o as THREE.Mesh;
+      // 3D 環境（遠景，沒入霧中）改用 Lambert：省去 PBR 與環境反射的逐像素運算，外觀幾乎相同
+      if (mesh.isMesh && shadows === 'none' && !lambertDone.has(mesh)) {
+        mesh.material = toLambert(mesh.material as THREE.MeshStandardMaterial);
+        lambertDone.add(mesh);
+      }
       if (mesh.isMesh) {
         const mat = mesh.material as THREE.MeshStandardMaterial;
         const glowing = mat.emissive && mat.emissive.getHex() !== 0;
@@ -183,16 +210,17 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
   const [ready, setReady] = useState(false);
   const revealRef = useRef<THREE.Group>(null);
   const revealT = useRef(-1);
+  const warmFrames = useRef(0);
   const readyCb = useRef(onReady);
   readyCb.current = onReady;
   useEffect(() => {
     let alive = true;
     setReady(false);
+    warmFrames.current = 0;
     warmUp(gl, scene, camera, stageScene).then(() => {
       if (!alive) return;
       revealT.current = -1;
       setReady(true);
-      readyCb.current?.();
     });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -248,11 +276,18 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
     const t = clock.elapsedTime;
     // 進場：0.9 秒由小到大（略帶回彈）並從下方浮上來
     const rg = revealRef.current;
+    // 放進場景後先以極小比例畫 3 幀（陰影深度等延遲建立的著色器在載入遮罩後面編譯完），再宣告就緒並開始進場
+    if (rg && warmFrames.current < 3) {
+      warmFrames.current++;
+      rg.scale.setScalar(0.001);
+      if (warmFrames.current === 3) readyCb.current?.();
+      return;
+    }
     if (rg && revealT.current < 1) {
       if (revealT.current < 0) revealT.current = 0;
       revealT.current = Math.min(1, revealT.current + dt / 0.9);
       const k = easeOutBackSoft(revealT.current);
-      rg.scale.setScalar(Math.max(0.001, 0.86 + 0.14 * k) * (revealT.current < 0.02 ? 0.001 : 1));
+      rg.scale.setScalar(0.86 + 0.14 * k);
       rg.position.y = (1 - Math.min(1, k)) * -0.35;
     }
     // 1) 撤銷上一幀的動畫增量
@@ -301,7 +336,7 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
           n.parent?.updateWorldMatrix(true, false);
           const wp = n.getWorldPosition(tmpV);
           const yaw = Math.atan2(camera.position.x - wp.x, camera.position.z - wp.z);
-          const parentYaw = n.parent ? new THREE.Euler().setFromQuaternion(n.parent.getWorldQuaternion(tmpQ), 'YXZ').y : 0;
+          const parentYaw = n.parent ? tmpE.setFromQuaternion(n.parent.getWorldQuaternion(tmpQ), 'YXZ').y : 0;
           n.rotation.set(0, yaw - parentYaw, 0);
           break;
         }

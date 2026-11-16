@@ -1,3 +1,4 @@
+import { useIsPresent } from 'motion/react';
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { LayoutGrid, MousePointerClick } from 'lucide-react';
 import type { Project } from '../data/projects';
@@ -31,6 +32,8 @@ function usePortrait() {
 export function MapScene({
   projects, onEnter, onIndex, reducedMotion,
 }: { projects: Project[]; onEnter: (id: string) => void; onIndex: () => void; reducedMotion: boolean }) {
+  // 頁面離場（轉場中）時讓 3D 停止渲染
+  const present = useIsPresent();
   const portrait = usePortrait();
   const enter = useCallback((id: string, screen: { x: number; y: number }) => {
     remember(id, screen);
@@ -42,7 +45,7 @@ export function MapScene({
       <div className="map-canvas" data-nav-ignore>
         <CanvasBoundary label="此裝置無法顯示 3D 群島">
           <Suspense fallback={<div className="map-loading">正在召喚群島…</div>}>
-            <MapWorld projects={projects} portrait={portrait} reducedMotion={reducedMotion} onEnter={enter} onMeasure={remember} />
+            <MapWorld projects={projects} portrait={portrait} reducedMotion={reducedMotion} onEnter={enter} onMeasure={remember} live={present} />
           </Suspense>
         </CanvasBoundary>
       </div>

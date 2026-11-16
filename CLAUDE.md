@@ -24,4 +24,5 @@
 - 長任務進度：`UPGRADE_ROADMAP.md`（中斷後從未打勾項目續做）；QA 腳本在 `tools/qa/`（需先 `npx vite preview --port 4173`）
 - 首頁 2D 疊層：`src/map/`；終章背景：`src/components/OutroBackground.tsx`（唯一的 2D 背景插畫）
 - 載入流程：`ModelDiorama` 先 `compileAsync` 編譯著色器、分批上傳貼圖，完成後才放進場景並浮上淡入；`DomainStage` 的 `StageLoader` 顯示進度，主模型與環境都就緒才收起並顯示熱點；就緒後在空檔預載前後作品，首頁預載所有輕量版、滑過島嶼時預載精細版
-- 效能：Canvas `dpr={[1, 1.5]}`、陰影貼圖 1024、環境模型不參與陰影、後製 MSAA 2＋半解析度 Bloom；幾何與材質共用、群島不使用點光源、觸控裝置關閉後製；熱點投影只在數值改變時寫 DOM、不每幀量測；2D 部分不用 filter / mix-blend-mode（說明卡的 backdrop-filter 為使用者指定的例外）。
+- 效能（2026-11-16 徹查後的原則，量測工具 `node tools/qa/probe.cjs [hash]`）：不使用後製（EffectComposer）；不要加點光源（每個 PBR 像素都要多算）；3D 環境用 Lambert 材質；首頁不開陰影、介紹頁陰影按需更新（`ShadowOnDemand`）；抗鋸齒只在 dpr < 1.5 的桌機開；新增會動態出現的材質要納入預熱（`compileAsync`＋`finishPrograms`），否則第一次出現時會卡頓；`gl.debug.checkShaderErrors` 只在開發模式開；首頁輕量版由 `map_lod_strip.mjs` 去掉 Fx 節點並合併網格；
+- 其他：Canvas `dpr={[1, 1.5]}`、陰影貼圖 1024、環境模型不參與陰影；幾何與材質共用、群島不使用點光源、觸控裝置關閉後製；熱點投影只在數值改變時寫 DOM、不每幀量測；2D 部分不用 filter / mix-blend-mode（說明卡的 backdrop-filter 為使用者指定的例外）。
