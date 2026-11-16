@@ -22,6 +22,7 @@ CJK_FONT = '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'
 def reset():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     GROUPS.clear()
+    TRI_STATS.clear()
     MATS.clear()
 
 
@@ -213,10 +214,11 @@ def standard_materials():
 
 # ───────────────────────── 建模工具 ─────────────────────────
 GROUPS = {}  # group -> list of objects
+TRI_STATS = {}  # 零件名稱 -> 三角面數
 UV_SCALE = 1.4
 
 
-def finalize(obj, mat, group='static', bevel=0.0, segs=2, uv=True):
+def finalize(obj, mat, group='static', bevel=0.0, segs=1, uv=True):
     """套用倒角（烘焙成實際幾何）、世界座標方盒投影 UV、指定材質與群組"""
     if bevel > 0:
         mod = obj.modifiers.new('bevel', 'BEVEL')
@@ -233,6 +235,9 @@ def finalize(obj, mat, group='static', bevel=0.0, segs=2, uv=True):
         bpy.data.meshes.remove(old)
     if uv:
         box_uv(obj)
+    # 面數統計（依零件名稱前綴累計三角面，匯出時列出最多的幾項，方便控管預算）
+    key = obj.name.split('.')[0].rstrip('0123456789_')
+    TRI_STATS[key] = TRI_STATS.get(key, 0) + sum(len(p.vertices) - 2 for p in obj.data.polygons)
     obj.data.materials.clear()
     obj.data.materials.append(MATS[mat])
     GROUPS.setdefault(group, []).append(obj)
@@ -262,7 +267,7 @@ def box_uv(obj):
     bm.free()
 
 
-def box(name, size, loc, mat, rot=(0, 0, 0), group='static', bevel=0.012, segs=2):
+def box(name, size, loc, mat, rot=(0, 0, 0), group='static', bevel=0.012, segs=1):
     bpy.ops.mesh.primitive_cube_add(size=1, location=loc, rotation=rot)
     o = bpy.context.active_object
     o.name = name
@@ -345,6 +350,8 @@ def pivot(objs, name, piv):
 def export(path):
     tris = sum(len(o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
     print(f'objects={len([o for o in bpy.data.objects if o.type == "MESH"])} faces={tris}')
+    top = sorted(TRI_STATS.items(), key=lambda kv: -kv[1])[:10]
+    print('tris-top ' + ' '.join(f'{k}:{v}' for k, v in top))
     bpy.ops.export_scene.gltf(
         filepath=path, export_format='GLB', export_apply=True, export_yup=True,
         export_image_format='WEBP', export_materials='EXPORT', export_lights=False, export_cameras=False,
@@ -383,7 +390,7 @@ def label_block(name, size, loc, mat, group='static', bevel=0.03, rot=(0, 0, 0),
     o.name = name
     o.scale = size
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    finalize(o, mat, group, bevel=bevel, segs=3, uv=False)
+    finalize(o, mat, group, bevel=bevel, segs=1, uv=False)
     me = o.data
     bm = bmesh.new()
     bm.from_mesh(me)
@@ -447,6 +454,7 @@ def image_card(name, path, height, loc, group='static', rot=(0, 0, 0), crop_alph
 
 
 def sphere(name, r, loc, mat, seg=24, rings=14, scale=(1, 1, 1), group='static'):
+    seg, rings = min(seg, 20), min(rings, 12)   # 面數預算：小球體不需要更細的分段
     bpy.ops.mesh.primitive_uv_sphere_add(segments=seg, ring_count=rings, radius=r, location=loc)
     o = bpy.context.active_object
     o.name = name
@@ -456,6 +464,7 @@ def sphere(name, r, loc, mat, seg=24, rings=14, scale=(1, 1, 1), group='static')
 
 
 def torus(name, R, r, loc, mat, rot=(0, 0, 0), group='static', major=48, minor=10):
+    major, minor = min(major, 64), min(minor, 8)   # 面數預算：圓環分段上限
     bpy.ops.mesh.primitive_torus_add(major_radius=R, minor_radius=r, location=loc, rotation=rot, major_segments=major, minor_segments=minor)
     o = bpy.context.active_object
     o.name = name
@@ -464,11 +473,11 @@ def torus(name, R, r, loc, mat, rot=(0, 0, 0), group='static', major=48, minor=1
 
 def capsule(name, length, r, loc, mat, group='static'):
     """沿 X 軸的膠囊體（圓柱 + 兩端半球），平滑著色"""
-    bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=r, depth=length, location=loc, rotation=(0, math.pi / 2, 0))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=r, depth=length, location=loc, rotation=(0, math.pi / 2, 0))
     body = bpy.context.active_object
     parts = [body]
     for s in (-1, 1):
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=r, location=(loc[0] + s * length / 2, loc[1], loc[2]))
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=r, location=(loc[0] + s * length / 2, loc[1], loc[2]))
         parts.append(bpy.context.active_object)
     for p in parts:
         bpy.ops.object.shade_smooth() if False else None

@@ -11,10 +11,10 @@ const { launch, collect, OUT, BASE } = require('./_launch.cjs');
   const n = await p.locator('.hs-dot').count();
   console.log('hotspot markers', n);
   if (n) {
-    await p.locator('.tour-strip button').nth(0).click();
+    await p.locator('.tour-strip button:not(.tour-play):not(.tour-home)').nth(0).click();
     await p.waitForTimeout(4000);
     await p.screenshot({ path: `${OUT}/tour-${id}-${w}-1.png`, timeout: 180000 });
-    await p.locator('.tour-strip button').nth(Math.min(4, n)).click();
+    await p.locator('.tour-strip button:not(.tour-play):not(.tour-home)').nth(Math.min(4, n)).click();
     await p.waitForTimeout(4000);
     await p.screenshot({ path: `${OUT}/tour-${id}-${w}-2.png`, timeout: 180000 });
     console.log('card title:', await p.locator('.tour-card h3').textContent());

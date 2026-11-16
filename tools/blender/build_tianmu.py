@@ -191,7 +191,7 @@ CX, CY, CZ = 0.25, 0.0, 2.55
 L, R = 1.9, 0.3
 kit.capsule('capsule', L, R, (CX, CY, CZ), 'lacquer', group='Bob_0')
 for s in (-1, 1):
-    kit.torus('cap_ring', R + 0.006, 0.014, (CX + s * L * 0.42, CY, CZ), 'gold', rot=(0, math.pi / 2, 0), group='Bob_0', major=48, minor=8)
+    kit.torus('cap_ring', R + 0.006, 0.014, (CX + s * L * 0.42, CY, CZ), 'gold', rot=(0, math.pi / 2, 0), group='Bob_0', major=32, minor=6)
 box('cap_topline', (L * 0.9, 0.02, 0.012), (CX, CY, CZ + R + 0.002), 'gold', group='Bob_0', bevel=0)
 label_block('cap_display', (L * 0.72, 0.02, R * 0.95), (CX, CY - R - 0.005, CZ), 'display', group='Bob_0', bevel=0.004, face='front')
 kit.sphere('cap_pip', 0.035, (CX - L * 0.48, CY - R + 0.02, CZ + 0.06), 'warm', seg=12, rings=8, group='Bob_0')

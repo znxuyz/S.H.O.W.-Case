@@ -20,7 +20,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
-import { finishPrograms, modelUrl } from './assets';
+import { DRACO_PATH, finishPrograms, modelUrl } from './assets';
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
 const tmpE = new THREE.Euler();
@@ -148,7 +148,7 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
   /** 著色器與貼圖都準備好、開始淡入時呼叫（介紹頁用來收起載入遮罩） */
   onReady?: () => void;
 }) {
-  const gltf = useGLTF(modelUrl(url), false, true);
+  const gltf = useGLTF(modelUrl(url), DRACO_PATH, true);
   useEffect(() => {
     if (!shouldRelease) return;
     const src = gltf.scene;

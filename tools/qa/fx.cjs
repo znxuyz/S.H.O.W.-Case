@@ -10,12 +10,12 @@ const { launch, collect, OUT, BASE } = require('./_launch.cjs');
   await p.goto(BASE + (only !== undefined ? '?fxslow=' + (process.env.FX_SLOW || 20) : '') + '#/' + id); await p.reload();
   await p.waitForFunction(() => window.__stageGL, null, { timeout: 120000 });
   await p.waitForTimeout(+(process.env.QA_WAIT || 30000));
-  const n = await p.locator('.tour-strip button').count();
+  const n = await p.locator('.tour-strip button:not(.tour-play):not(.tour-home)').count();
   let missing = 0;
   for (let i = 0; i < n; i++) {
     if (only !== undefined && +only !== i) continue;
-    if (await p.locator('.tour-strip button').nth(i).getAttribute('aria-pressed') === null) continue;
-    await p.locator('.tour-strip button').nth(i).click();
+    if (await p.locator('.tour-strip button:not(.tour-play):not(.tour-home)').nth(i).getAttribute('aria-pressed') === null) continue;
+    await p.locator('.tour-strip button:not(.tour-play):not(.tour-home)').nth(i).click();
     await p.waitForFunction((k) => window.__fxLast && window.__fxLast.key >= k, i + 1, { timeout: 60000 }).catch(() => {});
     const last = await p.evaluate(() => window.__fxLast);
     const bad = (last?.found ?? []).filter((x) => x.endsWith(':0'));

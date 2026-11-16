@@ -7,6 +7,7 @@ import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { join, prune } from '@gltf-transform/functions';
 import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
+import draco3d from 'draco3dgltf';
 
 /** 4×4 欄主序矩陣相乘 a·b */
 function mul(a, b) {
@@ -17,7 +18,10 @@ function mul(a, b) {
 
 const [, , input, output] = process.argv;
 await MeshoptDecoder.ready; await MeshoptEncoder.ready;
-const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder, 'meshopt.encoder': MeshoptEncoder });
+const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({
+  'meshopt.decoder': MeshoptDecoder, 'meshopt.encoder': MeshoptEncoder,
+  'draco3d.decoder': await draco3d.createDecoderModule(), 'draco3d.encoder': await draco3d.createEncoderModule(),
+});
 const doc = await io.read(input);
 const root = doc.getRoot();
 const scene = root.getDefaultScene() ?? root.listScenes()[0];
@@ -45,6 +49,8 @@ for (const node of [...parentOf.keys()]) {
   }
   node.dispose();
 }
+// 首頁小島不需要法線／粗糙度細節貼圖（省檔案與著色器成本）
+for (const m of root.listMaterials()) { m.setNormalTexture(null); m.setMetallicRoughnessTexture(null); }
 await doc.transform(join({ keepNamed: false }), prune());
 await io.write(output, doc);
 console.log(`strip ${input.split('/').pop()}: removed ${removed} hidden, lifted ${lifted} fx parts`);

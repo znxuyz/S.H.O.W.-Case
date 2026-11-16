@@ -2,11 +2,13 @@
 import { useGLTF } from '@react-three/drei';
 
 export const modelUrl = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+/** 自架的 Draco 解碼器（three 官方 wasm 版，於背景 worker 解碼，不依賴外部 CDN） */
+export const DRACO_PATH = `${import.meta.env.BASE_URL}draco/`;
 export const mapModel = (model: string) => model.replace(/^models\//, 'models/map/');
 
 /** 在背景預先下載並解析模型（不會上傳到 GPU；真正顯示時才建立 GPU 資源） */
 export function preloadModels(...paths: (string | undefined)[]) {
-  paths.forEach((p) => { if (p) useGLTF.preload(modelUrl(p), false, true); });
+  paths.forEach((p) => { if (p) useGLTF.preload(modelUrl(p), DRACO_PATH, true); });
 }
 
 /**
