@@ -197,6 +197,7 @@ for (x, y, r) in [(-0.4, -1.95, 0.0), (0.95, -1.95, 0.0)]:
     for dx in (-0.17, 0.17):
         box('bench_leg', (0.025, 0.12, 0.16), (x + dx, y, 0.08), 'chair', bevel=0)
 
+TILES = []
 # ── 月曆廣場：已借用日以 3D 色塊浮起 ──
 CAL_X, CAL_Y, CAL_W, CAL_D = SX - 0.1, -0.85, 2.6, 2.2
 booked = {3: 0, 8: 1, 9: 2, 15: 0, 17: 7, 22: 1, 24: 0, 29: 2, 11: 4, 26: 5}
@@ -207,7 +208,8 @@ for c in range(35):
         v = 1 - (130 + (c // 7) * 92 + 42) / 600
         x = CAL_X - CAL_W / 2 + u * CAL_W
         y = CAL_Y - CAL_D / 2 + v * CAL_D
-        box('booked_tile', (0.3, 0.26, 0.05), (x, y, 0.055), f'room_{booked[day]}', bevel=0.012, group='Fx_tiles')
+        TILES.append((x, y))
+        box('booked_tile', (0.3, 0.26, 0.05), (x, y, 0.055), f'room_{booked[day]}', bevel=0.012, group=f'Fx_tile{len(TILES) - 1}')
 
 # ── 審核桌：印章落下的地方（桌上一張借用申請單） ──
 box('review_desk', (0.56, 0.42, 0.04), (STX, STY, 0.64), 'desk', bevel=0.008)
@@ -221,11 +223,11 @@ material('sign_once', rough=0.6, tex=kit.label_texture('s1', '單次', BLUE, siz
 material('sign_week', rough=0.6, tex=kit.label_texture('s2', '每週', '#36b37e', size=(240, 90), font_size=56))
 material('sign_month', rough=0.6, tex=kit.label_texture('s3', '每月', '#f29b30', size=(240, 90), font_size=56))
 SGX, SGY = 1.5, -0.55
-cyl('sign_pole', 0.03, 1.0, (SGX, SGY, 0.5), 'wall_trim', verts=10, group='Fx_sign')
-cone('sign_cap', 0.06, 0.0, 0.08, (SGX, SGY, 1.04), 'roof', verts=10, group='Fx_sign')
+cyl('sign_pole', 0.03, 1.0, (SGX, SGY, 0.5), 'wall_trim', verts=10)
+cone('sign_cap', 0.06, 0.0, 0.08, (SGX, SGY, 1.04), 'roof', verts=10)
 for k, (m, a) in enumerate([('sign_once', -0.5), ('sign_week', 0.9), ('sign_month', 2.4)]):
     label_block(f'sign_{k}', (0.34, 0.025, 0.11), (SGX + math.cos(a) * 0.17, SGY + math.sin(a) * 0.17, 0.92 - k * 0.15), m,
-                bevel=0.004, face='front', rot=(0, 0, a), group='Fx_sign')
+                bevel=0.004, face='front', rot=(0, 0, a), group=f'Fx_arm{k}')
 box('sign_base', (0.16, 0.16, 0.05), (SGX, SGY, 0.025), 'wall_trim', bevel=0.01)
 
 # ── 自動寄信通知：校門旁的郵筒（蓋子掀開、信封飛出） ──
@@ -240,11 +242,15 @@ for k in range(2):
     label_block(f'mail_env_{k}', (0.2, 0.006, 0.13), (MBX - 0.03 + k * 0.06, MBY + 0.01 * k, 0.66), 'envelope', bevel=0.002, face='front', group='Fx_letter', rot=(0, 0, 0.2 * (k - 0.5)))
 
 # ── 點擊動畫節點 ──
-kit.fx_node('Fx_tiles', (CAL_X, CAL_Y, 0.03))
-kit.fx_node('Fx_sign', (SGX, SGY, 0.0))
+for k, (x, y) in enumerate(TILES):
+    kit.fx_node(f'Fx_tile{k}', (x, y, 0.03))
+for k in range(3):
+    kit.fx_node(f'Fx_arm{k}', (SGX, SGY, 0.92 - k * 0.15))
+# 蓋印後申請單上浮現的紅色「核准」印記（平常隱藏）
+label_block('approved_mark', (0.2, 0.2, 0.004), (STX, STY, 0.67), 'approved', bevel=0, group='FxHide_mark')
+kit.fx_node('FxHide_mark', (STX, STY, 0.668))
 kit.fx_node('Fx_mlid', (MBX, MBY + 0.13, 0.77))
 kit.fx_node('Fx_letter', (MBX, MBY, 0.6))
-kit.fx_around('Fx_desk', STX, STY, r=0.32, z0=0.0, z1=0.7)
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'school')

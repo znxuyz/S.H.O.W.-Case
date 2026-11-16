@@ -70,8 +70,8 @@ box('tablet_bezel', (TW - 0.06, TD - 0.06, 0.01), (TX, TY, 0.105), 'bezel', beve
 label_block('tablet_screen', (TW - 0.2, TD - 0.2, 0.006), (TX, TY, 0.112), 'screen', bevel=0)
 cyl('camera_dot', 0.02, 0.01, (TX, TY + TD / 2 - 0.05, 0.112), 'pen_tip', verts=10)
 # 觸控筆
-beam('pencil', (TX + 1.55, TY - 0.9, 0.04), (TX + 1.45, TY + 0.9, 0.04), 0.06, 'pen', round_=True)
-cone('pencil_tip', 0.03, 0.0, 0.1, (TX + 1.56, TY - 0.97, 0.04), 'pen_tip', verts=10, rot=(math.pi / 2, 0, 0.05))
+beam('pencil', (TX + 1.55, TY - 0.9, 0.04), (TX + 1.45, TY + 0.9, 0.04), 0.06, 'pen', round_=True, group='Fx_pencil')
+cone('pencil_tip', 0.03, 0.0, 0.1, (TX + 1.56, TY - 0.97, 0.04), 'pen_tip', verts=10, rot=(math.pi / 2, 0, 0.05), group='Fx_pencil')
 
 # ── 從螢幕升起的五座懸浮書架 ──
 SHELVES = [(-1.1, 0.9, 1.05), (-0.25, 1.15, 1.45), (0.65, 1.15, 1.25), (1.45, 0.85, 0.95), (0.25, 0.45, 2.0)]
@@ -79,15 +79,15 @@ for i, (x, y, z) in enumerate(SHELVES):
     g = f'Bob{i}'
     box('shelf_board', (1.0, 0.36, 0.04), (x, y, z), 'shelf', group=g, bevel=0.012)
     box('shelf_edge', (1.0, 0.015, 0.014), (x, y - 0.18, z + 0.014), 'shelf_glow', group=g, bevel=0)
-    label_block(f'cat_label_{i}', (0.66, 0.02, 0.24), (x, y - 0.19, z - 0.14), f'cat_{i}', group=g, bevel=0.004, face='front')
+    label_block(f'cat_label_{i}', (0.66, 0.02, 0.24), (x, y - 0.19, z - 0.14), f'cat_{i}', group=f'Fx_cat{i}', bevel=0.004, face='front')
     for k in range(4):
         kind = 'doc_pdf' if (k + i) % 2 == 0 else 'doc_word'
-        label_block(f'doc_{i}_{k}', (0.2, 0.02, 0.27), (x - 0.345 + k * 0.23, y, z + 0.16), kind, group=g, bevel=0.003, face='front',
+        label_block(f'doc_{i}_{k}', (0.2, 0.02, 0.27), (x - 0.345 + k * 0.23, y, z + 0.16), kind, group=f'Fx_doc{i}_{k}' if i == 0 else g, bevel=0.003, face='front',
                     rot=(0, 0, (k - 1.5) * 0.06))
     beam('tether', (x, y, z - 0.02), (TX + (x - TX) * 0.3, TY + (y - TY) * 0.3, 0.12), 0.008, 'shelf_glow', round_=True)
 
 # ── 下載光束與箭頭 ──
-cone('download_beam', 0.55, 0.2, 1.2, (TX - 0.2, TY - 0.2, 0.72), 'beam', verts=32)
+cone('download_beam', 0.55, 0.2, 1.2, (TX - 0.2, TY - 0.2, 0.72), 'beam', verts=32, group='Fx_dbeam')
 cone('download_arrow', 0.16, 0.0, 0.2, (TX - 0.2, TY - 0.2, 0.55), 'arrow', verts=4, rot=(math.pi, 0, math.pi / 4), group='Pulse0')
 box('download_shaft', (0.08, 0.08, 0.26), (TX - 0.2, TY - 0.2, 0.78), 'arrow', group='Pulse0', bevel=0.01)
 
@@ -117,11 +117,23 @@ for k in range(3):
     box('sticky', (0.13, 0.13, 0.008), (-0.95 + k * 0.17, 0.95, 0.12), 'note', rot=(0, 0, k * 0.2 - 0.2), bevel=0)
 
 # ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
-kit.fx_around('Fx_manual', 1.55, -1.45, r=0.38, z0=0.03, z1=1.2)
+kit.fx_node('Fx_dbeam', (TX - 0.2, TY - 0.2, 0.12))
+kit.fx_node('Fx_pencil', (TX + 1.5, TY, 0.04))
+# 被下載的文件卡：從書架高度落進平板（平常隱藏）
+label_block('dl_doc', (0.22, 0.02, 0.3), (TX - 0.2, TY - 0.2, 1.25), 'doc_pdf', bevel=0.003, face='front', group='FxHide_dl')
+kit.fx_node('FxHide_dl', (TX - 0.2, TY - 0.2, 1.25))
+# 改一行就上線：螢幕上浮現的新文字列與「已上線」標記（平常隱藏）
+material('newline', rough=0.5, tex=kit.label_texture('nl', '+ 新增一行 → 已上線', '#0b2433', fg=(127, 255, 176), size=(420, 70), font_size=36), emit=srgb('#ffffff'), emit_strength=0.9, emit_tex=True)
+label_block('new_line', (1.0, 0.17, 0.008), (TX + 0.55, TY - 0.6, 0.12), 'newline', bevel=0, group='FxHide_line')
+kit.fx_node('FxHide_line', (TX + 0.05, TY - 0.6, 0.12))
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'desk')
 for i, (x, y, z) in enumerate(SHELVES):
-    kit.pivot(kit.merge_group(f'Bob{i}', f'shelf{i}'), f'Bob{i}', (x, y, z))
+    bi = kit.pivot(kit.merge_group(f'Bob{i}', f'shelf{i}'), f'Bob{i}', (x, y, z))
+    kit.reparent(kit.fx_node(f'Fx_cat{i}', (x, y - 0.19, z - 0.02)), bi)
+    if i == 0:
+        for k in range(4):
+            kit.reparent(kit.fx_node(f'Fx_doc0_{k}', (x - 0.345 + k * 0.23, y, z + 0.025)), bi)
 kit.pivot(kit.merge_group('Pulse0', 'arrow'), 'Pulse0', (TX - 0.2, TY - 0.2, 0.66))
 kit.export(OUT)

@@ -310,7 +310,7 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
         intensity={2}
         position={[14, 22, 10]}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0008}
         shadow-camera-left={-26}
         shadow-camera-right={26}

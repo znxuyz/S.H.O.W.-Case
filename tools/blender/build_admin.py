@@ -192,15 +192,15 @@ material('note_p', srgb('#ff9ec4'), rough=0.8)
 material('badge', rough=0.6, tex=kit.label_texture('badge', '成員', '#d9622b', size=(140, 190), font_size=52))
 # 放大鏡（環內）
 MGX, MGY = 0.55, 0.5
-kit.torus('magnifier_rim', 0.17, 0.025, (MGX, MGY, 0.06), 'pen', rot=(0.15, 0, 0), major=32, minor=8)
-cyl('magnifier_lens', 0.16, 0.012, (MGX, MGY, 0.06), 'lens', verts=24, rot=(0.15, 0, 0))
-kit.beam('magnifier_handle', (MGX + 0.17, MGY - 0.12, 0.05), (MGX + 0.42, MGY - 0.32, 0.04), 0.045, 'desk_dark', round_=True)
+kit.torus('magnifier_rim', 0.17, 0.025, (MGX, MGY, 0.06), 'pen', rot=(0.15, 0, 0), major=32, minor=8, group='Fx_mag')
+cyl('magnifier_lens', 0.16, 0.012, (MGX, MGY, 0.06), 'lens', verts=24, rot=(0.15, 0, 0), group='Fx_mag')
+kit.beam('magnifier_handle', (MGX + 0.17, MGY - 0.12, 0.05), (MGX + 0.42, MGY - 0.32, 0.04), 0.045, 'desk_dark', round_=True, group='Fx_mag')
 # 成員識別證架（環內）
 BGX, BGY = -0.58, -0.55
 box('badge_stand', (0.36, 0.08, 0.04), (BGX, BGY, 0.02), 'pen', bevel=0.006)
 for k in range(3):
     kit.beam('lanyard', (BGX - 0.12 + k * 0.12, BGY, 0.32), (BGX - 0.12 + k * 0.12, BGY, 0.24), 0.008, 'engine', round_=True)
-    kit.label_block(f'badge_{k}', (0.09, 0.012, 0.12), (BGX - 0.12 + k * 0.12, BGY - 0.01, 0.17), 'badge', bevel=0.003, face='front')
+    kit.label_block(f'badge_{k}', (0.09, 0.012, 0.12), (BGX - 0.12 + k * 0.12, BGY - 0.01, 0.17), 'badge', bevel=0.003, face='front', group=f'Fx_badge{k}')
 box('badge_bar', (0.36, 0.02, 0.02), (BGX, BGY, 0.33), 'pen', bevel=0)
 for dx in (-0.17, 0.17):
     cyl('badge_post', 0.01, 0.32, (BGX + dx, BGY, 0.17), 'pen', verts=6)
@@ -210,23 +210,60 @@ box('cabinet', (0.42, 0.3, 0.5), (CBX, CBY, 0.25), 'cabinet', bevel=0.012)
 for k in range(3):
     box('drawer', (0.36, 0.02, 0.13), (CBX, CBY - 0.16, 0.09 + k * 0.16), 'white', bevel=0.004)
     box('drawer_handle', (0.1, 0.02, 0.02), (CBX, CBY - 0.175, 0.1 + k * 0.16), 'pen', bevel=0)
-box('drawer_open', (0.36, 0.2, 0.12), (CBX, CBY - 0.27, 0.41), 'cabinet', bevel=0.006)
+box('drawer_open', (0.36, 0.2, 0.12), (CBX, CBY - 0.27, 0.41), 'cabinet', bevel=0.006, group='Fx_drawer')
 for k in range(4):
-    box('filed_folder', (0.3, 0.012, 0.16), (CBX, CBY - 0.2 - k * 0.04, 0.47), ['folder_b', 'folder_y', 'folder_g', 'folder_b'][k], bevel=0)
-# 行事曆便利貼
+    box('filed_folder', (0.3, 0.012, 0.16), (CBX, CBY - 0.2 - k * 0.04, 0.47), ['folder_b', 'folder_y', 'folder_g', 'folder_b'][k], bevel=0, group='Fx_drawer')
+# 行事曆便利貼（各自獨立，點擊時像被翻動般擺動）
+STICKY = []
 for k, (dx, dz, m) in enumerate([(-0.12, 0.06, 'note_y'), (0.1, -0.06, 'note_p'), (0.0, -0.14, 'note_y')]):
-    box('sticky', (0.09, 0.01, 0.09), (1.48 + dx * 0.9, 1.44 + dx * 0.4, 0.26 + dz), m, rot=(0.25, 0, -0.5 + k * 0.1), bevel=0)
+    box('sticky', (0.09, 0.01, 0.09), (1.48 + dx * 0.9, 1.44 + dx * 0.4, 0.26 + dz), m, rot=(0.25, 0, -0.5 + k * 0.1), bevel=0, group=f'Fx_sticky{k}')
+    STICKY.append((1.48 + dx * 0.9, 1.44 + dx * 0.4, 0.26 + dz + 0.045))
 
 # ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
-kit.fx_around('Fx_cal', 1.5, 1.5, r=0.38, z0=0.03, z1=0.9)
-kit.fx_around('Fx_search', 0.55, 0.55, r=0.32, z0=0.03, z1=0.6)
-kit.fx_around('Fx_badges', -0.6, -0.6, r=0.32, z0=0.03, z1=0.7)
+kit.fx_node('Fx_mag', (MGX, MGY, 0.06))
+for k in range(3):
+    kit.fx_node(f'Fx_badge{k}', (BGX - 0.12 + k * 0.12, BGY - 0.01, 0.24))
+kit.fx_node('Fx_drawer', (CBX, CBY - 0.27, 0.41))
+for k, p in enumerate(STICKY):
+    kit.fx_node(f'Fx_sticky{k}', p)
+# 行事曆：沿上緣往後翻的一張月曆紙（樞紐與月曆同樣傾斜，平常隱藏）
+piv = bpy.data.objects.new('FxHide_calpage', None)
+bpy.context.scene.collection.objects.link(piv)
+piv.location = (1.48, 1.462, 0.44)
+piv.rotation_euler = (0.25, 0, -0.5)
+bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0))
+leaf = bpy.context.active_object
+leaf.scale = (0.37, 0.006, 0.41)
+bpy.ops.object.transform_apply(scale=True)
+for v in leaf.data.vertices:
+    v.co.z -= 0.205
+leaf.name = 'cal_leaf'
+leaf.data.materials.append(kit.MATS['calendar'])
+leaf.parent = piv
+# 卡關站：平時豎起、點擊時放下橫擋軌道的柵欄桿
+material('gate_stripe', rough=0.6, tex=kit.label_texture('gate', '■□■□■□', '#ffffff', fg=(220, 60, 60), size=(300, 40), font_size=34, border=False))
+GTX, GTY = sx - 0.18, sy + 0.12
+cyl('gate_post', 0.025, 0.3, (GTX, GTY, 0.15), 'pen', verts=8)
+box('gate_arm', (0.03, 0.03, 0.6), (GTX, GTY, 0.6), 'gate_stripe', bevel=0.004, group='Fx_gate')
+kit.fx_node('Fx_gate', (GTX, GTY, 0.3))
+# 處室總覽板：兩側隱藏的延伸面板（點擊時展開）
+for side in (-1, 1):
+    label_block(f'ov_side_{side}', (0.38, 0.02, 0.5), (side * 0.66, -0.02, 1.38), 'overview', bevel=0.006, face='front', group='FxHide_ov' + ('L' if side < 0 else 'R'))
+# 火車煙囪的蒸汽（平常隱藏）
+material('steam', srgb('#ffffff'), rough=1.0)
+ex, ey, _ = on_track(T0, 0)
+ang0 = tangent(T0)
+for k in range(3):
+    kit.ico('steam', 0.05 + k * 0.025, (ex + math.cos(ang0) * 0.12, ey + math.sin(ang0) * 0.12, 0.46 + k * 0.1), 'steam', sub=1, group='FxHide_steam')
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'desk')
-kit.pivot(kit.merge_group('Spin0', 'train'), 'Spin0', (0, 0, 0))
+sp = kit.pivot(kit.merge_group('Spin0', 'train'), 'Spin0', (0, 0, 0))
+kit.reparent(kit.fx_node('FxHide_steam', (ex + math.cos(ang0) * 0.12, ey + math.sin(ang0) * 0.12, 0.4)), sp)
 kit.pivot(kit.merge_group('Pulse0', 'stuck'), 'Pulse0', (sx, sy - 0.045, 0.67))
-kit.pivot(kit.merge_group('Billboard0', 'overview'), 'Billboard0', (0, 0, 1.38))
+ov = kit.pivot(kit.merge_group('Billboard0', 'overview'), 'Billboard0', (0, 0, 1.38))
+kit.reparent(kit.fx_node('FxHide_ovL', (-0.45, -0.02, 1.38)), ov)
+kit.reparent(kit.fx_node('FxHide_ovR', (0.45, -0.02, 1.38)), ov)
 for i, a in enumerate(STATION_ANG):
     kit.pivot(kit.merge_group(f'Billboard{1 + i}', f'sign{i}'), f'Billboard{1 + i}', (math.cos(a) * (RX + 0.42), math.sin(a) * (RY + 0.42), 0.66))
 kit.export(OUT)

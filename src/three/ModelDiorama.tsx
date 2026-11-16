@@ -11,7 +11,8 @@
  *
  * 點擊熱點的專屬動畫（fx）：熱點指定節點名稱與動作（見 FxKind），
  * 動作以「增量」疊加在上述常駐動畫之上（每幀先撤銷上一幀的增量），結束後自動復原；
- * 同時讓節點發光，並從節點位置擴散一圈光波。
+ * 每個動作都是「結構動作」（掀、滑、伸、拍、轉、顯現、掃描、蓋印），只有指定 glow 的零件才會增亮，
+ * 指定 ring 才擴散能量波；FxHide_* 節點平常隱藏，只在 reveal 時出現。
  */
 import { useEffect, useMemo, useRef } from 'react';
 import type { FxKind, FxStep } from '../data/projects';
@@ -29,32 +30,46 @@ export interface FxTrigger { steps: FxStep[]; key: number; color: string }
 
 // QA：網址加 ?fxslow 會把點擊動畫放慢（預設 12 倍，?fxslow=40 可自訂），方便在慢速的軟體渲染器截圖
 const FX_SLOW = typeof location !== 'undefined' ? Number(/fxslow=?(\d*)/.exec(location.search)?.[1] || (location.search.includes('fxslow') ? 12 : 1)) : 1;
-const DUR: Record<FxKind, number> = { pop: 1.1, stamp: 1.3, float: 2.6, spin: 1.4, lid: 2.4, press: 0.9, shake: 1.0, swing: 1.6, flash: 2.2, ripple: 1.6 };
+const DUR: Record<FxKind, number> = { hinge: 2.6, slide: 2.6, stretch: 2.4, flap: 2.2, whirl: 2.0, reveal: 2.6, sweep: 2.6, stamp: 1.5, press: 0.9, pulse: 1.3, flash: 2.2 };
+const AMT: Record<FxKind, number> = { hinge: 1.2, slide: 0.3, stretch: 2, flap: 0.6, whirl: Math.PI * 4, reveal: 1, sweep: 0.5, stamp: 0.2, press: 0.08, pulse: 0.12, flash: 0 };
 
-interface Delta { px: number; py: number; pz: number; rx: number; ry: number; rz: number; s: number; show: boolean }
-const ZERO: Delta = { px: 0, py: 0, pz: 0, rx: 0, ry: 0, rz: 0, s: 1, show: false };
-const bell = (x: number) => Math.sin(Math.min(1, Math.max(0, x)) * Math.PI);
-const easeOut = (x: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+interface Delta { p: [number, number, number]; r: [number, number, number]; s: [number, number, number]; show: boolean }
+const AX = { x: 0, y: 1, z: 2 } as const;
+const zero = (): Delta => ({ p: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1], show: false });
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+const bell = (x: number) => Math.sin(clamp01(x) * Math.PI);
+const easeOut = (x: number) => 1 - Math.pow(1 - clamp01(x), 3);
+const easeInOut = (x: number) => { const c = clamp01(x); return c < 0.5 ? 4 * c * c * c : 1 - Math.pow(-2 * c + 2, 3) / 2; };
+const easeOutBack = (x: number) => { const c = clamp01(x); const k = 1.70158; return 1 + (k + 1) * Math.pow(c - 1, 3) + k * Math.pow(c - 1, 2); };
+/** 展開 → 停住 → 收回 的包絡 */
+const hold = (u: number, a = 0.22, b = 0.78) => (u < a ? easeInOut(u / a) : u > b ? 1 - easeInOut((u - b) / (1 - b)) : 1);
 
 /** 每種動作在時間 u（0..1）時的增量 */
-function delta(kind: FxKind, u: number, dur: number): Delta {
+function delta(s: FxStep, u: number, dur: number): Delta {
   const t = u * dur;
-  const d = { ...ZERO };
-  switch (kind) {
-    case 'pop': d.py = bell(u) * 0.28; d.s = 1 + Math.sin(u * Math.PI * 3) * 0.08 * (1 - u); break;
-    case 'stamp': {
-      // 抬起 → 重重蓋下 → 停留 → 回位
-      d.py = u < 0.25 ? easeOut(u / 0.25) * 0.25 : u < 0.35 ? 0.25 - ((u - 0.25) / 0.1) * 0.45 : u < 0.6 ? -0.2 : -0.2 + easeOut((u - 0.6) / 0.4) * 0.2;
+  const d = zero();
+  const amt = s.amt ?? AMT[s.kind];
+  const i = AX[s.axis ?? (s.kind === 'hinge' || s.kind === 'flap' ? 'x' : 'y')];
+  switch (s.kind) {
+    case 'hinge': d.r[i] = amt * hold(u); break;
+    case 'slide': d.p[i] = amt * hold(u, 0.3, 0.8); break;
+    case 'stretch': d.s[i] = 1 + (amt - 1) * hold(u, 0.3, 0.8); break;
+    case 'flap': d.r[i] = amt * Math.sin(t * Math.PI * 2 * (s.freq ?? 2.4)) * Math.min(1, u / 0.08) * (u > 0.7 ? 1 - (u - 0.7) / 0.3 : 1); break;
+    case 'whirl': d.r[i] = amt * easeInOut(u); break;
+    case 'reveal': {
+      d.show = true;
+      const k = u < 0.2 ? easeOutBack(u / 0.2) : u > 0.85 ? 1 - easeInOut((u - 0.85) / 0.15) : 1;
+      d.s = [Math.max(0.02, k * amt), Math.max(0.02, k * amt), Math.max(0.02, k * amt)];
       break;
     }
-    case 'float': d.py = Math.min(1, t / 0.5) * 0.35 * (u > 0.8 ? 1 - (u - 0.8) / 0.2 : 1) + Math.sin(t * 3) * 0.04; break;
-    case 'spin': d.ry = easeOut(u) * Math.PI * 2; d.py = bell(u) * 0.15; break;
-    case 'lid': d.rx = -(u < 0.2 ? easeOut(u / 0.2) : u > 0.8 ? 1 - easeOut((u - 0.8) / 0.2) : 1) * 1.15; break;
-    case 'press': d.py = -bell(Math.min(1, u * 2.2)) * 0.1; d.s = 1 + bell(u) * 0.05; break;
-    case 'shake': d.rz = Math.sin(t * 28) * 0.12 * (1 - u); d.py = bell(u) * 0.06; break;
-    case 'swing': d.rx = Math.sin(t * 11) * 0.45 * (1 - u); break;
-    case 'flash': d.show = true; d.s = 1 + bell(u) * 0.04; break;
-    case 'ripple': break;
+    case 'sweep': d.p[i] = amt * (0.5 - 0.5 * Math.cos(u * Math.PI * 2 * (s.freq ?? 1))); break;
+    case 'stamp':
+      // 抬起 → 重重蓋下 → 停留 → 回位
+      d.p[1] = u < 0.25 ? easeOut(u / 0.25) * amt * 0.8 : u < 0.33 ? amt * 0.8 - ((u - 0.25) / 0.08) * amt * 1.8 : u < 0.62 ? -amt : -amt + easeInOut((u - 0.62) / 0.38) * amt;
+      break;
+    case 'press': { const k = bell(Math.min(1, u * 2)); d.p[1] = -amt * k; d.s = [1 + k * 0.06, 1 - k * 0.12, 1 + k * 0.06]; break; }
+    case 'pulse': { const b = Math.pow(bell((u * 2) % 1), 3); const k = 1 + amt * b; d.s = [k, k, k]; break; }
+    case 'flash': d.show = true; break;
   }
   return d;
 }
@@ -81,14 +96,18 @@ function release(url: string, scene: THREE.Object3D) {
 /**
  * release：離開頁面時釋放資源（介紹頁的精細模型與環境用；首頁輕量版保留快取，返回時秒開）
  */
-export default function ModelDiorama({ url, release: shouldRelease = false, fx = null }: { url: string; release?: boolean; fx?: FxTrigger | null }) {
+/**
+ * shadows：full＝主模型（投射＋接收，但漂浮/旋轉/看板/發光零件不投射）；
+ *          cast＝首頁輕量版（只投射）；none＝3D 環境（大面積地形不進陰影計算）
+ */
+export default function ModelDiorama({ url, release: shouldRelease = false, fx = null, shadows = 'full' }: { url: string; release?: boolean; fx?: FxTrigger | null; shadows?: 'full' | 'cast' | 'none' }) {
   const gltf = useGLTF(modelUrl(url), false, true);
   useEffect(() => {
     if (!shouldRelease) return;
     const src = gltf.scene;
     return () => { release(url, src); };
   }, [gltf.scene, url, shouldRelease]);
-  const { scene, rigs, named, rings } = useMemo(() => {
+  const { scene, rigs, named, rings, hidden } = useMemo(() => {
     const root = gltf.scene.clone(true);
     const rigs: Rig[] = [];
     root.traverse((o) => {
@@ -104,8 +123,11 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
           mat.depthWrite = true;
           mat.side = THREE.DoubleSide;
         }
-        mesh.castShadow = !mat.transparent && !glowing && !card;
-        mesh.receiveShadow = !glowing && !card;
+        // 掛在動態節點（Bob/Spin/Billboard/Pulse/Fx…）下的小零件不投射陰影：省下陰影貼圖的重繪
+        let moving = false;
+        for (let p: THREE.Object3D | null = mesh.parent; p; p = p.parent) if (/^(Bob|Spin|Billboard|Pulse|Lit_|Drop_|FxHide)/.test(p.name)) { moving = true; break; }
+        mesh.castShadow = shadows !== 'none' && !mat.transparent && !glowing && !card && !moving;
+        mesh.receiveShadow = shadows === 'full' && !glowing && !card;
         if (mat.transparent) mat.depthWrite = false;
       }
       const m = /^(Gear|ClockHandH|ClockHand|GantryBridge|GantryHead|Drop_|SpinR|Spin|Bob|Crane|Hook|Billboard|Lit_|Pulse)(\d*)/.exec(o.name);
@@ -126,8 +148,10 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
       root.add(m);
       return m;
     });
-    return { scene: root, rigs, named, rings };
-  }, [gltf.scene]);
+    const hidden: THREE.Object3D[] = [];
+    root.traverse((o) => { if (o.name.startsWith('FxHide')) { o.visible = false; hidden.push(o); } });
+    return { scene: root, rigs, named, rings, hidden };
+  }, [gltf.scene, shadows]);
 
   /** 依名稱找節點（支援結尾 * 萬用字元，例如 Lit_*） */
   const find = (name: string) => {
@@ -179,11 +203,13 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
     const t = clock.elapsedTime;
     // 1) 撤銷上一幀的動畫增量
     applied.current.forEach((d, n) => {
-      n.position.x -= d.px; n.position.y -= d.py; n.position.z -= d.pz;
-      n.rotation.x -= d.rx; n.rotation.y -= d.ry; n.rotation.z -= d.rz;
-      if (d.s !== 1) n.scale.divideScalar(d.s);
+      n.position.x -= d.p[0]; n.position.y -= d.p[1]; n.position.z -= d.p[2];
+      n.rotation.x -= d.r[0]; n.rotation.y -= d.r[1]; n.rotation.z -= d.r[2];
+      n.scale.x /= d.s[0]; n.scale.y /= d.s[1]; n.scale.z /= d.s[2];
     });
     applied.current.clear();
+    // 隱藏零件（FxHide_*）平常不顯示，只有 reveal 動作期間出現
+    hidden.forEach((n) => { n.visible = false; });
     // 2) 新的觸發
     if (pendingKey.current !== null && fx) {
       pendingKey.current = null;
@@ -193,7 +219,7 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
       (window as unknown as { __fxLast?: unknown; __fxFind?: unknown }).__fxFind = find;
       (window as unknown as { __fxLast?: unknown }).__fxLast = { key: fx.key, found: fx.steps.map((s) => `${s.node}:${find(s.node).length}`) };
       fx.steps.forEach((s) => find(s.node).forEach((n) => {
-        if (s.kind !== 'stamp' && s.ring) emitRing(n, t + (s.delay ?? 0) * FX_SLOW, s.ring);
+        if (s.kind !== 'stamp' && s.ring) emitRing(n, t + (s.delay ?? 0) * FX_SLOW + (s.dur ?? DUR[s.kind]) * 0.15 * FX_SLOW, s.ring);
       }));
     }
     for (const r of rigs) {
@@ -239,30 +265,38 @@ export default function ModelDiorama({ url, release: shouldRelease = false, fx =
     if (a) {
       let alive = false;
       for (const s of a.steps) {
-        const dur = DUR[s.kind] * FX_SLOW;
+        const dur = (s.dur ?? DUR[s.kind]) * FX_SLOW;
         const u = (t - a.start - (s.delay ?? 0) * FX_SLOW) / dur;
         if (u < 0) { alive = true; continue; }
         if (u > 1) continue;
         alive = true;
-        const d = delta(s.kind, u, dur);
+        const d = delta(s, u, dur);
         const nodes = find(s.node);
         nodes.forEach((n) => {
-          n.position.x += d.px; n.position.y += d.py; n.position.z += d.pz;
-          n.rotation.x += d.rx; n.rotation.y += d.ry; n.rotation.z += d.rz;
-          if (d.s !== 1) n.scale.multiplyScalar(d.s);
+          n.position.x += d.p[0]; n.position.y += d.p[1]; n.position.z += d.p[2];
+          n.rotation.x += d.r[0]; n.rotation.y += d.r[1]; n.rotation.z += d.r[2];
+          n.scale.x *= d.s[0]; n.scale.y *= d.s[1]; n.scale.z *= d.s[2];
           if (d.show) n.visible = true;
           const prev = applied.current.get(n);
-          applied.current.set(n, prev ? { px: prev.px + d.px, py: prev.py + d.py, pz: prev.pz + d.pz, rx: prev.rx + d.rx, ry: prev.ry + d.ry, rz: prev.rz + d.rz, s: prev.s * d.s, show: prev.show || d.show } : d);
-          const k = s.kind === 'stamp' ? (u > 0.33 && u < 0.7 ? 1 : 0.3) : bell(u);
-          glowTargets(n).forEach((m) => {
-            glowing.add(m);
-            m.emissive.copy(a.color);
-            m.emissiveIntensity = Math.max(glowMats.current.get(m)!.i, k * 0.6);
-          });
+          applied.current.set(n, prev ? {
+            p: [prev.p[0] + d.p[0], prev.p[1] + d.p[1], prev.p[2] + d.p[2]],
+            r: [prev.r[0] + d.r[0], prev.r[1] + d.r[1], prev.r[2] + d.r[2]],
+            s: [prev.s[0] * d.s[0], prev.s[1] * d.s[1], prev.s[2] * d.s[2]],
+            show: prev.show || d.show,
+          } : d);
+          // 只有標記 glow 的零件（符文、霓虹、全息）會增亮
+          if (s.glow) {
+            const k = hold(u, 0.15, 0.75);
+            glowTargets(n).forEach((m) => {
+              glowing.add(m);
+              m.emissive.copy(a.color);
+              m.emissiveIntensity = Math.max(glowMats.current.get(m)!.i, k * 1.4);
+            });
+          }
         });
         // 蓋章：落下瞬間激起光波
-        if (s.kind === 'stamp' && u > 0.34 && !s._rung) {
-          nodes.forEach((n) => emitRing(n, t, s.ring ?? 2.2));
+        if (s.kind === 'stamp' && s.ring && u > 0.33 && !s._rung) {
+          nodes.forEach((n) => emitRing(n, t, s.ring!));
           (s as FxStep & { _rung?: boolean })._rung = true;
         }
       }

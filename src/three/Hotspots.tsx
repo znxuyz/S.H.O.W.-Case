@@ -29,84 +29,104 @@ export function focusCamera(h: Hotspot): V3 {
  */
 export interface CardRefs { card: HTMLElement | null; line: HTMLElement | null }
 
-export function MarkerProjector({ hotspots, markers, active = null, cardRefs }: {
+export function MarkerProjector({ hotspots, markers, active = null, cardRefs, occluders }: {
   hotspots: Hotspot[]; markers: MutableRefObject<(HTMLElement | null)[]>; active?: number | null; cardRefs?: MutableRefObject<CardRefs>;
+  /** 只對主模型做遮擋射線（不含大面積的 3D 環境地形） */
+  occluders?: MutableRefObject<THREE.Object3D | null>;
 }) {
   const { camera, size, scene } = useThree();
   const v = useRef(new THREE.Vector3());
+  const tmp = useRef({ p: new THREE.Vector3(), d: new THREE.Vector3() });
   const frame = useRef(0);
   const caster = useRef(new THREE.Raycaster());
-  const liftRef = useRef(new Map<number, number>());
+  // 效能：快取每個元素上次寫入的樣式字串（沒變就不寫，避免無謂的樣式重算）、標籤寬度、說明卡尺寸
+  const last = useRef(new Map<HTMLElement, string>());
+  const widths = useRef(new Map<HTMLElement, number>());
+  const card = useRef<{ el: HTMLElement | null; w: number; h: number; age: number }>({ el: null, w: 0, h: 0, age: 0 });
+  const pos = useRef<{ x: number; y: number; vis: boolean }[]>([]);
+  const write = (el: HTMLElement, key: string, apply: () => void) => {
+    if (last.current.get(el) === key) return;
+    last.current.set(el, key);
+    apply();
+  };
   useFrame(() => {
-    // 每 12 幀做一次遮擋檢查：被模型擋住的標記淡化
-    if (++frame.current % 12 === 0) {
-      hotspots.forEach((h, i) => {
-        const el = markers.current[i];
-        if (!el) return;
-        const p = new THREE.Vector3(...h.at);
-        const dir = p.clone().sub(camera.position);
-        const dist = dir.length();
-        caster.current.set(camera.position, dir.normalize());
+    const n = hotspots.length;
+    // 遮擋檢查：每 4 幀只檢查 1 個熱點（輪流），只對主模型射線
+    if (n && ++frame.current % 4 === 0) {
+      const i = (frame.current / 4) % n;
+      const el = markers.current[i];
+      const target = occluders?.current ?? scene;
+      if (el) {
+        const { p, d } = tmp.current;
+        p.set(...hotspots[i].at);
+        d.copy(p).sub(camera.position);
+        const dist = d.length();
+        caster.current.set(camera.position, d.normalize());
         caster.current.far = dist - 0.25;
-        const hit = caster.current.intersectObjects(scene.children, true).some((x) => (x.object as THREE.Mesh).isMesh && x.object.visible && !(x.object as THREE.Mesh).geometry?.type?.includes('Sphere') && x.distance < dist - 0.25 && x.distance > 0.5);
+        const hit = caster.current.intersectObject(target, true).some((x) => (x.object as THREE.Mesh).isMesh && x.object.visible && x.distance > 0.5);
         el.classList.toggle('is-occluded', hit);
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      const h = hotspots[i];
+      const el = markers.current[i];
+      v.current.set(h.at[0], h.at[1], h.at[2]).project(camera);
+      const vis = v.current.z < 1 && Math.abs(v.current.x) < 1.15 && Math.abs(v.current.y) < 1.15;
+      const px = Math.round((v.current.x * 0.5 + 0.5) * size.width * 2) / 2;
+      const py = Math.round((-v.current.y * 0.5 + 0.5) * size.height * 2) / 2;
+      pos.current[i] = { x: px, y: py, vis };
+      if (!el) continue;
+      const key = vis ? `${px},${py}` : 'h';
+      write(el, key, () => {
+        el.style.transform = `translate3d(${px}px, ${py}px, 0)`;
+        el.style.visibility = vis ? 'visible' : 'hidden';
       });
     }
-    const placed: { x: number; y: number; w: number; h: number }[] = [];
-    const order = hotspots.map((h, i) => { v.current.set(h.at[0], h.at[1], h.at[2]).project(camera); return { i, y: v.current.y }; }).sort((a, b) => b.y - a.y);
-    hotspots.forEach((h, i) => {
-      const el = markers.current[i];
-      if (!el) return;
-      v.current.set(h.at[0], h.at[1], h.at[2]).project(camera);
-      const visible = v.current.z < 1 && Math.abs(v.current.x) < 1.15 && Math.abs(v.current.y) < 1.15;
-      const px = (v.current.x * 0.5 + 0.5) * size.width;
-      const py = (-v.current.y * 0.5 + 0.5) * size.height;
-      el.style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0)`;
-      el.style.visibility = visible ? 'visible' : 'hidden';
-      (el as HTMLElement & { _p?: [number, number] })._p = [px, py];
-      // 說明卡：貼在該物件旁（優先放右側，靠近邊緣就換到左側），並以指引線連回物件
-      if (i === active && cardRefs?.current.card && size.width > 760) {
-        const card = cardRefs.current.card;
-        const w = card.offsetWidth, hh = card.offsetHeight;
-        const gap = 56;
-        const right = px + gap + w < size.width - 76;
-        let x = right ? px + gap : px - gap - w;
-        x = Math.max(16, Math.min(size.width - w - 76, x));
-        const y = Math.max(76, Math.min(size.height - hh - 92, py - hh * 0.4));
-        card.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
-        card.style.visibility = 'visible';
-        const line = cardRefs.current.line;
-        if (line) {
-          const ex = right ? x : x + w;
-          const ey = Math.max(y + 18, Math.min(y + hh - 18, py));
-          const len = Math.hypot(ex - px, ey - py);
-          line.style.width = `${Math.max(0, len - 14).toFixed(1)}px`;
-          line.style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0) rotate(${Math.atan2(ey - py, ex - px).toFixed(4)}rad) translateX(14px)`;
-          line.style.visibility = visible ? 'visible' : 'hidden';
-        }
+    // 說明卡：貼在該物件旁（優先放右側，靠近邊緣就換到左側），並以指引線連回物件
+    const c = cardRefs?.current.card;
+    if (active !== null && c && size.width > 760 && pos.current[active]) {
+      const cc = card.current;
+      // 尺寸只在卡片換了或每 30 幀量一次（量測會觸發版面計算）
+      if (cc.el !== c || ++cc.age > 30) { cc.el = c; cc.w = c.offsetWidth; cc.h = c.offsetHeight; cc.age = 0; }
+      const { x: px, y: py, vis } = pos.current[active];
+      const gap = 56;
+      const right = px + gap + cc.w < size.width - 76;
+      let x = right ? px + gap : px - gap - cc.w;
+      x = Math.round(Math.max(16, Math.min(size.width - cc.w - 76, x)));
+      const y = Math.round(Math.max(76, Math.min(size.height - cc.h - 92, py - cc.h * 0.4)));
+      write(c, `${x},${y}`, () => { c.style.transform = `translate3d(${x}px, ${y}px, 0)`; c.style.visibility = 'visible'; });
+      const line = cardRefs!.current.line;
+      if (line) {
+        const ex = right ? x : x + cc.w;
+        const ey = Math.max(y + 18, Math.min(y + cc.h - 18, py));
+        const len = Math.max(0, Math.hypot(ex - px, ey - py) - 14);
+        const ang = Math.atan2(ey - py, ex - px);
+        write(line, `${px},${py},${ex},${ey},${vis}`, () => {
+          line.style.width = `${len.toFixed(1)}px`;
+          line.style.transform = `translate3d(${px}px, ${py}px, 0) rotate(${ang.toFixed(4)}rad) translateX(14px)`;
+          line.style.visibility = vis ? 'visible' : 'hidden';
+        });
       }
-    });
-    // 名稱標籤避讓：由畫面上方往下排，與已放好的標籤重疊就往上疊一層
-    // 先把所有圓點當成障礙物，標籤（中心約在圓點上方 33px）不得壓到別的圓點
-    markers.current.forEach((m) => {
-      const q = (m as (HTMLElement & { _p?: [number, number] }) | null)?._p;
-      if (q && m!.style.visibility !== 'hidden') placed.push({ x: q[0], y: q[1], w: 30, h: 30 });
-    });
-    order.forEach(({ i }) => {
-      const el = markers.current[i] as (HTMLElement & { _p?: [number, number]; _lab?: HTMLElement | null }) | null;
-      if (!el || !el._p || el.style.visibility === 'hidden') return;
+    }
+    // 名稱標籤避讓：先把所有圓點當障礙物，再由畫面上方往下排；與已放好的標籤重疊就往上疊一層
+    const placed: { x: number; y: number; w: number; h: number }[] = [];
+    for (let i = 0; i < n; i++) if (pos.current[i]?.vis) placed.push({ x: pos.current[i].x, y: pos.current[i].y, w: 30, h: 30 });
+    const order = Array.from({ length: n }, (_, i) => i).filter((i) => pos.current[i]?.vis).sort((a, b) => pos.current[a].y - pos.current[b].y);
+    for (const i of order) {
+      const el = markers.current[i] as (HTMLElement & { _lab?: HTMLElement | null }) | null;
+      if (!el) continue;
       if (el._lab === undefined) el._lab = el.querySelector<HTMLElement>('.hs-label');
       const lab = el._lab;
-      if (!lab) return;
-      const w = lab.offsetWidth || 90;
-      const [x, y] = el._p;
+      if (!lab) continue;
+      let w = widths.current.get(lab);
+      if (w === undefined) { w = lab.offsetWidth || 90; widths.current.set(lab, w); }
+      const { x, y } = pos.current[i];
       let off = 0;
-      const hit = (ly: number) => placed.some((q) => Math.abs(q.x - x) < (q.w + w) / 2 + 4 && Math.abs(q.y - ly) < (q.h + 22) / 2 + 2);
+      const hit = (ly: number) => placed.some((q) => Math.abs(q.x - x) < (q.w + w!) / 2 + 4 && Math.abs(q.y - ly) < (q.h + 22) / 2 + 2);
       for (let guard = 0; guard < 6 && hit(y - 33 - off); guard++) off += 26;
       placed.push({ x, y: y - 33 - off, w, h: 22 });
-      const lift = liftRef.current;
-      if (lift.get(i) !== off) { lift.set(i, off); lab.style.translate = off ? `0 ${-off}px` : ''; }
-    });
+      write(lab, String(off), () => { lab.style.translate = off ? `0 ${-off}px` : ''; });
+    }
   });
   return null;
 }

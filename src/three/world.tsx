@@ -344,7 +344,7 @@ export function World({ style, sparkles = true, landscape = true }: { style: Wor
           <Scenery kind={style.scenery} />
         </>
       )}
-      {sparkles && <Sparkles count={70} scale={[16, 9, 16]} position={[0, 2, 0]} size={3} speed={0.35} opacity={0.8} color={style.sparkle} />}
+      {sparkles && <Sparkles count={40} scale={[16, 9, 16]} position={[0, 2, 0]} size={3} speed={0.35} opacity={0.8} color={style.sparkle} />}
       <Environment resolution={128} frames={1} environmentIntensity={0.55}>
         <Lightformer form="rect" intensity={2.4} color={style.env[0]} position={[0, 6, -8]} scale={[12, 4, 1]} />
         <Lightformer form="rect" intensity={1.6} color={style.env[1]} position={[8, 2, 4]} rotation={[0, -Math.PI / 2, 0]} scale={[6, 3, 1]} />
@@ -357,8 +357,9 @@ export function World({ style, sparkles = true, landscape = true }: { style: Wor
 /** 後製：只讓高亮的發光體（霓虹、燈籠、窗光）產生光暈，加上暗角 */
 export function Effects({ bloom }: { bloom: number }) {
   return (
-    <EffectComposer multisampling={4}>
-      <Bloom mipmapBlur intensity={bloom} luminanceThreshold={0.85} luminanceSmoothing={0.2} />
+    // 效能：MSAA 4→2、Bloom 以半解析度、5 層 mip 計算
+    <EffectComposer multisampling={2}>
+      <Bloom mipmapBlur levels={5} resolutionScale={0.5} intensity={bloom} luminanceThreshold={0.85} luminanceSmoothing={0.2} />
       <Vignette darkness={0.55} offset={0.32} />
     </EffectComposer>
   );

@@ -112,7 +112,7 @@ for dx in (-0.4, 0.4):
     for dy in (-0.4, 0.4):
         cyl('pillar', 0.04, 0.62, (PX + dx, PY + dy, 0.47), 'red', verts=10)
 box('pav_lintel', (0.92, 0.92, 0.06), (PX, PY, 0.8), 'red', bevel=0.01)
-box('pav_glow', (0.6, 0.6, 0.4), (PX, PY, 0.45), 'warm', bevel=0.02)
+box('pav_glow', (0.6, 0.6, 0.4), (PX, PY, 0.45), 'warm', bevel=0.02, group='Fx_pavglow')
 for (lvl, w, h, z) in [(0, 1.5, 0.36, 0.98), (1, 0.95, 0.42, 1.38)]:
     cone(f'roof_{lvl}', w * 0.72, 0.02, h, (PX, PY, z), 'roof', verts=4, rot=(0, 0, math.pi / 4))
     half = w * 0.72 / math.sqrt(2)
@@ -128,10 +128,13 @@ for (lvl, w, h, z) in [(0, 1.5, 0.36, 0.98), (1, 0.95, 0.42, 1.38)]:
         box('pav_upper', (0.55, 0.55, 0.22), (PX, PY, 1.17), 'red', bevel=0.01)
 cyl('finial', 0.02, 0.3, (PX, PY, 1.72), 'gold', verts=8)
 kit.sphere('finial_ball', 0.045, (PX, PY, 1.86), 'gold', seg=12, rings=8)
+LANTS = []
 for sx in (-1, 1):
     for sy in (-1, 1):
-        kit.sphere('lantern', 0.06, (PX + sx * 0.6, PY + sy * 0.6, 0.66), 'lantern', seg=12, rings=8, scale=(1, 1, 1.25))
-        beam('lantern_cord', (PX + sx * 0.6, PY + sy * 0.6, 0.74), (PX + sx * 0.6, PY + sy * 0.6, 0.8), 0.008, 'gold', round_=True)
+        g = f'Fx_lant{len(LANTS)}'
+        LANTS.append((PX + sx * 0.6, PY + sy * 0.6))
+        kit.sphere('lantern', 0.06, (PX + sx * 0.6, PY + sy * 0.6, 0.66), 'lantern', seg=12, rings=8, scale=(1, 1, 1.25), group=g)
+        beam('lantern_cord', (PX + sx * 0.6, PY + sy * 0.6, 0.74), (PX + sx * 0.6, PY + sy * 0.6, 0.8), 0.008, 'gold', round_=True, group=g)
 
 # ── 細節：石板路、石燈籠、竹林、梅樹、錦鯉、涼亭欄杆與台階 ──
 material('bamboo', srgb('#7fa65a'), rough=0.6)
@@ -198,30 +201,47 @@ kit.torus('hour_ring', 1.45, 0.014, (CX, CY, CZ), 'gold', group='Spin_0', major=
 for i in range(12):
     a = i / 12 * math.tau
     x, y = CX + math.cos(a) * 1.45, CY + math.sin(a) * 1.45
-    label_block(f'hour_{i}', (0.14, 0.03, 0.18), (x, y, CZ), f'hour_{i}', group='Spin_0', bevel=0.006, face='front',
+    label_block(f'hour_{i}', (0.14, 0.03, 0.18), (x, y, CZ), f'hour_{i}', group=f'Fx_hour{i}', bevel=0.006, face='front',
                 rot=(0, 0, a + math.pi / 2))
-# 迴旋音符（SpinR_0）
+# 迴旋音符（SpinR_0；每顆音符是獨立節點，點擊時依序跳起）
+NOTES = []
+kit.sphere('note_hub', 0.01, (CX, CY, CZ), 'note', seg=6, rings=4, group='SpinR_0')
 for i in range(4):
     a = i / 4 * math.tau + 0.4
     x, y, z = CX + math.cos(a) * 0.95, CY + math.sin(a) * 0.95, CZ + 0.45 + (i % 2) * 0.15
-    kit.sphere('note_head', 0.06, (x, y, z), 'note', seg=12, rings=8, scale=(1.25, 1, 0.9), group='SpinR_0')
-    box('note_stem', (0.016, 0.016, 0.26), (x + 0.06, y, z + 0.13), 'note', group='SpinR_0', bevel=0)
-    box('note_flag', (0.1, 0.016, 0.04), (x + 0.11, y, z + 0.24), 'note', rot=(0, 0.5, 0), group='SpinR_0', bevel=0)
-# 傳音符紙（Bob_1）
+    NOTES.append((x, y, z))
+    kit.sphere('note_head', 0.06, (x, y, z), 'note', seg=12, rings=8, scale=(1.25, 1, 0.9), group=f'Fx_note{i}')
+    box('note_stem', (0.016, 0.016, 0.26), (x + 0.06, y, z + 0.13), 'note', group=f'Fx_note{i}', bevel=0)
+    box('note_flag', (0.1, 0.016, 0.04), (x + 0.11, y, z + 0.24), 'note', rot=(0, 0.5, 0), group=f'Fx_note{i}', bevel=0)
+# 傳音符紙（Bob_1；每張符紙獨立，點擊時像被風吹動般翻飛）
+CHARMS = []
+kit.sphere('charm_hub', 0.01, (CX, CY - 0.55, CZ), 'gold', seg=6, rings=4, group='Bob_1')
 for i, (dx, dz, rz) in enumerate([(-1.05, 0.25, 0.25), (1.55, -0.1, -0.3), (-0.35, -0.55, 0.1)]):
-    label_block(f'charm_{i}', (0.2, 0.008, 0.32), (CX + dx, CY - 0.55, CZ + dz), f'charm_{i}', group='Bob_1', bevel=0.002, face='front', rot=(0, rz, 0))
+    label_block(f'charm_{i}', (0.2, 0.008, 0.32), (CX + dx, CY - 0.55, CZ + dz), f'charm_{i}', group=f'Fx_charm{i}', bevel=0.002, face='front', rot=(0, rz, 0))
+    CHARMS.append((CX + dx, CY - 0.55, CZ + dz + 0.16))
 # 天燈（Bob_2）
 for i, (x, y, z) in enumerate([(-1.6, 0.4, 2.1), (1.75, -0.6, 1.8), (-0.6, -1.5, 1.6), (1.2, 1.6, 2.6)]):
     box('sky_lantern', (0.13, 0.13, 0.18), (x, y, z), 'warm', group='Bob_2', bevel=0.02)
 
 # ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
-kit.fx_around('Fx_cave', -1.05, -0.85, r=0.42, z0=0.03, z1=1.4)
+kit.fx_extract('Fx_roof1', (PX - 0.6, PY - 0.6, 1.2), (PX + 0.6, PY + 0.6, 2.0), max_size=2.2)
+kit.fx_node('Fx_roof1', (PX, PY, 1.2))
+kit.fx_node('Fx_pavglow', (PX, PY, 0.45))
+for k, (x, y) in enumerate(LANTS):
+    kit.fx_node(f'Fx_lant{k}', (x, y, 0.8))
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'island')
 kit.pivot(kit.merge_group('Bob_0', 'capsule'), 'Bob_0', (CX, CY, CZ))
-kit.pivot(kit.merge_group('Spin_0', 'hours'), 'Spin_0', (CX, CY, CZ))
-kit.pivot(kit.merge_group('SpinR_0', 'notes'), 'SpinR_0', (CX, CY, CZ))
-kit.pivot(kit.merge_group('Bob_1', 'charms'), 'Bob_1', (CX, CY - 0.55, CZ))
+s0 = kit.pivot(kit.merge_group('Spin_0', 'hours'), 'Spin_0', (CX, CY, CZ))
+for i in range(12):
+    a = i / 12 * math.tau
+    kit.reparent(kit.fx_node(f'Fx_hour{i}', (CX + math.cos(a) * 1.45, CY + math.sin(a) * 1.45, CZ)), s0)
+sr = kit.pivot(kit.merge_group('SpinR_0', 'notes'), 'SpinR_0', (CX, CY, CZ))
+for i, p in enumerate(NOTES):
+    kit.reparent(kit.fx_node(f'Fx_note{i}', p), sr)
+b1 = kit.pivot(kit.merge_group('Bob_1', 'charms'), 'Bob_1', (CX, CY - 0.55, CZ))
+for i, p in enumerate(CHARMS):
+    kit.reparent(kit.fx_node(f'Fx_charm{i}', p), b1)
 kit.pivot(kit.merge_group('Bob_2', 'lanterns'), 'Bob_2', (0, 0, 2.1))
 kit.export(OUT)

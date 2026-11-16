@@ -104,9 +104,12 @@ for i, (x, y) in enumerate(SPOTS):
     g = f'Billboard{i}'
     box(f'mini_back_{i}', (0.3, 0.03, 0.4), (x - 0.05, y + 0.05, z + 0.42), f'stamp_glow_{i}', rot=(0.12, 0, 0), bevel=0.01, group=g)
     box(f'mini_pages_{i}', (0.28, 0.035, 0.38), (x - 0.05, y + 0.02, z + 0.42), 'page_edge', rot=(0.06, 0, 0), bevel=0.006, group=g)
-    box(f'mini_cover_{i}', (0.3, 0.025, 0.4), (x - 0.05, y - 0.01, z + 0.42), f'cover_{i}', bevel=0.01, group=g)
-    label_block(f'mini_stamp_{i}', (0.22, 0.008, 0.22), (x - 0.05, y - 0.026, z + 0.45), f'stamp_{i}', bevel=0.004, face='front', group=g)
-    box(f'mini_gold_{i}', (0.24, 0.009, 0.02), (x - 0.05, y - 0.026, z + 0.28), 'gold', bevel=0, group=g)
+    # 封面（含年級章、燙金線）是獨立節點：樞紐在左緣，點擊時像翻開護照一樣向外打開
+    cg = f'Fx_cover{i}'
+    box(f'mini_cover_{i}', (0.3, 0.025, 0.4), (x - 0.05, y - 0.01, z + 0.42), f'cover_{i}', bevel=0.01, group=cg)
+    label_block(f'mini_stamp_{i}', (0.22, 0.008, 0.22), (x - 0.05, y - 0.026, z + 0.45), f'stamp_{i}', bevel=0.004, face='front', group=cg)
+    box(f'mini_gold_{i}', (0.24, 0.009, 0.02), (x - 0.05, y - 0.026, z + 0.28), 'gold', bevel=0, group=cg)
+    label_block(f'mini_inner_{i}', (0.24, 0.006, 0.32), (x - 0.05, y + 0.003, z + 0.42), 'page_r', bevel=0, face='front', group=g)
     cyl(f'stamp_glow_{i}', 0.4, 0.015, (x, y, z + 0.19), f'stamp_glow_{i}', verts=24, group=f'Lit_{i}')
 # 年級之間的虛線航線
 for a, b in zip(SPOTS, SPOTS[1:] + SPOTS[:1]):
@@ -148,19 +151,20 @@ HX2, HY2 = 1.5, 1.32
 box('home', (0.36, 0.3, 0.26), (HX2, HY2, 0.15), 'house_wall', bevel=0.01)
 cone('home_roof', 0.3, 0.0, 0.2, (HX2, HY2, 0.38), 'house_roof', verts=4, rot=(0, 0, math.pi / 4))
 box('home_win', (0.12, 0.012, 0.1), (HX2 - 0.07, HY2 - 0.156, 0.17), 'window_glow', bevel=0)
-box('home_door', (0.08, 0.012, 0.15), (HX2 + 0.09, HY2 - 0.156, 0.1), 'house_roof', bevel=0)
+box('home_door', (0.08, 0.012, 0.15), (HX2 + 0.09, HY2 - 0.156, 0.1), 'house_roof', bevel=0, group='Fx_door')
+box('home_doorway', (0.075, 0.006, 0.145), (HX2 + 0.09, HY2 - 0.152, 0.1), 'window_glow', bevel=0)
 kit.tree((HX2 + 0.32, HY2 + 0.1, 0.0), s=0.3)
 # GitHub Pages 雲端（浮在左上方）
 GCX, GCY, GCZ = -1.35, 1.45, 1.45
 for (dx, dz, r) in [(0, 0, 0.26), (0.24, -0.04, 0.2), (-0.24, -0.05, 0.2), (0.1, 0.12, 0.18)]:
     kit.ico('gh_cloud', r, (GCX + dx, GCY, GCZ + dz), 'cloud', sub=2, scale=(1.2, 0.9, 0.85), group='Bob5')
 label_block('gh_tag', (0.42, 0.02, 0.12), (GCX, GCY - 0.24, GCZ - 0.22), 'pages_tag', bevel=0.004, face='front', group='Bob5')
-cone('upload_arrow', 0.1, 0.0, 0.14, (GCX + 0.55, GCY, GCZ - 0.25), 'upload', verts=4, rot=(0, 0, math.pi / 4), group='Bob5')
-box('upload_shaft', (0.06, 0.06, 0.22), (GCX + 0.55, GCY, GCZ - 0.42), 'upload', group='Bob5', bevel=0.01)
+cone('upload_arrow', 0.1, 0.0, 0.14, (GCX + 0.55, GCY, GCZ - 0.25), 'upload', verts=4, rot=(0, 0, math.pi / 4), group='Fx_arrow')
+box('upload_shaft', (0.06, 0.06, 0.22), (GCX + 0.55, GCY, GCZ - 0.42), 'upload', group='Fx_arrow', bevel=0.01)
 # 聲波（耳機兩側的弧）
 for s in (-1, 1):
     for k in range(3):
-        kit.torus('wave', 0.18 + k * 0.1, 0.01, (HX + s * 0.42, HY, HZ - 0.08), 'wave', rot=(0, math.pi / 2, 0), group='Bob3', major=24, minor=4)
+        kit.torus('wave', 0.18 + k * 0.1, 0.01, (HX + s * 0.42, HY, HZ - 0.08), 'wave', rot=(0, math.pi / 2, 0), group='Fx_waveL' if s < 0 else 'Fx_waveR', major=24, minor=4)
 
 # ── 蓋章台：一枚大印章懸在攤開的小護照上方（點擊時重重蓋下） ──
 material('ink_pad', srgb('#3a2f4a'), rough=0.8)
@@ -189,16 +193,31 @@ label_block('btn_face', (0.22, 0.22, 0.006), (BTX, BTY, 0.172), 'go_btn', bevel=
 # ── 點擊動畫節點 ──
 kit.fx_node('Fx_stamp', (STX + 0.17, STY, 0.44))
 kit.fx_node('Fx_btn', (BTX, BTY, 0.09))
-kit.fx_around('Fx_house', HX2, HY2, r=0.35, z0=-0.05, z1=0.8)
+kit.fx_node('Fx_door', (HX2 + 0.05, HY2 - 0.156, 0.1))
+# 蓋章台：攤開小護照的三張書頁（點擊時依序翻頁）與蓋下後浮現的年級章印記
+for k in range(3):
+    box(f'leaf_{k}', (0.3, 0.41, 0.004), (STX + 0.17, STY, 0.062 + k * 0.004), 'page_edge', bevel=0, rot=(0, 0.08, 0), group=f'FxHide_leaf{k}')
+    kit.fx_node(f'FxHide_leaf{k}', (STX, STY, 0.06))
+label_block('pmark', (0.17, 0.17, 0.003), (STX + 0.17, STY, 0.074), 'stamp_face', bevel=0, rot=(0, 0.08, 0), group='FxHide_pmark')
+kit.fx_node('FxHide_pmark', (STX + 0.17, STY, 0.07))
+# 部署上線：雲端上方浮出的「上線！」標籤
+material('live_tag', rough=0.5, tex=kit.label_texture('live', '上線！', '#36b37e', size=(220, 100), font_size=60), emit=srgb('#ffffff'), emit_strength=0.5, emit_tex=True)
+label_block('live', (0.32, 0.015, 0.14), (GCX, GCY - 0.1, GCZ + 0.42), 'live_tag', bevel=0.003, face='front', group='FxHide_live')
+kit.fx_node('FxHide_live', (GCX, GCY - 0.1, GCZ + 0.3))
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'book')
 for i, (x, y) in enumerate(SPOTS):
-    kit.pivot(kit.merge_group(f'Billboard{i}', f'stamp{i}'), f'Billboard{i}', (x - 0.05, y, 0.42))
+    bb = kit.pivot(kit.merge_group(f'Billboard{i}', f'stamp{i}'), f'Billboard{i}', (x - 0.05, y, 0.42))
+    kit.reparent(kit.fx_node(f'Fx_cover{i}', (x - 0.2, y - 0.01, 0.42)), bb)
     kit.pivot(kit.merge_group(f'Lit_{i}', f'glow{i}'), f'Lit_{i}', (x, y, 0.21))
 kit.pivot(kit.merge_group('Spin0', 'planeA'), 'Spin0', (0, 0, 0))
-kit.pivot(kit.merge_group('Bob5', 'ghcloud'), 'Bob5', (GCX, GCY, GCZ))
+b5 = kit.pivot(kit.merge_group('Bob5', 'ghcloud'), 'Bob5', (GCX, GCY, GCZ))
+kit.reparent(kit.fx_node('Fx_arrow', (GCX + 0.55, GCY, GCZ - 0.5)), b5)
 kit.pivot(kit.merge_group('SpinR0', 'planeB'), 'SpinR0', (0, 0, 0))
 for i in range(4):
-    kit.pivot(kit.merge_group(f'Bob{i}', f'float{i}'), f'Bob{i}', (0, 0, 0))
+    bi = kit.pivot(kit.merge_group(f'Bob{i}', f'float{i}'), f'Bob{i}', (0, 0, 0))
+    if i == 3:
+        kit.reparent(kit.fx_node('Fx_waveL', (HX - 0.42, HY, HZ - 0.08)), bi)
+        kit.reparent(kit.fx_node('Fx_waveR', (HX + 0.42, HY, HZ - 0.08)), bi)
 kit.export(OUT)

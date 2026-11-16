@@ -95,9 +95,14 @@ for k in range(4):
 cyl('mail_post', 0.05, 0.6, (CX, CY, 0.3), 'teal', verts=12)
 box('mail_body', (0.5, 0.38, 0.36), (CX, CY, 0.78), 'teal', bevel=0.04, segs=3)
 bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.19, depth=0.5, location=(CX, CY, 0.96), rotation=(0, math.pi / 2, 0))
-kit.finalize(bpy.context.active_object, 'teal', group='Fx_lid')
-box('mail_slot', (0.3, 0.02, 0.035), (CX, CY - 0.2, 0.88), 'white', bevel=0.004)
-label_block('mail_sign', (0.34, 0.02, 0.15), (CX, CY - 0.2, 0.72), 'mailbox_sign', bevel=0.003, face='front')
+kit.finalize(bpy.context.active_object, 'teal')
+# 前蓋（Fx_front，樞紐在下緣）：點擊時向前下方掀開，露出深色內膛
+material('mail_dark', srgb('#0b3b37'), rough=0.9)
+box('mail_inside', (0.42, 0.02, 0.28), (CX, CY - 0.185, 0.78), 'mail_dark', bevel=0)
+box('mail_front', (0.46, 0.025, 0.31), (CX, CY - 0.205, 0.785), 'teal', bevel=0.01, group='Fx_front')
+box('mail_slot', (0.3, 0.02, 0.035), (CX, CY - 0.22, 0.88), 'white', bevel=0.004, group='Fx_front')
+label_block('mail_sign', (0.34, 0.02, 0.15), (CX, CY - 0.22, 0.75), 'mailbox_sign', bevel=0.003, face='front', group='Fx_front')
+cyl('mail_knob', 0.022, 0.03, (CX, CY - 0.235, 0.66), 'flower_y', rot=(math.pi / 2, 0, 0), verts=10, group='Fx_front')
 box('mail_flag', (0.03, 0.16, 0.03), (CX + 0.27, CY, 0.95), 'flower_y', bevel=0.004)
 box('mail_flag_t', (0.03, 0.03, 0.12), (CX + 0.27, CY + 0.08, 1.01), 'flower_y', bevel=0.004)
 for i in range(3):
@@ -178,16 +183,41 @@ for k in range(4):
     box('record_book', (0.16, 0.11, 0.035), (GX - 0.12, GY + 0.12, 0.4 + k * 0.035), 'book_a' if k % 2 else 'book_b', rot=(0, 0, k * 0.12), bevel=0.004)
 
 # 信箱裡等著被「收進去」的三張反思卡（點擊時從投遞口彈出再落回）
+# 內膛裡的三張反思卡：各自是一個節點，前蓋掀開後依序緩緩升起
 for k in range(3):
-    label_block(f'drop_card_{k}', (0.2, 0.006, 0.13), (CX - 0.06 + k * 0.06, CY - 0.02 + k * 0.01, 1.0), f'refl_{k}', group='Fx_cards', bevel=0.002, face='front', rot=(0, 0, 0.15 * (k - 1)))
+    label_block(f'drop_card_{k}', (0.2, 0.006, 0.13), (CX - 0.1 + k * 0.1, CY - 0.15 + k * 0.012, 0.74), f'refl_{k}', group=f'Fx_card{k}', bevel=0.002, face='front', rot=(0, 0, 0.12 * (k - 1)))
+
+# 守望亭：可旋轉的探照燈＋光束（光束平常隱藏）、稽核紀錄簿封面可翻開
+material('beam_light', srgb('#fff2b8'), emit=srgb('#ffe28a'), emit_strength=3, alpha=0.35)
+cyl('search_base', 0.05, 0.04, (GX + 0.3, GY - 0.3, 0.72), 'white', verts=10)
+cyl('search_head', 0.055, 0.1, (GX + 0.3, GY - 0.36, 0.78), 'lamp', rot=(math.pi / 2, 0, 0), verts=12, group='Fx_search')
+cone('search_beam', 0.32, 0.05, 1.1, (GX + 0.3, GY - 0.95, 0.78), 'beam_light', verts=16, rot=(-math.pi / 2, 0, 0), group='FxHide_beam')
+box('log_cover', (0.17, 0.12, 0.012), (GX - 0.12, GY + 0.12, 0.555), 'book_b', bevel=0.003, group='Fx_logcover')
+box('log_page', (0.16, 0.11, 0.004), (GX - 0.12, GY + 0.12, 0.548), 'paper', bevel=0)
+
+# 公告看板前方的統計長條（不露個資，只有數字）：點擊時長高
+for k, (m, h) in enumerate([('teal', 0.12), ('flower_y', 0.18), ('flower_p', 0.09)]):
+    box(f'stat_bar_{k}', (0.09, 0.06, h), (BX - 0.15 + k * 0.15, BY - 0.2, h / 2 + 0.02), m, bevel=0.008, group=f'Fx_bar{k}')
+
+# 飲水台：平常隱藏的水柱，點擊時噴起
+cyl('water_jet', 0.025, 0.4, (WX, WY + 0.02, 0.78), 'water', verts=10, group='FxHide_jet')
 
 # ── 點擊動畫節點 ──
-kit.fx_node('Fx_lid', (CX, CY + 0.19, 0.96))
-kit.fx_node('Fx_cards', (CX, CY, 0.9))
-kit.fx_around('Fx_desk', DX, DY, r=0.3, z0=0.0, z1=0.8)
-kit.fx_around('Fx_kiosk', GX, GY, r=0.42, z0=0.09, z1=1.3, max_size=1.8)
-kit.fx_around('Fx_board', BX, BY, r=0.45, z0=0.1, z1=1.3)
-kit.fx_around('Fx_fountain', WX, WY, r=0.25, z0=0.0, z1=0.8)
+kit.fx_node('Fx_front', (CX, CY - 0.205, 0.63))
+for k in range(3):
+    kit.fx_node(f'Fx_card{k}', (CX - 0.1 + k * 0.1, CY - 0.15, 0.74))
+kit.fx_node('Fx_search', (GX + 0.3, GY - 0.3, 0.78))
+kit.reparent(kit.fx_node('FxHide_beam', (GX + 0.3, GY - 0.4, 0.78)), bpy.data.objects['Fx_search'])
+kit.fx_node('Fx_logcover', (GX - 0.205, GY + 0.12, 0.555))
+for k in range(3):
+    kit.fx_node(f'Fx_bar{k}', (BX - 0.15 + k * 0.15, BY - 0.2, 0.02))
+kit.fx_node('FxHide_jet', (WX, WY + 0.02, 0.58))
+# 違規登錄：筆電螢幕可再打開、螢幕上方浮出「已登錄」標籤（平常隱藏）
+material('logged', rough=0.6, tex=kit.label_texture('logged', '已登錄 +1', '#0f9b8e', size=(260, 90), font_size=48), emit=srgb('#ffffff'), emit_strength=0.6, emit_tex=True)
+label_block('logged_tag', (0.26, 0.01, 0.09), (DX, DY + 0.08, 0.66), 'logged', bevel=0.002, face='front', group='FxHide_logged')
+kit.fx_node('FxHide_logged', (DX, DY + 0.08, 0.6))
+kit.fx_extract('Fx_screen', (DX - 0.15, DY + 0.05, 0.4), (DX + 0.15, DY + 0.15, 0.55), max_size=0.3)
+kit.fx_node('Fx_screen', (DX, DY + 0.09, 0.395))
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'garden')

@@ -2,10 +2,10 @@
  * 介紹頁的全螢幕 3D 舞台：Canvas 佔滿整個視窗，箱庭不會被任何邊框裁切。
  * 空間導覽：熱點標記綁在模型各部位，點擊後鏡頭聚焦（Hotspots.tsx）。
  */
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { ContactShadows, OrbitControls, PerformanceMonitor } from '@react-three/drei';
-import { PCFShadowMap } from 'three';
+import { PCFShadowMap, type Group } from 'three';
 import type { Hotspot } from '../data/projects';
 import type { MutableRefObject } from 'react';
 import { CameraFocus, MarkerProjector, StageShift, type CardRefs } from './Hotspots';
@@ -27,6 +27,7 @@ export interface DomainStageProps {
 
 export default function DomainStage({ kind, accent, model, env, projectId, reducedMotion, hotspots = [], active = null, onPick, markers, cardRefs, pulse = 0 }: DomainStageProps) {
   const W = worldFor(kind, projectId);
+  const modelRef = useRef<Group>(null);
   // 自動品質：幀率持續偏低時降低解析度並關閉後製
   const [low, setLow] = useState(false);
   const post = allowEffects() && !low;
@@ -49,7 +50,7 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
       <World style={W} landscape={!env} />
       {env && (
         <Suspense fallback={null}>
-          <group position={[0, -0.4, 0]}><ModelDiorama url={env} release /></group>
+          <group position={[0, -0.4, 0]}><ModelDiorama url={env} release shadows="none" /></group>
         </Suspense>
       )}
       <ambientLight color={W.ambient} intensity={W.ambientI} />
@@ -59,7 +60,7 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
         intensity={W.sunI}
         position={[6, 11, 5]}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0005}
         shadow-normalBias={0.02}
         shadow-camera-left={-6}
@@ -69,11 +70,11 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
         shadow-camera-near={1}
         shadow-camera-far={34}
       />
-      <group position={[0, -0.4, 0]}>
+      <group position={[0, -0.4, 0]} ref={modelRef}>
         <Diorama kind={kind} accent={accent} model={model} lights fx={fx} />
       </group>
       {!env && <ContactShadows position={[0, -3.98, 0]} scale={18} blur={2.6} far={7} opacity={0.55} resolution={512} color="#000000" />}
-      {markers && <MarkerProjector hotspots={hotspots} markers={markers} active={active} cardRefs={cardRefs} />}
+      {markers && <MarkerProjector hotspots={hotspots} markers={markers} active={active} cardRefs={cardRefs} occluders={modelRef} />}
       <CameraFocus hotspot={focused ? hotspots[active!] : null} home={home} homeTarget={[0, 0.8, 0]} />
       <StageShift focused={focused} />
       <OrbitControls

@@ -7,7 +7,7 @@ const { launch, collect, OUT, BASE } = require('./_launch.cjs');
   const b = await launch();
   const p = await b.newPage({ viewport: { width: 1280, height: 800 } });
   const errs = collect(p);
-  await p.goto(BASE + (only !== undefined ? '?fxslow=60' : '') + '#/' + id); await p.reload();
+  await p.goto(BASE + (only !== undefined ? '?fxslow=' + (process.env.FX_SLOW || 20) : '') + '#/' + id); await p.reload();
   await p.waitForFunction(() => window.__stageGL, null, { timeout: 120000 });
   await p.waitForTimeout(+(process.env.QA_WAIT || 30000));
   const n = await p.locator('.tour-strip button').count();
@@ -21,7 +21,7 @@ const { launch, collect, OUT, BASE } = require('./_launch.cjs');
     const bad = (last?.found ?? []).filter((x) => x.endsWith(':0'));
     missing += bad.length;
     console.log(i, last ? last.found.join(' ') : 'NO TRIGGER', bad.length ? '  ← 找不到' : '');
-    if (only !== undefined) { await p.waitForTimeout(+(process.env.FX_AT || 22000)); await p.screenshot({ path: `${OUT}/fx-${id}-${i}.png`, timeout: 180000 }); }
+    if (only !== undefined) { await p.waitForTimeout(+(process.env.FX_AT || 25000)); await p.screenshot({ path: `${OUT}/fx-${id}-${i}.png`, timeout: 180000 }); }
   }
   console.log('missing nodes', missing, 'errors', errs.slice(0, 6)); await b.close();
 })();

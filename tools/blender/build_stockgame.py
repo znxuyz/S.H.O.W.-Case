@@ -92,7 +92,7 @@ for i, (s, h) in enumerate([(3.0, 0.16), (2.4, 0.16), (1.85, 0.14)]):
 TOP = 0.46
 bpy.ops.mesh.primitive_circle_add(vertices=64, radius=0.88, fill_type='NGON', location=(0, 0, TOP + 0.004))
 sig = bpy.context.active_object
-kit.finalize(sig, 'sigil', uv=False)
+kit.finalize(sig, 'sigil', uv=False, group='Fx_sigil')
 for poly in sig.data.polygons:
     for li in poly.loop_indices:
         v = sig.data.vertices[sig.data.loops[li].vertex_index].co
@@ -107,7 +107,7 @@ for k in range(4):
 # 股票契約卡（召喚媒介），浮在陣中央
 label_block('stock_card', (0.36, 0.02, 0.48), (0, -0.05, TOP + 0.42), 'card', group='Bob0', bevel=0.006, face='front')
 kit.torus('card_halo', 0.36, 0.01, (0, -0.05, TOP + 0.42), 'spirit_gold', rot=(math.pi / 2, 0, 0), group='Bob0', major=40, minor=6)
-cone('summon_beam', 0.8, 0.45, 1.2, (0, 0, TOP + 0.6), 'beam', verts=40)
+cone('summon_beam', 0.8, 0.45, 1.2, (0, 0, TOP + 0.6), 'beam', verts=40, group='Fx_beam')
 
 # ── 主角：十日金烏 + 魂環 ──
 HZ = TOP + 2.15
@@ -195,7 +195,7 @@ material('scroll', rough=0.85, tex=tex_scroll())
 QX, QY = 1.5, -1.45
 box('stele_base', (0.5, 0.3, 0.12), (QX, QY, 0.06), 'violet', bevel=0.02)
 label_block('stele', (0.42, 0.1, 0.6), (QX, QY, 0.42), 'quote', bevel=0.02, face='front', rot=(0, 0, 0.3))
-cone('stele_cap', 0.36, 0.05, 0.12, (QX, QY, 0.78), 'gold', verts=4, rot=(0, 0, math.pi / 4 + 0.3))
+cone('stele_cap', 0.36, 0.05, 0.12, (QX, QY, 0.78), 'gold', verts=4, rot=(0, 0, math.pi / 4 + 0.3), group='Fx_stelecap')
 # 神祇圖鑑（左前方，攤開的書）
 CBX, CBY = -1.4, -1.45
 box('codex_stand', (0.12, 0.12, 0.3), (CBX, CBY, 0.15), 'violet', bevel=0.01)
@@ -208,22 +208,52 @@ for k, (bx, by) in enumerate([(-1.6, 1.25), (1.25, 1.6)]):
     cone(f'flame_{k}', 0.15, 0.0, 0.4, (bx, by, 0.68), 'flame' if k == 0 else 'flame_v', verts=8, group=f'Pulse{k + 1}')
 SCX, SCY = -1.75, 0.3
 kit.beam('scroll_rod_t', (SCX, SCY - 0.14, 1.25), (SCX, SCY + 0.14, 1.25), 0.03, 'gold', round_=True)
-label_block('task_scroll', (0.02, 0.26, 0.6), (SCX, SCY, 0.92), 'scroll', bevel=0, rot=(0, 0, -math.pi / 2), face='front')
-kit.beam('scroll_rod_b', (SCX, SCY - 0.14, 0.6), (SCX, SCY + 0.14, 0.6), 0.03, 'gold', round_=True)
+label_block('task_scroll', (0.02, 0.26, 0.6), (SCX, SCY, 0.92), 'scroll', bevel=0, rot=(0, 0, -math.pi / 2), face='front', group='Fx_scroll')
+kit.beam('scroll_rod_b', (SCX, SCY - 0.14, 0.6), (SCX, SCY + 0.14, 0.6), 0.03, 'gold', round_=True, group='Fx_rodb')
 kit.beam('scroll_pole', (SCX - 0.05, SCY, 0), (SCX - 0.05, SCY, 1.3), 0.025, 'violet')
 
 # ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
-kit.fx_around('Fx_pillar', 1.4, -0.81, r=0.3, z0=0.03, z1=1.8)
-kit.fx_around('Fx_quote', 1.5, -1.45, r=0.35, z0=0.03, z1=1.3)
-kit.fx_around('Fx_codex', -1.4, -1.45, r=0.35, z0=0.03, z1=1.0)
-kit.fx_around('Fx_brazier', -1.6, 1.25, r=0.35, z0=0.03, z1=1.4)
+kit.fx_node('Fx_sigil', (0, 0, TOP))
+kit.fx_node('Fx_beam', (0, 0, TOP))
+kit.fx_node('Fx_stelecap', (QX, QY, 0.78))
+kit.fx_node('Fx_rodb', (SCX, SCY, 0.6))
+kit.fx_node('Fx_scroll', (SCX, SCY, 1.25))
+# 報價玉碑：平常隱藏的掃描光條（點擊時由下往上掃過碑面）
+material('scan_line', srgb('#bfffe8'), emit=srgb('#7dffd0'), emit_strength=5)
+box('scan', (0.46, 0.03, 0.025), (QX - 0.03, QY - 0.06, 0.16), 'scan_line', rot=(0, 0, 0.3), bevel=0, group='FxHide_scan')
+kit.fx_node('FxHide_scan', (QX - 0.03, QY - 0.06, 0.16))
+# 神祇圖鑑：沿書脊翻動的三張書頁（樞紐與書本同樣傾斜，平常隱藏）
+material('leaf', srgb('#f6e7c8'), rough=0.85)
+for k in range(3):
+    piv = bpy.data.objects.new(f'FxHide_page{k}', None)
+    bpy.context.scene.collection.objects.link(piv)
+    piv.location = (CBX, CBY, 0.375 + k * 0.004)
+    piv.rotation_euler = (0.35, 0, -0.25)
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0.15, 0, 0))
+    leaf = bpy.context.active_object
+    leaf.scale = (0.29, 0.38, 0.004)
+    bpy.ops.object.transform_apply(scale=True)
+    leaf.name = f'page_leaf_{k}'
+    leaf.data.materials.append(kit.MATS['leaf'])
+    leaf.parent = piv
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'altar')
 kit.pivot(kit.merge_group('Bob0', 'card'), 'Bob0', (0, -0.05, TOP + 0.42))
 for k, (bx, by) in enumerate([(-1.6, 1.25), (1.25, 1.6)]):
     kit.pivot(kit.merge_group(f'Pulse{k + 1}', f'flame{k}'), f'Pulse{k + 1}', (bx, by, 0.5))
-kit.pivot(kit.merge_group('Billboard0', 'beast'), 'Billboard0', (0, 0, HZ))
+bb0 = kit.pivot(kit.merge_group('Billboard0', 'beast'), 'Billboard0', (0, 0, HZ))
+# 靈翼：平常收起（隱藏），點擊時從肩部展開並大幅拍動
+material('wing', srgb('#ffe9b8'), emit=srgb('#ffc76b'), emit_strength=2.5)
+for side, name in ((-1, 'FxHide_wingL'), (1, 'FxHide_wingR')):
+    sx = side * 0.3
+    for k in range(6):
+        a = math.radians(-10 + k * 16)        # 羽毛由水平往上散開
+        L = 1.15 - abs(k - 2) * 0.12
+        cx = sx + side * math.cos(a) * L / 2
+        cz = HZ + 0.25 + math.sin(a) * L / 2
+        kit.box(f'feather_{k}', (L, 0.02, 0.13 - k * 0.008), (cx, 0.08, cz), 'wing', rot=(0, -side * a, 0), bevel=0.02, group=name)
+    kit.reparent(kit.fx_node(name, (sx, 0.08, HZ + 0.25)), bb0)
 kit.pivot(kit.merge_group('Spin0', 'ringa'), 'Spin0', (0, 0, HZ - 0.55))
 kit.pivot(kit.merge_group('SpinR0', 'ringb'), 'SpinR0', (0, 0, HZ - 0.35))
 kit.pivot(kit.merge_group('SpinR1', 'ringc'), 'SpinR1', (0, 0, HZ - 0.75))

@@ -135,8 +135,8 @@ for si, (x0, y0, w, h, bias) in enumerate(SECTORS):
         t = tier(bias)
         gap = 0.035
         cx, cy = tx + tw / 2, ty + th / 2
-        box('stock', (tw - gap, th - gap, height), (cx, cy, height / 2), f'heat_{t}', bevel=0.012, segs=1)
-        box('stock_cap', (tw - gap - 0.02, th - gap - 0.02, 0.012), (cx, cy, height + 0.006), f'cap_{t}', bevel=0)
+        box('stock', (tw - gap, th - gap, height), (cx, cy, height / 2), f'heat_{t}', bevel=0.012, segs=1, group=f'Fx_sector{si}')
+        box('stock_cap', (tw - gap - 0.02, th - gap - 0.02, 0.012), (cx, cy, height + 0.006), f'cap_{t}', bevel=0, group=f'Fx_sector{si}')
     label_block(f'sector_label_{si}', (min(0.62, w * 0.6), 0.02, 0.22), (x0 + w / 2, y0 - 0.02, 0.15), f'sector_{si}', bevel=0.004, face='front')
 
 # ── 拉普拉斯之眼 ──
@@ -208,8 +208,8 @@ for dx in (-0.5, 0.5):
 # 五大選股濾鏡：五片疊起的發光鏡環（左前方）
 FLX, FLY = -1.45, -1.3
 for i in range(5):
-    kit.torus(f'lens_ring_{i}', 0.32 - i * 0.02, 0.018, (FLX, FLY, 0.3 + i * 0.18), f'lens_{i}', group='SpinR2', major=32, minor=6)
-    cyl(f'lens_disc_{i}', 0.3 - i * 0.02, 0.006, (FLX, FLY, 0.3 + i * 0.18), 'lens', verts=24, group='SpinR2')
+    kit.torus(f'lens_ring_{i}', 0.32 - i * 0.02, 0.018, (FLX, FLY, 0.3 + i * 0.18), f'lens_{i}', group=f'Fx_lens{i}', major=32, minor=6)
+    cyl(f'lens_disc_{i}', 0.3 - i * 0.02, 0.006, (FLX, FLY, 0.3 + i * 0.18), 'lens', verts=24, group=f'Fx_lens{i}')
 kit.sphere('lens_pick', 0.06, (FLX, FLY, 1.25), 'cap_up3', seg=12, rings=8, group='Bob9')
 # ETF 籃子：由小方塊組成的立方體（左後方）
 ETX, ETY = -1.5, 1.45
@@ -217,7 +217,7 @@ for a in range(3):
     for b in range(3):
         for c in range(3):
             if (a + b + c) % 2 == 0 or c == 2:
-                box('etf_cell', (0.13, 0.13, 0.13), (ETX - 0.15 + a * 0.15, ETY - 0.15 + b * 0.15, 0.1 + c * 0.15), ['heat_up2', 'heat_dn2', 'heat_flat'][(a + b + c) % 3], bevel=0.01, segs=1)
+                box('etf_cell', (0.13, 0.13, 0.13), (ETX - 0.15 + a * 0.15, ETY - 0.15 + b * 0.15, 0.1 + c * 0.15), ['heat_up2', 'heat_dn2', 'heat_flat'][(a + b + c) % 3], bevel=0.01, segs=1, group=f'Fx_etf{c}')
 label_block('etf_tag', (0.3, 0.02, 0.18), (ETX, ETY - 0.26, 0.62), 'etf_label', bevel=0.004, face='front')
 # 資料塔（四角，帶閃爍燈）
 for (x, y) in [(1.8, 1.8), (-1.8, 1.8), (1.8, -1.8), (-1.8, -1.8)]:
@@ -226,10 +226,20 @@ for (x, y) in [(1.8, 1.8), (-1.8, 1.8), (1.8, -1.8), (-1.8, -1.8)]:
     kit.sphere('pylon_led', 0.03, (x, y, 0.75), 'neon_m', seg=8, rings=5)
 
 # ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
-kit.fx_around('Fx_heat', -0.8, 0.6, r=0.55, z0=0.03, z1=1.0, exclude=())
+for si in range(len(SECTORS)):
+    kit.fx_node(f'Fx_sector{si}', (0, 0, 0))
 kit.fx_node('Fx_kline', (KPX, KPY, 0.0))
-kit.fx_extract('Fx_etf', (ETX - 0.3, ETY - 0.3, 0.03), (ETX + 0.3, ETY + 0.3, 0.75), max_size=0.5, exclude=('stock',))
-kit.fx_node('Fx_etf', (ETX, ETY, 0.0))
+for c in range(3):
+    kit.fx_node(f'Fx_etf{c}', (ETX, ETY, 0.1 + c * 0.15))
+# K 線面板：平常隱藏的「W 底」霓虹框選
+for (sx, sz, dx, dz) in [(0.5, 0.02, 0, 0.16), (0.5, 0.02, 0, -0.16), (0.02, 0.34, 0.25, 0), (0.02, 0.34, -0.25, 0)]:
+    box('wmark', (sx, 0.02, sz), (KPX + 0.15 + dx, KPY - 0.04, 1.02 + dz), 'neon_c', bevel=0, group='FxHide_wmark')
+kit.reparent(kit.fx_node('FxHide_wmark', (KPX + 0.15, KPY - 0.04, 1.02)), bpy.data.objects['Fx_kline'])
+# 拉普拉斯之眼：全息投影柱（向上延伸）與雷射掃描環（由地面掃到眼睛），平常隱藏
+cyl('holo_pillar', 0.12, 1.2, (EX, EY, EZ + 0.6 + 0.3), 'neon_c', verts=16, group='FxHide_holo')
+kit.fx_node('FxHide_holo', (EX, EY, EZ + 0.3))
+kit.torus('laser_ring', 1.7, 0.012, (EX, EY, 0.3), 'neon_m', group='FxHide_laser', major=72, minor=4)
+kit.fx_node('FxHide_laser', (EX, EY, 0.3))
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'terrain')
@@ -239,7 +249,9 @@ kit.pivot(kit.merge_group('Spin0', 'ringa'), 'Spin0', (EX, EY, EZ))
 kit.pivot(kit.merge_group('SpinR0', 'ringb'), 'SpinR0', (EX, EY, EZ))
 kit.pivot(kit.merge_group('Spin1', 'ticker'), 'Spin1', (EX, EY, EZ - 0.75))
 kit.pivot(kit.merge_group('SpinR1', 'rewind'), 'SpinR1', (0, 0, 0.04))
-kit.pivot(kit.merge_group('SpinR2', 'lenses'), 'SpinR2', (FLX, FLY, 0))
+s2 = kit.pivot(kit.merge_group('SpinR2', 'lenses'), 'SpinR2', (FLX, FLY, 0))
+for i in range(5):
+    kit.reparent(kit.fx_node(f'Fx_lens{i}', (FLX, FLY, 0.3 + i * 0.18)), s2)
 kit.pivot(kit.merge_group('Bob9', 'pick'), 'Bob9', (FLX, FLY, 1.25))
 for i in range(7):
     a = i / 7 * math.tau

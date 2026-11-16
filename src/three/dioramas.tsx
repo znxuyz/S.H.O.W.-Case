@@ -449,7 +449,7 @@ export function Diorama({ kind, accent, lights = false, model, lod = false, fx =
   if (model) {
     return (
       <Suspense fallback={<Diorama kind={kind} accent={accent} lights={lights} />}>
-        <ModelDiorama url={lod ? model.replace(/^models\//, 'models/map/') : model} release={!lod} fx={fx} />
+        <ModelDiorama url={lod ? model.replace(/^models\//, 'models/map/') : model} release={!lod} fx={fx} shadows={lod ? 'cast' : 'full'} />
         {lights && (
           <>
             <pointLight color="#9fd8ff" intensity={6} distance={6} position={[0, 1.6, 0.6]} />

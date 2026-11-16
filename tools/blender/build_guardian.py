@@ -65,15 +65,16 @@ bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 kit.finalize(roof, 'roof_red', bevel=0.02)
 for dx in (-0.25, 0.25):
     box('house_window', (0.2, 0.02, 0.2), (TX + 0.05 + dx, TY - 0.31, 1.88), 'lamp', bevel=0)
-label_block('blackboard', (0.62, 0.03, 0.42), (TX + 0.05, TY - 0.72, 1.82), 'chalk', bevel=0.006, face='front')
-box('board_frame', (0.68, 0.025, 0.48), (TX + 0.05, TY - 0.705, 1.82), 'wood_light', bevel=0.004)
+label_block('blackboard', (0.62, 0.03, 0.42), (TX + 0.05, TY - 0.72, 1.82), 'chalk', bevel=0.006, face='front', group='Fx_board')
+box('board_frame', (0.68, 0.025, 0.48), (TX + 0.05, TY - 0.705, 1.82), 'wood_light', bevel=0.004, group='Fx_board')
 for (dx, dy, dz, r, m) in [(-0.7, 0.2, 2.75, 0.75, 'leaf_dark'), (0.6, 0.1, 2.7, 0.7, 'leaf'), (0.0, 0.45, 3.1, 0.85, 'leaf'),
                            (-0.35, -0.2, 3.2, 0.55, 'leaf_dark'), (0.45, -0.25, 3.15, 0.5, 'leaf'), (0.05, 0.1, 3.55, 0.55, 'leaf_dark'),
                            (-0.95, 0.5, 2.35, 0.45, 'leaf'), (0.95, 0.55, 2.4, 0.45, 'leaf_dark')]:
     ico('canopy', r, (TX + dx, TY + dy, dz), m, sub=2)
-for (dx, dz) in [(-0.85, 2.25), (0.85, 2.2), (-0.4, 2.45)]:
-    beam('lamp_cord', (TX + dx, TY - 0.45, dz + 0.2), (TX + dx, TY - 0.45, dz + 0.08), 0.01, 'bark', round_=True)
-    kit.sphere('lantern', 0.07, (TX + dx, TY - 0.45, dz), 'lamp', seg=12, rings=8)
+GLANTS = [(-0.85, 2.25), (0.85, 2.2), (-0.4, 2.45)]
+for k, (dx, dz) in enumerate(GLANTS):
+    beam('lamp_cord', (TX + dx, TY - 0.45, dz + 0.2), (TX + dx, TY - 0.45, dz + 0.08), 0.01, 'bark', round_=True, group=f'Fx_glant{k}')
+    kit.sphere('lantern', 0.07, (TX + dx, TY - 0.45, dz), 'lamp', seg=12, rings=8, group=f'Fx_glant{k}')
 
 # ── 進化之路：四座石台與角色看板 ──
 STAGES = [('bear-egg.png', 0.55), ('bear-baby.png', 0.72), ('bear-adult.png', 0.92), ('bear-guardian.png', 1.2)]
@@ -81,7 +82,7 @@ SPOTS = [(-1.4, -1.05, 0.14), (-0.5, -1.38, 0.28), (0.45, -1.38, 0.42), (1.35, -
 for i, ((img, h), (x, y, ph)) in enumerate(zip(STAGES, SPOTS)):
     cyl('pedestal', 0.34, ph, (x, y, ph / 2), 'stone_light', verts=20, bevel=0.02)
     cyl('pedestal_cap', 0.38, 0.06, (x, y, ph + 0.03), 'mossy_stone', verts=20, bevel=0.01)
-    kit.torus('pedestal_ring', 0.33, 0.014, (x, y, ph + 0.065), 'rune', major=40, minor=6)
+    kit.torus('pedestal_ring', 0.33, 0.014, (x, y, ph + 0.065), 'rune', major=40, minor=6, group=f'Fx_rune{i}')
     kit.image_card(f'stage_{i}', os.path.join(PETS, img), h, (x, y, ph + 0.06 + h / 2), group=f'Billboard{i}')
 for a, b in zip(SPOTS, SPOTS[1:]):
     for t in (0.35, 0.65):
@@ -153,14 +154,14 @@ box('stall_counter', (0.6, 0.3, 0.32), (SX2, SY2, 0.16), 'stall', bevel=0.02)
 for dx in (-0.27, 0.27):
     cyl('stall_post', 0.018, 0.5, (SX2 + dx, SY2 + 0.1, 0.57), 'stall', verts=6)
 for k in range(6):
-    box('awning', (0.11, 0.42, 0.02), (SX2 - 0.275 + k * 0.11, SY2 - 0.02, 0.83), 'awning_a' if k % 2 else 'awning_b', rot=(0.35, 0, 0), bevel=0)
+    box('awning', (0.11, 0.42, 0.02), (SX2 - 0.275 + k * 0.11, SY2 - 0.02, 0.83), 'awning_a' if k % 2 else 'awning_b', rot=(0.35, 0, 0), bevel=0, group='Fx_awning')
 for k, m in enumerate(['flag_r', 'flag_b', 'flag_y', 'bowl']):
-    box('prize', (0.09, 0.09, 0.09), (SX2 - 0.2 + k * 0.13, SY2 - 0.02, 0.37), m, rot=(0, 0, k * 0.4), bevel=0.012)
+    box('prize', (0.09, 0.09, 0.09), (SX2 - 0.2 + k * 0.13, SY2 - 0.02, 0.37), m, rot=(0, 0, k * 0.4), bevel=0.012, group=f'Fx_prize{k}')
 kit.sphere('coin', 0.05, (SX2 + 0.2, SY2 - 0.16, 0.36), 'gold', seg=12, rings=6, scale=(1, 0.3, 1), group='Spin2')
 # 領地佔領戰：三色旗插在小丘上
 for k, (fx, fy, m) in enumerate([(0.15, 0.35, 'flag_r'), (0.45, 0.6, 'flag_b'), (-0.15, 0.62, 'flag_y')]):
     cyl('flag_pole', 0.012, 0.6, (fx, fy, 0.3), 'stall', verts=6)
-    box('flag', (0.2, 0.01, 0.12), (fx + 0.1, fy, 0.53), m, bevel=0)
+    box('flag', (0.2, 0.01, 0.12), (fx + 0.1, fy, 0.53), m, bevel=0, group=f'Fx_flag{k}')
 # 餵食碗
 for k, (bx, by) in enumerate([(-0.95, -1.2), (0.0, -1.62), (0.9, -1.55)]):
     cyl('bowl', 0.07, 0.04, (bx, by, 0.02), 'bowl', verts=14)
@@ -170,9 +171,23 @@ cyl('sign_post', 0.025, 0.5, (-1.75, -1.4, 0.25), 'stall', verts=6)
 kit.label_block('sign', (0.5, 0.03, 0.17), (-1.62, -1.45, 0.48), 'sign_board', bevel=0.006, face='front', rot=(0, 0, 0.35))
 
 # ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
-kit.fx_around('Fx_class', -0.2, 0.35, r=0.5, z0=1.1, z1=2.4)
-kit.fx_around('Fx_shop', -1.35, -0.35, r=0.38, z0=0.03, z1=1.1)
-kit.fx_around('Fx_flags', 0.2, 0.5, r=0.3, z0=0.03, z1=1.0)
+for i, (x, y, ph) in enumerate(SPOTS):
+    kit.fx_node(f'Fx_rune{i}', (x, y, ph + 0.065))
+kit.fx_node('Fx_board', (TX + 0.05, TY - 0.71, 1.82))
+for k, (dx, dz) in enumerate(GLANTS):
+    kit.fx_node(f'Fx_glant{k}', (TX + dx, TY - 0.45, dz + 0.2))
+kit.fx_node('Fx_awning', (SX2, SY2 + 0.18, 0.9))
+for k in range(4):
+    kit.fx_node(f'Fx_prize{k}', (SX2 - 0.2 + k * 0.13, SY2 - 0.02, 0.37))
+for k, (fx, fy) in enumerate([(0.15, 0.35), (0.45, 0.6), (-0.15, 0.62)]):
+    kit.fx_node(f'Fx_flag{k}', (fx, fy, 0.53))
+# 守護神獸石台上的進化光柱（平常隱藏）
+material('evolve_beam', srgb('#fff2b8'), emit=srgb('#ffd27a'), emit_strength=3, alpha=0.4)
+cyl('evolve_pillar', 0.3, 1.6, (SPOTS[3][0], SPOTS[3][1], SPOTS[3][2] + 0.86), 'evolve_beam', verts=24, group='FxHide_evolve')
+kit.fx_node('FxHide_evolve', (SPOTS[3][0], SPOTS[3][1], SPOTS[3][2] + 0.06))
+# 照護站：心跳時浮現的醫療十字光（平常隱藏）
+kit.sphere('care_glow', 0.12, (CX - 0.12, CY - 0.45, 0.62), 'cross', seg=14, rings=8, group='FxHide_care')
+kit.fx_node('FxHide_care', (CX - 0.12, CY - 0.45, 0.62))
 
 # ── 合併、樞紐、匯出 ──
 kit.merge_group('static', 'forest')

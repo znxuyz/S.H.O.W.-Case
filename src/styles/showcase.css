@@ -142,17 +142,22 @@
 .tour-strip .tour-home { padding: 0.42rem 0.8rem; }
 
 .tour-card { position: absolute; right: clamp(4rem, 6vw, 6rem); top: 50%; transform: translateY(-50%); width: min(23rem, calc(100vw - 2rem));
-  padding: 1.2rem 1.3rem 1.1rem; border-radius: 1.1rem; background: var(--chrome-bg); border: 1px solid var(--line-strong);
-  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.6), 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+  padding: 1.2rem 1.3rem 1.1rem; border-radius: 1.1rem;
+  /* 高不透明深色底＋背景模糊＋清楚邊框：背後光環再亮，文字也清楚（卡片內統一改用淺色字） */
+  --fg: #f5f3ee; --muted: #c9c5bd; --line: rgba(255, 255, 255, 0.16); --line-strong: rgba(255, 255, 255, 0.24);
+  color: var(--fg); background: rgba(15, 15, 20, 0.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, rgba(255, 255, 255, 0.18));
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   animation: card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
 @keyframes card-in { from { opacity: 0; transform: translateY(-50%) translateX(18px) scale(0.97); } }
 .tour-card-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.6rem; }
 .tour-card-head button { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; color: var(--fg); border: 1px solid var(--line); cursor: pointer; }
-.tour-card-num { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600; color: var(--accent); }
+.tour-card-num { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600; color: color-mix(in srgb, var(--accent) 70%, white); }
 .tour-card-num small { color: var(--muted); font-weight: 400; }
 .tour-card-code { font-size: 0.72rem; letter-spacing: 0.1em; color: var(--muted); }
 .tour-card h3 { font-family: var(--font-display); font-size: 1.35rem; font-weight: 700; line-height: 1.3; color: var(--fg); }
-.tour-card p { margin-top: 0.6rem; font-size: 0.9rem; line-height: 1.8; color: var(--muted); }
+.tour-card p { margin-top: 0.6rem; font-size: 0.92rem; line-height: 1.8; color: var(--muted); }
+.tour-card h3 { text-shadow: none; }
 .tour-card-nav { margin-top: 1rem; display: flex; justify-content: space-between; gap: 0.5rem; }
 .tour-card-nav button { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.45rem 0.8rem; border-radius: 999px; font-size: 0.78rem; color: var(--fg); border: 1px solid var(--line); cursor: pointer; transition: background 0.2s; }
 .tour-card-nav button:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }

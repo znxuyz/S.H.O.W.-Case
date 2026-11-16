@@ -622,3 +622,11 @@ def fx_node(name, piv):
 def fx_around(name, x, y, r=0.3, z0=0.0, z1=2.0, src='static', piv=None, max_size=1.2, exclude=('rail', 'ballast', 'sleeper', 'root', 'stock')):
     fx_extract(name, (x - r, y - r, z0), (x + r, y + r, z1), src=src, max_size=max_size, exclude=exclude)
     return fx_node(name, piv or (x, y, z0))
+
+
+def reparent(child, parent):
+    """把節點掛到另一個節點底下（保持世界座標不變），例如把封面樞紐掛進會面向鏡頭的看板節點"""
+    bpy.context.view_layer.update()   # 新建的空物件要更新後 matrix_world 才正確
+    child.parent = parent
+    child.matrix_parent_inverse = parent.matrix_world.inverted()
+    return child

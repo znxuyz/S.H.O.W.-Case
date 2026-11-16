@@ -137,7 +137,7 @@ for d in range(5):
             kit.cyl(f'slot_glow_{i}', 0.04, 0.01, (x, y, 0.03), 'thread', verts=12)
             label_block(f'Drop_{i}', (CW - 0.08, CH - 0.08, BH), (x, y, BH / 2 + 0.55), f'subj_{subj}', group=f'Drop_{i}')
         else:
-            label_block(f'cell_{d}_{p}', (CW - 0.08, CH - 0.08, BH), (x, y, BH / 2 + 0.01), f'subj_{subj}')
+            label_block(f'cell_{d}_{p}', (CW - 0.08, CH - 0.08, BH), (x, y, BH / 2 + 0.01), f'subj_{subj}', group=f'Fx_day{d}')
 
 # 約束線：同一位老師（數學）的課以發光弧線相連 → 不能撞堂
 math_cells = [cells[(d, p)] for d in range(5) for p in range(6) if TIMETABLE[d][p] == '數學' and (d, p) not in DROPS]
@@ -160,11 +160,13 @@ for x in (-1.75, 1.75):
     box('bridge_shoe', (0.2, 0.26, 0.14), (x, BY0, GZ + 0.1), 'brass_dark', group='GantryBridge', bevel=0.015)
 HX0 = -0.4
 box('head_carriage', (0.26, 0.24, 0.18), (HX0, BY0, GZ + 0.11), 'brass', group='GantryHead', bevel=0.02)
-cyl('head_rod', 0.025, 0.7, (HX0, BY0, GZ - 0.3), 'steel', group='GantryHead')
-box('gripper_plate', (0.22, 0.06, 0.03), (HX0, BY0, GZ - 0.66), 'steel_dark', group='GantryHead', bevel=0.005)
+# 吊掛組：鋼索（可伸長）＋夾爪（隨鋼索下降、爪子張開）＋夾著的積木；整組可水平轉向
+cyl('head_rod', 0.025, 0.7, (HX0, BY0, GZ - 0.3), 'steel', group='Fx_cable')
+box('gripper_plate', (0.22, 0.06, 0.03), (HX0, BY0, GZ - 0.66), 'steel_dark', group='Fx_grip', bevel=0.005)
 for s in (-1, 1):
-    box('gripper_claw', (0.02, 0.05, 0.12), (HX0 + s * 0.24, BY0, GZ - 0.73), 'steel_dark', group='GantryHead', bevel=0.004)
-label_block('carried', (CW - 0.08, CH - 0.08, BH), (HX0, BY0, GZ - 0.75), 'subj_自然', group='GantryHead')
+    box('gripper_claw', (0.02, 0.05, 0.12), (HX0 + s * 0.24, BY0, GZ - 0.73), 'steel_dark', group='Fx_claw' + ('L' if s < 0 else 'R'), bevel=0.004)
+label_block('carried', (CW - 0.08, CH - 0.08, BH), (HX0, BY0, GZ - 0.75), 'subj_自然', group='Fx_grip')
+kit.ico('arm_hub', 0.03, (HX0, BY0, GZ + 0.02), 'steel_dark', sub=1, group='Fx_arm')
 kit.ico('head_light', 0.04, (HX0, BY0 - 0.13, GZ + 0.11), 'thread', sub=1, group='GantryHead')
 
 # ───────────────────────── 懸浮時鐘（時段） ─────────────────────────
@@ -195,24 +197,31 @@ material('zero', rough=0.4, tex=kit.label_texture('zero', '硬衝突 0', '#0d2a5
 for k in range(5):
     x, y = -1.35 + k * 0.32, -1.68
     m = 'pawn_t' if k % 2 == 0 else 'pawn_h'
-    kit.cone('pawn_body', 0.09, 0.04, 0.2, (x, y, 0.1), m, verts=16)
-    kit.sphere('pawn_head', 0.055, (x, y, 0.25), m, seg=12, rings=8)
+    kit.cone('pawn_body', 0.09, 0.04, 0.2, (x, y, 0.1), m, verts=16, group=f'Fx_pawn{k}')
+    kit.sphere('pawn_head', 0.055, (x, y, 0.25), m, seg=12, rings=8, group=f'Fx_pawn{k}')
     box('meter_bg', (0.05, 0.02, 0.3), (x + 0.12, y, 0.15), 'meter_bg', bevel=0)
     h = [0.18, 0.24, 0.29, 0.14, 0.22][k]
-    box('meter_fill', (0.04, 0.025, h), (x + 0.12, y - 0.003, h / 2 + 0.005), 'meter_hi' if h > 0.27 else 'meter_ok', bevel=0)
+    box('meter_fill', (0.04, 0.025, h), (x + 0.12, y - 0.003, h / 2 + 0.005), 'meter_hi' if h > 0.27 else 'meter_ok', bevel=0, group=f'Fx_meter{k}')
 for k, (x, m) in enumerate([(0.55, 'phase1'), (1.2, 'phase2')]):
     box('tray', (0.55, 0.36, 0.06), (x, -1.68, 0.03), 'tray', bevel=0.01)
     for j in range(3):
-        label_block(f'tray_block_{k}_{j}', (0.14, 0.11, 0.07), (x - 0.17 + j * 0.17, -1.66, 0.1), f"subj_{['體育', '音樂', '美勞'][j] if k == 0 else ['國語', '數學', '社會'][j]}", bevel=0.01)
+        label_block(f'tray_block_{k}_{j}', (0.14, 0.11, 0.07), (x - 0.17 + j * 0.17, -1.66, 0.1), f"subj_{['體育', '音樂', '美勞'][j] if k == 0 else ['國語', '數學', '社會'][j]}", bevel=0.01, group=f'Fx_tray{k}_{j}')
     label_block(f'tray_label_{k}', (0.42, 0.02, 0.24), (x, -1.88, 0.16), m, bevel=0.004, face='front')
 cyl('beacon_pole', 0.025, 0.6, (1.85, -1.2, 0.3), 'steel_dark', verts=8)
 kit.sphere('beacon_lamp', 0.07, (1.85, -1.2, 0.64), 'ok_lamp', seg=14, rings=8, group='Pulse0')
 label_block('zero_sign', (0.36, 0.02, 0.15), (1.85, -1.32, 0.42), 'zero', bevel=0.004, face='front')
 
 # ── 點擊動畫節點（熱點附近的零件抽出成 Fx_ 節點） ──
-kit.fx_node('Fx_thread', (0.0, 0.0, 0.0))
-kit.fx_around('Fx_pieces', -0.75, -1.68, r=0.38, z0=0.03, z1=0.8)
-kit.fx_around('Fx_trays', 0.9, -1.75, r=0.4, z0=0.03, z1=0.8)
+kit.fx_node('Fx_thread', (0.0, 0.0, BH))
+for d in range(5):
+    kit.fx_node(f'Fx_day{d}', (GX0 + CW * (d + 0.5), 0, 0))
+for k in range(5):
+    x = -1.35 + k * 0.32
+    kit.fx_node(f'Fx_pawn{k}', (x, -1.68, 0.0))
+    kit.fx_node(f'Fx_meter{k}', (x + 0.12, -1.68, 0.005))
+for k, x in enumerate((0.55, 1.2)):
+    for j in range(3):
+        kit.fx_node(f'Fx_tray{k}_{j}', (x - 0.17 + j * 0.17, -1.66, 0.065))
 
 # ───────────────────────── 合併、設定樞紐、匯出 ─────────────────────────
 kit.merge_group('static', 'engine')
@@ -227,7 +236,11 @@ for i, (d, p) in enumerate(DROPS):
 # 機械臂頭掛在橫樑下，跟著橫樑移動
 kit.pivot(kit.merge_group('Pulse0', 'beacon'), 'Pulse0', (1.85, -1.2, 0.64))
 head, bridge = pivots['GantryHead'], pivots['GantryBridge']
-head.parent = bridge
-head.matrix_parent_inverse = bridge.matrix_world.inverted()
+kit.reparent(head, bridge)
+arm = kit.reparent(kit.fx_node('Fx_arm', (HX0, BY0, GZ)), head)
+kit.reparent(kit.fx_node('Fx_cable', (HX0, BY0, GZ + 0.05)), arm)
+grip = kit.reparent(kit.fx_node('Fx_grip', (HX0, BY0, GZ - 0.66)), arm)
+kit.reparent(kit.fx_node('Fx_clawL', (HX0 - 0.24, BY0, GZ - 0.67)), grip)
+kit.reparent(kit.fx_node('Fx_clawR', (HX0 + 0.24, BY0, GZ - 0.67)), grip)
 
 kit.export(OUT)
