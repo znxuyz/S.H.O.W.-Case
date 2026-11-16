@@ -166,7 +166,8 @@ export function StageShift({ focused }: { focused: boolean }) {
     const wide = size.width / size.height > 1.05 && size.width >= 1024;
     // 全景：主體略偏右（左上角留給標題）；聚焦：主體偏左（右側留給說明卡）
     const tx = wide ? (focused ? 0.02 : -0.08) : 0;
-    const ty = wide ? 0 : focused ? 0.16 : -0.06;
+    // 直式手機：全景時主體放在「標題卡下緣 ~ 底部導覽列」之間的空白中央；聚焦時往上移到說明卡（底部抽屜）上方
+    const ty = wide ? 0 : focused ? 0.13 : -0.07;
     if (!cur.current) cur.current = [tx, ty];
     const c = cur.current;
     const done = Math.abs(c[0] - tx) < 1e-4 && Math.abs(c[1] - ty) < 1e-4;

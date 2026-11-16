@@ -82,7 +82,7 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
       </div>
       <div className="corner-veil" aria-hidden />
 
-      <div ref={root} className={`tour scene-${project.theme}`}>
+      <div ref={root} className={`tour scene-${project.theme} ${h ? 'is-focused' : ''}`}>
         {/* 左上：極簡標題卡 */}
         <header className="tour-title">
           <div className="sc-kicker reveal">
