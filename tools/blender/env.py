@@ -249,3 +249,71 @@ def cradle(floor, style='mound', top=-1.25, r_top=3.2, mats=('rock', 'grass'), a
             a = i / 10 * math.tau + 0.3
             r = r_top * 1.25
             kit.ico('cradle_cloud', rnd.uniform(0.7, 1.1), (math.cos(a) * r, math.sin(a) * r, top - 0.9 + rnd.uniform(-0.3, 0.3)), rock, sub=2, scale=(1.4, 1.1, 0.55), group=group)
+
+
+# ───────────────────────── 鏡頭環繞淨空：自動環繞時不能被環境擋住 ─────────────────────────
+# 網站鏡頭（Blender 座標）：注視點 z = 1.2；全景時桌機在水平距離 14.85、高度 6.9，手機直式拉遠 1.75 倍。
+ORBIT_CAMS = ((14.85, 6.9), (25.99, 11.78))
+ORBIT_TARGET_Z = 1.2
+ORBIT_CLEAR_R = 27.5     # 被擋的物件整組推到這個水平半徑以外（兩種鏡頭的環繞圈都在內側）
+
+
+def _bbox(o):
+    from mathutils import Vector
+    cs = [o.matrix_world @ Vector(c) for c in o.bound_box]
+    xs = [c.x for c in cs]; ys = [c.y for c in cs]; zs = [c.z for c in cs]
+    cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+    e = max(max(xs) - min(xs), max(ys) - min(ys)) / 2
+    return cx, cy, e, min(zs), max(zs)
+
+
+def _blocks(d, e, zmin, zmax):
+    """物件（水平距離 d、半徑 e、高度 zmin..zmax）是否會擋到任一鏡頭的環繞視線（鏡頭→主島外緣這段）"""
+    for R, zc in ORBIT_CAMS:
+        t0, t1 = max(d - e, 3.5), min(d + e, R)
+        if t0 > t1:
+            continue
+        line = lambda t: ORBIT_TARGET_Z + (zc - ORBIT_TARGET_Z) * t / R
+        if zmax > line(t0) - 0.3 and zmin < line(t1):
+            return True
+    return False
+
+
+def _clear_pass(objs):
+    info = {o: _bbox(o) for o in objs}
+    shifted = {}
+    for o, (cx, cy, e, zmin, zmax) in info.items():
+        d = math.hypot(cx, cy)
+        # 花瓣、螢火蟲、小光點這類微小粒子不會擋住視線，保留原本的環繞配置
+        tiny = e < 0.3 and zmax - zmin < 0.6
+        if e > 20 or d < 1e-3 or tiny or o in shifted or not _blocks(d, e, zmin, zmax):
+            continue
+        k = (ORBIT_CLEAR_R + e - d) / d
+        dx, dy = cx * k, cy * k
+        # 同一處的零件一起移動（半徑取被擋物件的大小＋0.6）
+        for p, (px, py, pe, _, _) in info.items():
+            if p not in shifted and pe <= 20 and math.hypot(px - cx, py - cy) <= e + 0.6:
+                shifted[p] = (dx, dy)
+    for o, (dx, dy) in shifted.items():
+        o.location.x += dx
+        o.location.y += dy
+    if shifted:
+        import bpy
+        bpy.context.view_layer.update()
+    return len(shifted)
+
+
+def clear_orbit(groups=None):
+    """把會擋住鏡頭環繞視線的環境物件（連同同一處的其他零件，例如樹幹＋樹冠）沿徑向推到環繞圈外。
+    地形這類大面積物件不動；主島正下方的底座（距中心 3.5 以內）不受影響。
+    groups 預設為所有群組（包含熱氣球、漂浮物等動畫群組）；重複檢查到完全沒有遮擋為止（最多 4 輪）。"""
+    names = groups or list(kit.GROUPS.keys())
+    objs = [o for g in names for o in kit.GROUPS.get(g, [])]
+    total = 0
+    for _ in range(4):
+        n = _clear_pass(objs)
+        total += n
+        if n == 0:
+            break
+    print(f'orbit-clear moved {total} parts')
+    return total

@@ -85,6 +85,8 @@ material('cr_jade', srgb('#e8e4d8'), rough=0.5)
 material('cr_red', srgb('#b8323a'), rough=0.6)
 material('cr_gold', srgb('#ffd27a'), emit=srgb('#ffc24a'), emit_strength=2.0)
 env.cradle(-12.0, 'tiers', mats=('cr_jade', 'cr_red'), accent='cr_gold', stair_mat='cr_jade')
+# 鏡頭環繞淨空：會擋住自動環繞視線的物件推到環繞圈外
+env.clear_orbit()
 kit.merge_group('env', 'env')
 for i, (name, a, r, z, h) in enumerate([('zhang-yu-mo-huang', 1.1, 42, 6, 16), ('bing-jing-die-xian', 2.5, 40, 8, 14), ('ba-gua-jing-dun', 0.3, 44, 4, 13)]):
     kit.pivot(kit.merge_group(f'Billboard{i}', f'spirit{i}'), f'Billboard{i}', (math.cos(a) * r, math.sin(a) * r, z))

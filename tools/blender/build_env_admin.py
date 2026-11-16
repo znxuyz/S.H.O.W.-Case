@@ -115,6 +115,8 @@ material('cr_b1', srgb('#c2410c'), rough=0.7)
 material('cr_b2', srgb('#2f5a8a'), rough=0.7)
 material('cr_b3', srgb('#e8b04a'), rough=0.7)
 env.cradle(F, 'books', mats=('cr_b1', 'cr_b2', 'cr_b1', 'cr_b2', 'cr_b3'))
+# 鏡頭環繞淨空：會擋住自動環繞視線的物件推到環繞圈外
+env.clear_orbit()
 kit.merge_group('env', 'env')
 kit.pivot(kit.merge_group('Bob0', 'steam'), 'Bob0', (CX, CY, F + 8))
 kit.export(OUT)

@@ -6,7 +6,7 @@ NAME="$1"
 PY="${BLENDER_PY:-.blender-venv/bin/python}"
 TMP="$(mktemp -d)"
 RAW="$TMP/${NAME}-raw.glb"
-"$PY" "tools/blender/build_${NAME}.py" "$RAW" | grep -E "^(objects=|exported|fx |tris-top)"
+"$PY" "tools/blender/build_${NAME}.py" "$RAW" | grep -E "^(objects=|exported|fx |tris-top|orbit-clear)"
 if [[ "$NAME" != env_* ]]; then
   # 主模型：掛上共用的法線／粗糙度細節貼圖（環境在網站端用 Lambert，不需要）
   node tools/blender/detail_maps.mjs "$RAW" "$TMP/${NAME}-detail.glb"

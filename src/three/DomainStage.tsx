@@ -5,7 +5,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, PerformanceMonitor, useProgress } from '@react-three/drei';
-import { PCFShadowMap, Vector3, type Group } from 'three';
+import { PCFShadowMap, Raycaster, Vector3, type Group, type Mesh, type Scene } from 'three';
 import type { Hotspot } from '../data/projects';
 import type { MutableRefObject } from 'react';
 import { CameraFocus, MarkerProjector, StageShift, type CardRefs } from './Hotspots';
@@ -79,7 +79,7 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
       dpr={low ? 1 : [1, 1.5]}
       camera={{ position: home, fov: 32, near: 0.1, far: 300 }}
       onPointerMissed={() => onPick?.(null)}
-      onCreated={({ gl, scene }) => { gl.debug.checkShaderErrors = import.meta.env.DEV; const w = window as unknown as { __stageGL?: unknown; __stageScene?: unknown }; w.__stageGL = gl; w.__stageScene = scene; }}
+      onCreated={({ gl, scene }) => { gl.debug.checkShaderErrors = import.meta.env.DEV; const w = window as unknown as { __stageGL?: unknown; __stageScene?: unknown; __orbitCheck?: unknown }; w.__stageGL = gl; w.__stageScene = scene; w.__orbitCheck = (m: number) => orbitCheck(scene, m); }}
       gl={GL_OPTS}
       frameloop={live ? 'always' : 'never'}
     >
@@ -168,4 +168,25 @@ function ShadowOnDemand({ ready, pulse }: { ready: boolean; pulse: number }) {
   useEffect(() => { until.current = performance.now() + 4000; }, [ready, pulse]);
   useFrame(() => { if (performance.now() < until.current) gl.shadowMap.needsUpdate = true; });
   return null;
+}
+
+/**
+ * QA：沿著自動環繞的鏡頭路徑（全景距離 × m 倍，m=1 桌機、1.75 手機直式），每 10° 從鏡頭往主體中心打射線，
+ * 回報被 3D 環境擋住的角度（tools/qa/orbit.cjs 使用）。
+ */
+function orbitCheck(scene: Scene, m: number) {
+  const env = scene.children.find((c) => c.type === 'Group' && c.children.length > 0 && c.position.y === -0.4) ?? null;
+  const target = new Vector3(0, 0.8, 0);
+  const ray = new Raycaster();
+  const out: { deg: number; hit: number; dist: number }[] = [];
+  for (let deg = 0; deg < 360; deg += 10) {
+    const a = (deg * Math.PI) / 180;
+    const r = 10.5 * Math.SQRT2 * m;
+    const cam = new Vector3(Math.sin(a) * r, 6.5 * m, Math.cos(a) * r);
+    const dir = target.clone().sub(cam); const dist = dir.length(); dir.normalize();
+    ray.set(cam, dir); ray.far = dist - 3.2;   // 只看鏡頭到主島外緣之間
+    const hits = env ? ray.intersectObject(env, true).filter((h) => (h.object as Mesh).isMesh && h.object.visible) : [];
+    if (hits.length) out.push({ deg, hit: +hits[0].distance.toFixed(1), dist: +dist.toFixed(1), name: hits[0].object.name, y: +hits[0].point.y.toFixed(1), at: [+hits[0].point.x.toFixed(1), +hits[0].point.z.toFixed(1)] } as never);
+  }
+  return out;
 }

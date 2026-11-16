@@ -82,5 +82,7 @@ material('cr_metal', srgb('#1a2230'), rough=0.35, metal=0.8)
 material('cr_strut', srgb('#2a3548'), rough=0.4, metal=0.7)
 material('cr_neon', srgb('#22e4ff'), emit=srgb('#22e4ff'), emit_strength=4)
 env.cradle(FLOOR, 'tower', mats=('cr_metal', 'cr_strut'), accent='cr_neon')
+# 鏡頭環繞淨空：會擋住自動環繞視線的物件推到環繞圈外
+env.clear_orbit()
 kit.merge_group('env', 'env')
 kit.export(OUT)

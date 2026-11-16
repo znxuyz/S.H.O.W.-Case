@@ -22,6 +22,7 @@
 - 點擊動畫：熱點的 `fx` 指定模型節點與「結構動作」（hinge/slide/stretch/flap/whirl/reveal/sweep/stamp/press/pulse/flash，定義見 `projects.ts` 的 FxKind；軸向為網站座標）；不要用整塊發光＋跳動的通用動畫，每個物件拆出子網格各自動
 - Blender 端：`group='Fx_<名稱>'` 收集零件後 `kit.fx_node(名稱, 樞紐)`（樞紐＝轉軸/鉸鏈位置）；`FxHide_*` 節點平常隱藏、只在 reveal 時出現；掛在會動的節點下用 `kit.reparent`；檢查：`node tools/qa/fx.cjs <id>`（加索引會以 ?fxslow 放慢截圖）
 - 主島底座：各 `build_env_<id>.py` 呼叫 `env.cradle(...)`（mound / tiers / tower / books / cloud）
+- 鏡頭環繞淨空：各 `build_env_<id>.py` 在合併前呼叫 `env.clear_orbit()`，把會擋住自動環繞視線（桌機與手機直式兩種鏡頭距離）的高大物件連同同處零件推到環繞圈外（微小粒子除外、最多檢查 4 輪）；QA：`node tools/qa/orbit.cjs [id]`（每 10° 射線檢查，必須全部「無遮擋」）
 - 精緻度：`kit.plinth(rich=True)` 自動加分段壓頂石、四角柱墩、土層岩線、草叢（草地頂面）、垂吊岩錐；`kit.tree` 為三層樹冠＋枝幹＋樹根；要加細節優先用低面數結構配件（小零件 `bevel=0` 只有 12 面），不要提高曲面細分；面數不夠時拿看不出差別的小球體／小方塊減面換取
 - 空間導覽熱點：`projects.ts` 的 `hotspots`（座標為網站場景座標，Y 朝上；Blender 座標 (x, y, z) → 網站 (x, z - 0.4, -y)）
 - 自動導覽：`ProjectScene` 的 `auto` 狀態（底部導覽列最前面的播放鈕），每站停留 6–11 秒（依說明字數）；使用者拖曳、滾輪、點按鈕或按鍵即暫停；QA：`node tools/qa/autotour.cjs <id>`
@@ -52,6 +53,7 @@
    - 預算：主模型 ≤ 15k 三角面、≤ 1.5MB；環境 ≤ 1.5MB；首頁輕量版 ≤ 200KB；全部 Draco（`node tools/qa/glbstats.cjs <id>`）
    - 介紹頁：繪製呼叫 ≤ 160、著色器 ≤ 20、三角面 ≤ 60k、載入長任務總和 ≤ 800ms
    - `fx.cjs`：所有熱點節點都找得到（missing nodes 0）、沒有錯誤
+   - `node tools/qa/orbit.cjs <id>`：自動環繞一圈桌機與手機都「無遮擋」
    任何一項 FAIL 就修到 PASS（常見手段：合併零件、減少材質種類、降低散佈數量）。再用 `tools/qa/shot.cjs <id>` 與 `tools/qa/tour.cjs <id> 390x844` 看桌機與手機畫面。
 7. **收尾**：首頁群島會自動找空位；更新 README 作品清單（若有）與 `UPGRADE_ROADMAP.md` 進度紀錄；`npm run build` 後 commit 並直接推上 `main`（同時推開發分支），
    確認 GitHub Actions 部署成功後回報網址。

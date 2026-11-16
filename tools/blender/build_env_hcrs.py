@@ -98,6 +98,8 @@ kit.torus('balloon_band', 0.95, 0.06, (BX, BY, BZ - 0.1), 'balloon_b', group='Bo
 
 # ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
 env.cradle(terr_floor, 'mound', mats=('rock', 'grass'), stair_mat='concrete')
+# 鏡頭環繞淨空：會擋住自動環繞視線的物件推到環繞圈外
+env.clear_orbit()
 kit.merge_group('env', 'env')
 kit.pivot(kit.merge_group('Bob0', 'balloon'), 'Bob0', (BX, BY, BZ))
 kit.export(OUT)

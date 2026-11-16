@@ -95,6 +95,8 @@ for i in range(40):
 # ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
 material('cr_moss', srgb('#3d7a50'), rough=1.0)
 env.cradle(FLOOR, 'mound', mats=('rock', 'cr_moss'), stair_mat='wood', seed=7)
+# 鏡頭環繞淨空：會擋住自動環繞視線的物件推到環繞圈外
+env.clear_orbit()
 kit.merge_group('env', 'env')
 kit.pivot(kit.merge_group('Spin0', 'fireflies'), 'Spin0', (0, 0, 0))
 kit.export(OUT)

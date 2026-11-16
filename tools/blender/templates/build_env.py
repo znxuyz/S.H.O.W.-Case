@@ -35,5 +35,7 @@ for (a, r, z, s) in [(1.0, 10.5, -2.4, 0.9), (2.7, 11.5, -1.2, 0.7)]:
     env.floating_islet((math.cos(a) * r, math.sin(a) * r, z), s, top='grass')
 # 主島底座＋階梯
 env.cradle(FLOOR, 'mound', mats=('rock', 'grass'), stair_mat='concrete')
+# 鏡頭環繞淨空：會擋住自動環繞視線的高大物件推到環繞圈外
+env.clear_orbit()
 kit.merge_group('env', 'env')
 kit.export(OUT)

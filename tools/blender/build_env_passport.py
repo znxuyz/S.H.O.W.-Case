@@ -86,6 +86,8 @@ box('plane_fin', (0.3, 0.06, 0.4), (R - 0.7, 0, 3.8), 'red', group='Spin0', beve
 # ── 主島底座：從地面升起接住浮島，並有階梯相連 ──
 material('cr_cloud', srgb('#ffffff'), rough=1.0)
 env.cradle(-12.0, 'cloud', top=-0.9, r_top=3.0, mats=('cr_cloud', 'cr_cloud'))
+# 鏡頭環繞淨空：會擋住自動環繞視線的物件推到環繞圈外
+env.clear_orbit()
 kit.merge_group('env', 'env')
 kit.pivot(kit.merge_group('Spin0', 'plane'), 'Spin0', (0, 0, 0))
 kit.export(OUT)
