@@ -15,7 +15,7 @@ const ModelDiorama = lazy(() => import('./ModelDiorama'));
 import { Diorama } from './Diorama';
 import { preloadModels } from './assets';
 import type { BuildingKind } from './kinds';
-import { wantAntialias, World, worldFor } from './world';
+import { GL_OPTS, World, worldFor } from './world';
 
 export interface DomainStageProps {
   kind: BuildingKind; accent: string; model?: string; env?: string; projectId?: string; reducedMotion: boolean;
@@ -80,7 +80,7 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
       camera={{ position: home, fov: 32, near: 0.1, far: 300 }}
       onPointerMissed={() => onPick?.(null)}
       onCreated={({ gl, scene }) => { gl.debug.checkShaderErrors = import.meta.env.DEV; const w = window as unknown as { __stageGL?: unknown; __stageScene?: unknown }; w.__stageGL = gl; w.__stageScene = scene; }}
-      gl={{ antialias: wantAntialias(), powerPreference: 'high-performance' }}
+      gl={GL_OPTS}
       frameloop={live ? 'always' : 'never'}
     >
       <PerformanceMonitor flipflops={2} onDecline={() => setLow(true)} />

@@ -16,7 +16,7 @@ import { themes } from '../themes';
 import { Diorama } from './Diorama';
 import { finishPrograms, mapModel, preloadModels } from './assets';
 import { ACCENT } from './kinds';
-import { wantAntialias } from './world';
+import { GL_OPTS } from './world';
 import { DustLayers, NebulaDome, WorldFragments } from './cosmos';
 import { Sigil, SIGIL_FOR_THEME, type SigilKind } from './sigils';
 import { mulberry32 } from '../lib/random';
@@ -299,7 +299,7 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
       resize={{ offsetSize: true }}
       dpr={low ? 1 : [1, 1.5]}
       camera={{ position: camPos, fov: portrait ? 52 : 40, near: 0.5, far: 320 }}
-      gl={{ antialias: wantAntialias(), powerPreference: 'high-performance' }}
+      gl={GL_OPTS}
       frameloop={live ? 'always' : 'never'}
       onCreated={({ camera, gl, scene }) => { cameraRef.current = camera; gl.debug.checkShaderErrors = import.meta.env.DEV; const w = window as unknown as { __mapGL?: unknown; __mapScene?: unknown }; w.__mapGL = gl; w.__mapScene = scene; }}
       onPointerMissed={() => setHovered(null)}

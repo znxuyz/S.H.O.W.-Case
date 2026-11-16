@@ -91,9 +91,9 @@ const haloTexture = (() => {
   return t;
 })();
 
-function HaloLayer({ color }: { color: string }) {
+function HaloLayer({ color, opacity = 0.42 }: { color: string; opacity?: number }) {
   const ref = useRef<THREE.Mesh>(null);
-  const mat = useMemo(() => new THREE.MeshBasicMaterial({ map: haloTexture, color, transparent: true, opacity: 0.42, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }), [color]);
+  const mat = useMemo(() => new THREE.MeshBasicMaterial({ map: haloTexture, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }), [color, opacity]);
   const dir = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera }) => {
     const m = ref.current;
@@ -118,9 +118,9 @@ export function SkyDome({ top, bottom }: { top: string; bottom: string }) {
         depthWrite: false,
         fog: false,
         uniforms: { top: { value: new THREE.Color(top) }, bottom: { value: new THREE.Color(bottom) } },
-        vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+        vertexShader: 'precision highp float; varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
         fragmentShader:
-          'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(vP.y * 0.5 + 0.5, 0.0, 1.0); float k = smoothstep(0.35, 0.95, h); gl_FragColor = vec4(mix(bottom, top, k), 1.0); }',
+          'precision highp float; uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(vP.y * 0.5 + 0.5, 0.0, 1.0); float k = smoothstep(0.35, 0.95, h); gl_FragColor = vec4(mix(bottom, top, k), 1.0); }',
       }),
     [top, bottom],
   );
@@ -133,14 +133,19 @@ export function SkyDome({ top, bottom }: { top: string; bottom: string }) {
 
 /** 完整的世界：天空、霧、柔光、粒子、環境反射（地形與遠景由各作品的 3D 環境 env_*.glb 提供） */
 export function World({ style, sparkles = true }: { style: WorldStyle; sparkles?: boolean }) {
+  // 淺色天空（校園、行政等）時柔光減弱，避免把左上角文字底下洗白；手機再減一些並關閉漂浮粒子
+  const light = new THREE.Color(style.fog).getHSL({ h: 0, s: 0, l: 0 }).l > 0.6;
+  const touch = isTouch();
+  const haloOpacity = (light ? 0.16 : 0.42) * (touch ? 0.7 : 1);
+  const showSparkles = sparkles && !touch;
   return (
     <>
       {/* 天空底部與霧同色：遠景沒入霧中時與地平線無縫銜接 */}
       <SkyDome top={style.skyTop} bottom={style.fog} />
       {/* 指數霧：近處主體清晰、遠景逐漸隱沒 */}
       <fogExp2 attach="fog" args={[style.fog, 1.45 / style.fogFar]} />
-      <HaloLayer color={style.env[1]} />
-      {sparkles && <Sparkles count={40} scale={[16, 9, 16]} position={[0, 2, 0]} size={3} speed={0.35} opacity={0.8} color={style.sparkle} />}
+      <HaloLayer color={style.env[1]} opacity={haloOpacity} />
+      {showSparkles && <Sparkles count={40} scale={[16, 9, 16]} position={[0, 2, 0]} size={3} speed={0.35} opacity={0.8} color={style.sparkle} />}
       <Environment resolution={64} frames={1} environmentIntensity={0.55}>
         <Lightformer form="rect" intensity={2.4} color={style.env[0]} position={[0, 6, -8]} scale={[12, 4, 1]} />
         <Lightformer form="rect" intensity={1.6} color={style.env[1]} position={[8, 2, 4]} rotation={[0, -Math.PI / 2, 0]} scale={[6, 3, 1]} />
@@ -151,8 +156,10 @@ export function World({ style, sparkles = true }: { style: WorldStyle; sparkles?
 }
 
 /**
- * 抗鋸齒：只在一般解析度的桌機螢幕開（4× MSAA 在高解析度螢幕上很吃 GPU，而高 dpr 本身就夠細）；
- * 手機與觸控裝置一律關閉。
+ * WebGL 設定：一律 highp（手機預設的 mediump 會讓雜訊／法線運算溢位成彩色雜點）＋抗鋸齒
+ * （dpr 已上限 1.5，手機的 tile-based GPU 做 MSAA 成本很低）。
  */
-export const wantAntialias = () => allowEffects() && (typeof window === 'undefined' || window.devicePixelRatio < 1.5);
+export const GL_OPTS = { antialias: true, precision: 'highp' as const, powerPreference: 'high-performance' as const };
+/** 觸控裝置（手機、平板） */
+export const isTouch = () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 export const allowEffects = () => typeof window !== 'undefined' && !window.matchMedia('(pointer: coarse)').matches && window.innerWidth > 820;

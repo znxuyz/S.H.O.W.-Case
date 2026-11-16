@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { mulberry32 } from '../lib/random';
 
 const NEBULA_VERT = /* glsl */ `
+precision highp float;
 varying vec3 vDir;
 void main() {
   vDir = normalize(position);
@@ -18,6 +19,7 @@ void main() {
 }`;
 
 const NEBULA_FRAG = /* glsl */ `
+precision highp float;
 uniform float uTime;
 varying vec3 vDir;
 float hash(vec3 p) { p = fract(p * 0.3183099 + .1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
@@ -54,9 +56,11 @@ void main() {
  * 所以只在第一幀把它「烘焙」成一張 1024×512 的等距柱狀貼圖，之後穹頂每像素只取樣一次貼圖，並以極慢速度自轉。
  */
 const BAKE_VERT = /* glsl */ `
+precision highp float;
 varying vec2 vUv;
 void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
 const DOME_FRAG = /* glsl */ `
+precision highp float;
 uniform sampler2D map;
 varying vec3 vDir;
 void main() {
