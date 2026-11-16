@@ -297,3 +297,15 @@
   .video-modal-full { font-size: 0.7rem; padding: 0.3rem 0.6rem; }
 }
 @media (prefers-reduced-motion: reduce) { .video-spinner { animation-duration: 2.4s; } }
+
+/* 影片燈箱：完整介紹／20 秒精華切換、開啟聲音 */
+.video-modal-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.video-modal-tabs { display: inline-flex; gap: 0.25rem; padding: 0.2rem; border-radius: 999px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.14); }
+.video-modal-tabs button { padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; color: #d9d5cc; cursor: pointer; white-space: nowrap; }
+.video-modal-tabs button.is-on { color: #111; background: #f5f3ee; }
+.video-unmute { position: absolute; left: 1rem; top: 1rem; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border-radius: 999px;
+  font-size: 0.8rem; font-weight: 600; color: #111; background: #f5f3ee; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); cursor: pointer; }
+@media (max-width: 767px) {
+  .video-modal-head { display: grid; grid-template-columns: 1fr auto; row-gap: 0.5rem; }
+  .video-modal-tabs { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+}

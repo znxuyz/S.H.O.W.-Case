@@ -228,7 +228,7 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
       </div>
       {video && project.videoUrl && (
         <Suspense fallback={null}>
-          <VideoModal url={project.videoUrl} poster={project.videoPoster} fullUrl={project.videoFullUrl} title={project.title} onClose={closeVideo} />
+          <VideoModal url={project.videoUrl} highlightUrl={project.videoHighlightUrl} poster={project.videoPoster} originalUrl={project.videoOriginalUrl} title={project.title} onClose={closeVideo} />
         </Suspense>
       )}
     </>

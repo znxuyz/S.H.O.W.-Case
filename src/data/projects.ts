@@ -120,14 +120,16 @@ export interface Project {
   /** （選填）介紹頁的 3D 環境模型（.glb，放在 public/models/），取代程式產生的遠景 */
   env?: string;
   /**
-   * 演示影片（從專案 README 擷取：.mp4 直連、YouTube 或 GIF）。只在使用者按「觀看演示影片」開啟燈箱時才載入，頁面初始不預載。
-   * mp4 請用支援 Range 串流的網址（GitHub Pages 或 jsDelivr；GitHub raw 不適合）。
+   * 演示影片（來源：專案 README 的影片）。全部託管在本站、只在使用者開啟燈箱時才載入：
+   *   videoUrl          完整介紹（tools/make_fullvideo.sh：720p、有聲、faststart 串流，點開即播、邊播邊載）
+   *   videoHighlightUrl 20 秒精華（tools/make_highlight.sh：無聲循環）
+   *   videoOriginalUrl  原始檔（外部，最高畫質；燈箱角落連結）
    */
   videoUrl?: string;
+  videoHighlightUrl?: string;
   /** 影片封面（燈箱開啟、影片緩衝時顯示） */
   videoPoster?: string;
-  /** 原始完整影片（燈箱角落「在新分頁開啟完整影片」；videoUrl 為本站託管的 20 秒精華片段，由 tools/make_highlight.sh 產生） */
-  videoFullUrl?: string;
+  videoOriginalUrl?: string;
   /** 3D 空間導覽熱點（建議 3–5 個） */
   hotspots?: Hotspot[];
   hidden?: boolean;
@@ -152,9 +154,10 @@ export const projects: Project[] = [
     category: 'personal',
     status: 'live',
     env: 'models/env_lplc.glb',
-    videoUrl: 'videos/lplc.mp4',
+    videoUrl: 'videos/lplc-full.mp4',
+    videoHighlightUrl: 'videos/lplc.mp4',
     videoPoster: 'videos/lplc.jpg',
-    videoFullUrl: 'https://znxuyz.github.io/L.P.S.D-System/media/lplc-intro.mp4',
+    videoOriginalUrl: 'https://znxuyz.github.io/L.P.S.D-System/media/lplc-intro.mp4',
     hotspots: [
       {
         title: '資金流向熱力圖',
@@ -364,9 +367,10 @@ export const projects: Project[] = [
     category: 'personal',
     status: 'live',
     env: 'models/env_tianmu.glb',
-    videoUrl: 'videos/tianmu.mp4',
+    videoUrl: 'videos/tianmu-full.mp4',
+    videoHighlightUrl: 'videos/tianmu.mp4',
     videoPoster: 'videos/tianmu.jpg',
-    videoFullUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/TianMu-Island@main/docs/media/tianmu-island-tour-720p.mp4',
+    videoOriginalUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/TianMu-Island@main/docs/media/tianmu-island-tour-720p.mp4',
     hotspots: [
       {
         title: '天幕膠囊：靈液彈簧',
@@ -468,9 +472,10 @@ export const projects: Project[] = [
     category: 'personal',
     status: 'live',
     env: 'models/env_guardian.glb',
-    videoUrl: 'videos/guardian.mp4',
+    videoUrl: 'videos/guardian-full.mp4',
+    videoHighlightUrl: 'videos/guardian.mp4',
     videoPoster: 'videos/guardian.jpg',
-    videoFullUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/ClassroomManagementSystem2.0@main/docs/demo.mp4',
+    videoOriginalUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/ClassroomManagementSystem2.0@main/docs/demo.mp4',
     hotspots: [
       {
         title: '從蛋到守護神獸',
@@ -571,9 +576,10 @@ export const projects: Project[] = [
     status: 'live',
     building: 'hall',
     env: 'models/env_care.glb',
-    videoUrl: 'videos/care.mp4',
+    videoUrl: 'videos/care-full.mp4',
+    videoHighlightUrl: 'videos/care.mp4',
     videoPoster: 'videos/care.jpg',
-    videoFullUrl: 'https://znxuyz.github.io/C.A.R.E.-System/media/care-system-intro.mp4',
+    videoOriginalUrl: 'https://znxuyz.github.io/C.A.R.E.-System/media/care-system-intro.mp4',
     hotspots: [
       {
         title: '違規登錄',
@@ -682,9 +688,10 @@ export const projects: Project[] = [
     status: 'live',
     building: 'library',
     env: 'models/env_admin.glb',
-    videoUrl: 'videos/admin.mp4',
+    videoUrl: 'videos/admin-full.mp4',
+    videoHighlightUrl: 'videos/admin.mp4',
     videoPoster: 'videos/admin.jpg',
-    videoFullUrl: 'https://znxuyz.github.io/School-Administration/docs/demo.mp4',
+    videoOriginalUrl: 'https://znxuyz.github.io/School-Administration/docs/demo.mp4',
     hotspots: [
       {
         title: '四階段公文鐵道',
@@ -781,9 +788,10 @@ export const projects: Project[] = [
     building: 'school',
     env: 'models/env_hcrs.glb',
     model: 'models/hcrs.glb',
-    videoUrl: 'videos/hcrs.mp4',
+    videoUrl: 'videos/hcrs-full.mp4',
+    videoHighlightUrl: 'videos/hcrs.mp4',
     videoPoster: 'videos/hcrs.jpg',
-    videoFullUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/H.C.R.S-HRES-Classroom-Reservation-System@main/public/media/hcrs-intro.mp4',
+    videoOriginalUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/H.C.R.S-HRES-Classroom-Reservation-System@main/public/media/hcrs-intro.mp4',
     hotspots: [
       {
         title: '公開借用月曆',
