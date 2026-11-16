@@ -3,9 +3,9 @@
  * 空間導覽：熱點標記綁在模型各部位，點擊後鏡頭聚焦（Hotspots.tsx）。
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, PerformanceMonitor, useProgress } from '@react-three/drei';
-import { PCFShadowMap, type Group } from 'three';
+import { PCFShadowMap, Vector3, type Group } from 'three';
 import type { Hotspot } from '../data/projects';
 import type { MutableRefObject } from 'react';
 import { CameraFocus, MarkerProjector, StageShift, type CardRefs } from './Hotspots';
@@ -54,6 +54,21 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
   const far = typeof window !== 'undefined' && window.innerWidth / window.innerHeight < 1 ? 1.75 : 1;
   const home: [number, number, number] = [10.5 * far, 6.5 * far, 10.5 * far];
   const focused = active !== null && !!hotspots[active];
+  // 以「螢幕上的距離」找手指／游標附近 70px 內最近的熱點（比 3D 距離直覺：點在哪裡就選哪裡）
+  const pickNearest = useCallback((e: ThreeEvent<MouseEvent>) => {
+    if (!onPick || !hotspots.length) return;
+    const w = e.target instanceof HTMLElement ? e.target.clientWidth : window.innerWidth;
+    const hgt = e.target instanceof HTMLElement ? e.target.clientHeight : window.innerHeight;
+    const v = new Vector3();
+    let best = -1, bestD = 70;
+    hotspots.forEach((h, i) => {
+      v.set(h.at[0], h.at[1], h.at[2]).project(e.camera);
+      if (v.z > 1) return;
+      const d = Math.hypot((v.x - e.pointer.x) * w / 2, (v.y - e.pointer.y) * hgt / 2);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    if (best >= 0) { e.stopPropagation(); onPick(best); }
+  }, [hotspots, onPick]);
   const fx = useMemo<FxTrigger | null>(() => (focused && hotspots[active!].fx ? { steps: hotspots[active!].fx!.map((s) => ({ ...s })), key: pulse, color: accent } : null), [focused, active, pulse, hotspots, accent]);
   return (
     <>
@@ -93,7 +108,8 @@ export default function DomainStage({ kind, accent, model, env, projectId, reduc
         shadow-camera-near={1}
         shadow-camera-far={34}
       />
-      <group position={[0, -0.4, 0]} ref={modelRef}>
+      {/* 直接點模型：選取離點擊位置最近的功能（拖曳旋轉不會觸發；只掛 onClick，滑鼠移動時不做射線檢測） */}
+      <group position={[0, -0.4, 0]} ref={modelRef} onClick={pickNearest}>
         {model && <Diorama model={model} fx={fx} onReady={onMain} />}
       </group>
       {markers && <MarkerProjector hotspots={hotspots} markers={markers} active={active} cardRefs={cardRefs} occluders={modelRef} />}

@@ -67,7 +67,7 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
       {/* 3D 熱點標記（位置由舞台每幀投影寫入） */}
       <div className={`hs-layer ${stageReady ? 'is-ready' : ''}`} aria-label="模型上的導覽標記">
         {hotspots.map((hs, i) => (
-          <div key={i} ref={(el) => { markers.current[i] = el; }} className="hs-anchor" style={{ visibility: 'hidden' }}>
+          <div key={i} ref={(el) => { markers.current[i] = el; }} className={`hs-anchor ${active === i ? 'is-active' : ''}`} style={{ visibility: 'hidden' }}>
             <button
               className={`hs-dot ${active === i ? 'is-active' : ''} ${active !== null && active !== i ? 'is-dim' : ''}`}
               style={{ ['--c' as string]: accent }}
@@ -139,7 +139,7 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
         {/* 熱點說明卡 */}
         {h && <div className="tour-leader" ref={(el) => { cardRefs.current.line = el; }} style={{ visibility: 'hidden', ['--c' as string]: accent }} aria-hidden />}
         {h && (
-          <aside className="tour-card tour-card-float" key={active} ref={(el) => { cardRefs.current.card = el; }} style={{ visibility: typeof window !== 'undefined' && window.innerWidth > 760 ? 'hidden' : undefined }} role="dialog" aria-label={h.title}>
+          <aside className="tour-card tour-card-float" key={active} ref={(el) => { cardRefs.current.card = el; }} style={{ visibility: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'hidden' : undefined }} role="dialog" aria-label={h.title}>
             <div className="tour-card-head">
               <span className="tour-card-num">{String(active! + 1).padStart(2, '0')}<small> / {String(hotspots.length).padStart(2, '0')}</small></span>
               <button onClick={() => pick(null)} aria-label="關閉說明"><X className="h-4 w-4" /></button>

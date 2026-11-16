@@ -176,7 +176,7 @@
 .hs-dot.is-dim { opacity: 0.45; animation: none; }
 @keyframes hs-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 70%, transparent), 0 4px 14px rgba(0, 0, 0, 0.45); } 70% { box-shadow: 0 0 0 14px transparent, 0 4px 14px rgba(0, 0, 0, 0.45); } 100% { box-shadow: 0 0 0 0 transparent, 0 4px 14px rgba(0, 0, 0, 0.45); } }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .tour-title { top: calc(max(0.8rem, env(safe-area-inset-top)) + 3.6rem); max-width: calc(100vw - 4rem); }
   .tour-title .sc-title { font-size: 1.7rem; }
   .tour-title .sc-tagline { font-size: 0.9rem; }
@@ -198,7 +198,7 @@
 .tour-leader { position: absolute; left: 0; top: 0; height: 2px; transform-origin: 0 50%; pointer-events: none; z-index: 0;
   background: linear-gradient(90deg, color-mix(in srgb, var(--c) 90%, white), color-mix(in srgb, var(--c) 30%, transparent)); box-shadow: 0 0 8px var(--c); }
 .hs-anchor.is-occluded .hs-label { opacity: 0.4; }
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .tour-card-float { left: 0.75rem; right: 0.75rem; top: auto; transform: none !important; }
   .tour-leader { display: none; }
   /* 手機：島上只留編號圓點（標題在底部導覽列），避免文字標籤蓋住主體 */
@@ -212,7 +212,7 @@
 /* ═════════ 手機版：文字不壓主體、手勢不被攔截 ═════════
    標題卡改成緊湊版且整塊不攔截觸控（只有按鈕可點），拖曳旋轉與雙指縮放從畫面任何空白處都能開始；
    熱點圓點加大觸控範圍；右側直立導覽點隱藏（右下角已有上一頁 / 下一頁）。 */
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .tour-title { pointer-events: none; max-width: calc(100vw - 2rem); top: calc(max(0.6rem, env(safe-area-inset-top)) + 3.75rem); }
   .tour-title .sc-actions, .tour-title .tour-links { pointer-events: auto; }
   .tour-title .sc-kicker { font-size: 0.62rem; gap: 0.45rem; }
@@ -231,3 +231,21 @@
   .hs-dot::after { content: ''; position: absolute; inset: -9px; border-radius: 50%; }
   .hs-anchor .hs-dot { left: -14px; top: -14px; }
 }
+
+/* ═════════ 手機版（< 768px）熱點：平常不在模型上顯示任何圓點（底部導覽列已列出全部功能），
+   只有「目前選中」的那一顆以高亮標記出現在物件上，避免小螢幕上多顆圓點擠成一團 ═════════ */
+@media (max-width: 767px) {
+  .hs-anchor:not(.is-active) { display: none; }
+  .hs-dot.is-active { width: 34px; height: 34px; transform: none; opacity: 1; border-width: 2.5px;
+    background: var(--c); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 35%, transparent), 0 0 22px var(--c), 0 4px 14px rgba(0, 0, 0, 0.5);
+    animation: hs-focus 1.8s ease-out infinite; }
+  .hs-anchor.is-active .hs-dot { left: -17px; top: -17px; }
+  .hs-dot.is-active .hs-num { opacity: 1; font-size: 13px; }
+  .hs-anchor.is-occluded .hs-dot.is-active { opacity: 1; }
+  @keyframes hs-focus {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 70%, transparent), 0 0 22px var(--c), 0 4px 14px rgba(0, 0, 0, 0.5); }
+    70% { box-shadow: 0 0 0 16px transparent, 0 0 22px var(--c), 0 4px 14px rgba(0, 0, 0, 0.5); }
+    100% { box-shadow: 0 0 0 0 transparent, 0 0 22px var(--c), 0 4px 14px rgba(0, 0, 0, 0.5); }
+  }
+}
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) { .hs-dot.is-active { animation: none; } }

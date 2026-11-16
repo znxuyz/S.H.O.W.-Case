@@ -84,7 +84,7 @@ export function MarkerProjector({ hotspots, markers, active = null, cardRefs, oc
     }
     // 說明卡：貼在該物件旁（優先放右側，靠近邊緣就換到左側），並以指引線連回物件
     const c = cardRefs?.current.card;
-    if (active !== null && c && size.width > 760 && pos.current[active]) {
+    if (active !== null && c && size.width >= 768 && pos.current[active]) {
       const cc = card.current;
       // 尺寸只在卡片換了或每 30 幀量一次（量測會觸發版面計算）
       if (cc.el !== c || ++cc.age > 30) { cc.el = c; cc.w = c.offsetWidth; cc.h = c.offsetHeight; cc.age = 0; }
