@@ -279,3 +279,21 @@
 .tour-card-video { margin-top: 0.8rem; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.9rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
   color: var(--btn-fg, #0b0a09); background: var(--accent); }
 .tour-card-video:hover { background: color-mix(in srgb, var(--accent) 85%, white); }
+
+/* 影片燈箱：讀取／緩衝狀態與完整影片連結 */
+.video-modal-tools { display: flex; align-items: center; gap: 0.6rem; }
+.video-modal-full { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 500;
+  color: #e9e5dc; border: 1px solid rgba(255, 255, 255, 0.22); background: rgba(255, 255, 255, 0.06); text-decoration: none; white-space: nowrap; }
+.video-modal-full:hover { background: rgba(255, 255, 255, 0.16); }
+.video-modal-loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 0.8rem; pointer-events: none;
+  color: #f1ede4; font-size: 0.8rem; letter-spacing: 0.2em; background: radial-gradient(60% 60% at 50% 50%, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.55)); }
+.video-modal-loading a { pointer-events: auto; letter-spacing: normal; }
+.video-spinner { width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.18); border-top-color: #fff; animation: vspin 0.9s linear infinite; }
+@keyframes vspin { to { transform: rotate(360deg); } }
+.video-loading-bar { position: relative; display: block; width: 11rem; height: 3px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, 0.16); }
+.video-loading-bar i { position: absolute; inset: 0; transform-origin: 0 50%; background: #fff; transition: transform 0.3s ease; }
+@media (max-width: 767px) {
+  .video-modal-head { flex-wrap: wrap; font-size: 0.85rem; }
+  .video-modal-full { font-size: 0.7rem; padding: 0.3rem 0.6rem; }
+}
+@media (prefers-reduced-motion: reduce) { .video-spinner { animation-duration: 2.4s; } }

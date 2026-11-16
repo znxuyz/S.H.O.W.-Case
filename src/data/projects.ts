@@ -126,6 +126,8 @@ export interface Project {
   videoUrl?: string;
   /** 影片封面（燈箱開啟、影片緩衝時顯示） */
   videoPoster?: string;
+  /** 原始完整影片（燈箱角落「在新分頁開啟完整影片」；videoUrl 為本站託管的 20 秒精華片段，由 tools/make_highlight.sh 產生） */
+  videoFullUrl?: string;
   /** 3D 空間導覽熱點（建議 3–5 個） */
   hotspots?: Hotspot[];
   hidden?: boolean;
@@ -150,8 +152,9 @@ export const projects: Project[] = [
     category: 'personal',
     status: 'live',
     env: 'models/env_lplc.glb',
-    videoUrl: 'https://znxuyz.github.io/L.P.S.D-System/media/lplc-intro.mp4',
-    videoPoster: 'https://znxuyz.github.io/L.P.S.D-System/media/lplc-intro-poster.jpg',
+    videoUrl: 'videos/lplc.mp4',
+    videoPoster: 'videos/lplc.jpg',
+    videoFullUrl: 'https://znxuyz.github.io/L.P.S.D-System/media/lplc-intro.mp4',
     hotspots: [
       {
         title: '資金流向熱力圖',
@@ -361,8 +364,9 @@ export const projects: Project[] = [
     category: 'personal',
     status: 'live',
     env: 'models/env_tianmu.glb',
-    videoUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/TianMu-Island@main/docs/media/tianmu-island-tour-720p.mp4',
-    videoPoster: 'https://cdn.jsdelivr.net/gh/znxuyz/TianMu-Island@main/docs/media/tour-poster.jpg',
+    videoUrl: 'videos/tianmu.mp4',
+    videoPoster: 'videos/tianmu.jpg',
+    videoFullUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/TianMu-Island@main/docs/media/tianmu-island-tour-720p.mp4',
     hotspots: [
       {
         title: '天幕膠囊：靈液彈簧',
@@ -464,8 +468,9 @@ export const projects: Project[] = [
     category: 'personal',
     status: 'live',
     env: 'models/env_guardian.glb',
-    videoUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/ClassroomManagementSystem2.0@main/docs/demo.mp4',
-    videoPoster: 'https://cdn.jsdelivr.net/gh/znxuyz/ClassroomManagementSystem2.0@main/docs/preview.gif',
+    videoUrl: 'videos/guardian.mp4',
+    videoPoster: 'videos/guardian.jpg',
+    videoFullUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/ClassroomManagementSystem2.0@main/docs/demo.mp4',
     hotspots: [
       {
         title: '從蛋到守護神獸',
@@ -566,8 +571,9 @@ export const projects: Project[] = [
     status: 'live',
     building: 'hall',
     env: 'models/env_care.glb',
-    videoUrl: 'https://znxuyz.github.io/C.A.R.E.-System/media/care-system-intro.mp4',
-    videoPoster: 'https://cdn.jsdelivr.net/gh/znxuyz/C.A.R.E.-System@main/docs/images/preview.gif',
+    videoUrl: 'videos/care.mp4',
+    videoPoster: 'videos/care.jpg',
+    videoFullUrl: 'https://znxuyz.github.io/C.A.R.E.-System/media/care-system-intro.mp4',
     hotspots: [
       {
         title: '違規登錄',
@@ -676,8 +682,9 @@ export const projects: Project[] = [
     status: 'live',
     building: 'library',
     env: 'models/env_admin.glb',
-    videoUrl: 'https://znxuyz.github.io/School-Administration/docs/demo.mp4',
-    videoPoster: 'https://znxuyz.github.io/School-Administration/docs/demo-poster.jpg',
+    videoUrl: 'videos/admin.mp4',
+    videoPoster: 'videos/admin.jpg',
+    videoFullUrl: 'https://znxuyz.github.io/School-Administration/docs/demo.mp4',
     hotspots: [
       {
         title: '四階段公文鐵道',
@@ -774,8 +781,9 @@ export const projects: Project[] = [
     building: 'school',
     env: 'models/env_hcrs.glb',
     model: 'models/hcrs.glb',
-    videoUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/H.C.R.S-HRES-Classroom-Reservation-System@main/public/media/hcrs-intro.mp4',
-    videoPoster: 'https://cdn.jsdelivr.net/gh/znxuyz/H.C.R.S-HRES-Classroom-Reservation-System@main/docs/media/poster.jpg',
+    videoUrl: 'videos/hcrs.mp4',
+    videoPoster: 'videos/hcrs.jpg',
+    videoFullUrl: 'https://cdn.jsdelivr.net/gh/znxuyz/H.C.R.S-HRES-Classroom-Reservation-System@main/public/media/hcrs-intro.mp4',
     hotspots: [
       {
         title: '公開借用月曆',
