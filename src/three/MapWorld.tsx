@@ -75,7 +75,7 @@ interface Body {
   goalUntil: number;            // 目標有效期限（秒，performance 時間）；篩選中為 Infinity
   dim: number; dimTo: number;   // 亮度（1 正常、退後的島變暗）
   glow: number; glowTo: number; // 選中光環強度
-  rings: THREE.Mesh[];
+  rings: THREE.Object3D[];
   mark: THREE.Object3D | null;
 }
 
@@ -83,10 +83,79 @@ interface Body {
 const MARK_GEO = new THREE.OctahedronGeometry(0.32, 0);
 const MARK_MAT = new THREE.MeshBasicMaterial({ color: '#ffd98a', toneMapped: false });
 
-/* 選中光環：共用幾何，每座島各一組加色材質；強度 0 時不繪製 */
-const RING_IN = new THREE.RingGeometry(3.25, 3.5, 72);
-const RING_OUT = new THREE.RingGeometry(3.55, 4.7, 72);
-const ringMat = (color: string) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+/* ───────── 篩選聚光：緊貼底座外緣的細線星芒法陣＋緩緩上升的微光粒子 ─────────
+ * 全部由著色器即時計算（不用 Canvas 漸層貼圖，避免 iOS 抖動雜點）；所有島共用同一組幾何與著色器程式，
+ * 每座島只有 2 次繪製，且只在亮起時繪製。 */
+const SPOT_R = 3.15;
+const SPOT_GEO = new THREE.PlaneGeometry(SPOT_R * 2, SPOT_R * 2).rotateX(-Math.PI / 2);
+const SPOT_VERT = /* glsl */ `precision highp float;
+varying vec2 vP;
+void main() { vP = position.xz / ${SPOT_R.toFixed(2)}; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const SPOT_FRAG = /* glsl */ `precision highp float;
+uniform vec3 uColor; uniform float uOpacity; uniform float uTime;
+varying vec2 vP;
+float line(float d, float w) { return 1.0 - smoothstep(0.0, w, abs(d)); }
+void main() {
+  float r = length(vP);
+  if (r > 1.0) discard;
+  float a = atan(vP.y, vP.x);
+  float aw = a + uTime * 0.18;                       // 外環緩慢順轉
+  float ar = a - uTime * 0.11;                       // 內環反轉
+  float outer = line(r - 0.955, 0.012);
+  float halo = exp(-pow((r - 0.955) / 0.05, 2.0)) * 0.35;
+  float dash = line(r - 0.86, 0.006) * step(0.45, fract(ar * 24.0 / 6.2831853));
+  float ticks = line(r - 0.905, 0.028) * line(fract(aw * 36.0 / 6.2831853) - 0.5, 0.06) ;
+  float majors = line(r - 0.9, 0.05) * line(fract(aw * 4.0 / 6.2831853) - 0.5, 0.012);
+  // 八道細星芒：由內向外漸淡
+  float k = abs(sin((a + uTime * 0.05) * 4.0));
+  float rays = (1.0 - smoothstep(0.0, 0.012 / max(r, 0.05), k)) * smoothstep(0.25, 0.4, r) * (1.0 - smoothstep(0.6, 0.84, r)) * 0.55;
+  float v = outer + halo + dash * 0.7 + ticks * 0.6 + majors * 0.9 + rays;
+  gl_FragColor = vec4(uColor * v * uOpacity, 1.0);
+}`;
+const spotMat = (color: string) => new THREE.ShaderMaterial({
+  vertexShader: SPOT_VERT, fragmentShader: SPOT_FRAG, transparent: true, depthWrite: false, toneMapped: false,
+  blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  uniforms: { uColor: { value: new THREE.Color(color) }, uOpacity: { value: 0 }, uTime: { value: 0 } },
+});
+/* 上升微光：沿底座外緣隨機分布，往上飄並淡出 */
+const MOTE_N = 22;
+const MOTE_GEO = (() => {
+  const g = new THREE.BufferGeometry();
+  const pos = new Float32Array(MOTE_N * 3), seed = new Float32Array(MOTE_N);
+  const rnd = mulberry32(9);
+  for (let i = 0; i < MOTE_N; i++) {
+    const a = rnd() * Math.PI * 2, r = 2.2 + rnd() * 0.9;
+    pos.set([Math.cos(a) * r, 0, Math.sin(a) * r], i * 3);
+    seed[i] = rnd();
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+  return g;
+})();
+const MOTE_VERT = /* glsl */ `precision highp float;
+uniform float uTime; uniform float uPx;
+attribute float aSeed; varying float vA;
+void main() {
+  float u = fract(uTime * (0.12 + aSeed * 0.1) + aSeed * 7.13);
+  vec3 p = position + vec3(sin(uTime * 0.7 + aSeed * 30.0) * 0.12, u * 3.4, 0.0);
+  vA = smoothstep(0.0, 0.15, u) * (1.0 - smoothstep(0.55, 1.0, u));
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  gl_PointSize = uPx * (0.6 + aSeed * 0.8) * (40.0 / -mv.z);
+  gl_Position = projectionMatrix * mv;
+}`;
+const MOTE_FRAG = /* glsl */ `precision highp float;
+uniform vec3 uColor; uniform float uOpacity; varying float vA;
+void main() {
+  float d = length(gl_PointCoord - 0.5);
+  float a = (1.0 - smoothstep(0.1, 0.5, d)) * vA * uOpacity;
+  if (a < 0.01) discard;
+  gl_FragColor = vec4(mix(uColor, vec3(1.0), 0.35) * a, 1.0);
+}`;
+const moteMat = (color: string) => new THREE.ShaderMaterial({
+  vertexShader: MOTE_VERT, fragmentShader: MOTE_FRAG, transparent: true, depthWrite: false, toneMapped: false,
+  blending: THREE.AdditiveBlending,
+  uniforms: { uColor: { value: new THREE.Color(color) }, uOpacity: { value: 0 }, uTime: { value: 0 }, uPx: { value: Math.min(window.devicePixelRatio || 1, 1.5) * 3 } },
+});
 
 /** 依亮度係數調整島上所有材質（保存原色，離開首頁時還原） */
 function shade(g: THREE.Object3D, k: number) {
@@ -117,7 +186,7 @@ function Island({
 }) {
   const accent = project.accent ?? ACCENT[project.theme];
   const theme = themes[project.theme];
-  const mats = useMemo(() => { const a = ringMat(accent), b = ringMat(accent); a.userData.noDim = b.userData.noDim = true; return [a, b]; }, [accent]);
+  const mats = useMemo(() => [spotMat(accent), moteMat(accent)], [accent]);
   useEffect(() => () => mats.forEach((m) => m.dispose()), [mats]);
   return (
     <group
@@ -132,19 +201,8 @@ function Island({
       {seen && (
         <mesh ref={(r) => { body.mark = r; }} geometry={MARK_GEO} material={MARK_MAT} position={[0, 4.7, 0]} scale={[1, 1.5, 1]} visible={!hovered} raycast={() => null} />
       )}
-      {mats.map((m, k) => (
-        <mesh
-          key={k}
-          ref={(r) => { if (r) body.rings[k] = r; }}
-          geometry={k === 0 ? RING_IN : RING_OUT}
-          material={m}
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, k === 0 ? -0.25 : -0.3, 0]}
-          visible={false}
-          renderOrder={3}
-          raycast={() => null}
-        />
-      ))}
+      <mesh ref={(r) => { if (r) body.rings[0] = r; }} geometry={SPOT_GEO} material={mats[0]} position={[0, -0.32, 0]} visible={false} renderOrder={3} raycast={() => null} />
+      <points ref={(r) => { if (r) body.rings[1] = r; }} geometry={MOTE_GEO} material={mats[1]} position={[0, -0.3, 0]} visible={false} renderOrder={3} raycast={() => null} frustumCulled={false} />
       {hovered && (
         <>
           <Sigil kind={sigil} color={accent} />
@@ -220,10 +278,10 @@ function Swarm({ bodies, drag, hovered, reduced }: { bodies: Body[]; drag: Mutab
       b.rings.forEach((r, k) => {
         r.visible = b.glow > 0.01;
         if (!r.visible) return;
-        const m = r.material as THREE.MeshBasicMaterial;
-        m.opacity = b.glow * (k === 0 ? 0.95 : 0.14) * (k === 0 ? 0.75 + 0.25 * Math.sin(t * 2.4) : 1);
-        r.rotation.z = t * (k === 0 ? 0.25 : -0.12);
-        r.scale.setScalar(1 + (k === 1 ? 0.04 * Math.sin(t * 1.6) : 0));
+        // 柔和呼吸：法陣亮度 0.7–1.0 緩慢起伏
+        const u = ((r as THREE.Mesh).material as THREE.ShaderMaterial).uniforms;
+        u.uTime.value = t;
+        u.uOpacity.value = b.glow * (k === 0 ? 0.85 + 0.15 * Math.sin(t * 1.6 + b.phase[1]) : 0.9);
       });
       if (b.mark) { b.mark.rotation.y = t * 1.2; b.mark.position.y = 4.7 + Math.sin(t * 2 + b.phase[0]) * 0.15; }
       const isHover = hovered !== null && g.userData.id === hovered;
@@ -345,6 +403,8 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
     }));
   }, [projects.length, portrait]);
   const ids = useMemo(() => projects.map((p) => p.id), [projects]);
+  // QA：tools/qa 可讀取各島目前的位置與篩選目標
+  useEffect(() => { (window as unknown as { __mapBodies?: unknown }).__mapBodies = { bodies, ids }; }, [bodies, ids]);
 
   // 分類聚光燈：符合的島亮起光環並聚到中央小圓上，其餘退到外圈、下沉變暗；回到「全部」時各自回原位
   const firstFilter = useRef(true);
@@ -357,25 +417,32 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
     }
     firstFilter.current = false;
     const hit = projects.map((p) => matchFilter(p, filter));
-    const n = hit.filter(Boolean).length;
-    const r = n <= 1 ? 0 : Math.max(3.8, 7.4 / (2 * Math.sin(Math.PI / n)));
-    let k = 0;
-    // 依目前方位角排序，聚攏時不會交錯穿過彼此
-    const order = bodies.map((b, i) => ({ i, a: Math.atan2(b.anchor.z, b.anchor.x) })).sort((x, y) => x.a - y.a);
-    const start = order.find((o) => hit[o.i])?.a ?? 0;
-    order.forEach(({ i }) => {
-      const b = bodies[i];
+    // 依鏡頭目前的水平方位旋轉格位，讓「前後拉開」對準實際的視線方向
+    const cam = cameraRef.current;
+    const tg = controls.current?.target;
+    const az = cam ? Math.atan2(cam.position.x - (tg?.x ?? 0), cam.position.z - (tg?.z ?? 0)) : 0;
+    const rot = new THREE.Matrix4().makeRotationY(az);
+    const slots = clusterSlots(hit.filter(Boolean).length, portrait).map((v) => v.applyMatrix4(rot));
+    // 由中心往外的每個格位，指派給目前離它最近的島（移動距離短、不交錯）
+    const free = bodies.map((_, i) => i).filter((i) => hit[i]);
+    const goals = new Map<number, THREE.Vector3>();
+    slots.forEach((s) => {
+      let best = 0, bd = Infinity;
+      free.forEach((i, j) => { const d = bodies[i].anchor.distanceToSquared(s); if (d < bd) { bd = d; best = j; } });
+      goals.set(free.splice(best, 1)[0], s);
+    });
+    bodies.forEach((b, i) => {
       b.vel.set(0, 0, 0);
       b.goalUntil = Infinity;
       if (hit[i]) {
-        const a = start + (k++ / Math.max(1, n)) * Math.PI * 2;
-        b.goal = new THREE.Vector3(Math.cos(a) * r * (portrait ? 0.62 : 1), 0.6, Math.sin(a) * r * (portrait ? 1.5 : 0.8));
+        b.goal = goals.get(i)!;
         b.dimTo = 1; b.glowTo = 1;
       } else {
         const h = tmp.set(b.home.x, 0, b.home.z);
         const len = Math.max(h.length(), 0.001);
-        const out = Math.max(len, 9) + 13;
-        b.goal = new THREE.Vector3((h.x / len) * out, -3.2, (h.z / len) * out * (portrait ? 1 : 0.75));
+        // 退到聚攏群外圈更遠處並下沉，不和亮起的島在畫面上疊在一起
+        const out = Math.max(len, 9) + 20;
+        b.goal = new THREE.Vector3((h.x / len) * out, -6, (h.z / len) * out);
         b.dimTo = 0.3; b.glowTo = 0;
       }
     });
@@ -481,7 +548,7 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
         maxDistance={portrait ? 75 : 55}
         minPolarAngle={0.25}
         maxPolarAngle={1.25}
-        autoRotate={!reducedMotion && !hovered && !flying}
+        autoRotate={!reducedMotion && !hovered && !flying && filter === 'all'}
         autoRotateSpeed={0.2}
       />
     </Canvas>
@@ -492,7 +559,33 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
  * 選取法陣預熱：首頁載入約 3 秒後，在背景把每座島的法陣貼圖畫好、著色器編譯好並上傳 GPU，
  * 第一次滑過島嶼時就不會因為同步編譯或繪製 512px 貼圖而卡一下。完成後卸載。
  */
-const warmRing = ringMat('#ffffff');
+const warmSpot = spotMat('#ffffff');
+const warmMote = moteMat('#ffffff');
+
+/**
+ * 篩選聚攏的格位：六角蜂巢排列，相鄰島中心距 CLUSTER_GAP（島 4×4、半對角約 2.9，法陣半徑 3.15 → 光環彼此不重疊、留呼吸空間）。
+ * 取離中心最近的 n 格；橫向螢幕優先往左右展開、直向螢幕往前後展開。
+ */
+const CLUSTER_GAP = 7.6;
+function clusterSlots(n: number, portrait: boolean): THREE.Vector3[] {
+  if (n <= 0) return [];
+  if (n === 1) return [new THREE.Vector3(0, 0.6, portrait ? 0 : -1.5)];
+  if (n === 2) return [-1, 1].map((s) => (portrait ? new THREE.Vector3(0, 0.6, (s * CLUSTER_GAP * 1.1) / 2) : new THREE.Vector3((s * CLUSTER_GAP) / 2, 0.6, 0)));
+  const pts: THREE.Vector3[] = [];
+  const h = CLUSTER_GAP * Math.sqrt(3) / 2;
+  // 三島以上：以三角形重心為中心的蜂巢（三座時剛好是正三角形，不會有一座孤立在中央）
+  const off = n === 3 ? [CLUSTER_GAP / 2, h / 3] : [0, 0];
+  for (let r = -4; r <= 4; r++) for (let c = -4; c <= 4; c++) {
+    const x = (c + (r & 1 ? 0.5 : 0)) * CLUSTER_GAP - off[0], z = r * h - off[1];
+    // 橫向鏡頭俯角約 32°，前後距離在畫面上被壓扁 → 前後方向多拉開 15%，光環（橢圓）在畫面上也不相疊；
+    // 整群往鏡頭反方向退 2.5，前排不會被下方的篩選列擋住
+    pts.push(portrait ? new THREE.Vector3(z, 0.6, x * 1.1) : new THREE.Vector3(x, 0.6, z * 1.15 - 2.5));
+  }
+  const kx = portrait ? 1.35 : 1.0; // 橫向螢幕讓 x 方向「比較近」→ 往左右展開
+  const zc = portrait ? 0 : -2.5;
+  pts.sort((a, b) => (a.x * kx) ** 2 + (a.z - zc) ** 2 - ((b.x * kx) ** 2 + (b.z - zc) ** 2));
+  return pts.slice(0, n);
+}
 function SigilWarmup({ items }: { items: { kind: SigilKind; color: string }[] }) {
   const { gl, camera, scene } = useThree();
   const ref = useRef<THREE.Group>(null);
@@ -519,7 +612,8 @@ function SigilWarmup({ items }: { items: { kind: SigilKind; color: string }[] })
   return (
     <group ref={ref} visible={false}>
       {items.filter((it) => { const k = it.kind + it.color; if (seen.has(k)) return false; seen.add(k); return true; }).map((it) => <Sigil key={it.kind + it.color} kind={it.kind} color={it.color} />)}
-      <mesh geometry={RING_IN} material={warmRing} />
+      <mesh geometry={SPOT_GEO} material={warmSpot} />
+      <points geometry={MOTE_GEO} material={warmMote} frustumCulled={false} />
     </group>
   );
 }

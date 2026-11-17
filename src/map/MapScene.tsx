@@ -80,12 +80,18 @@ export function MapScene({
           <p className="map-eyebrow">Portfolio &amp; Showcase</p>
           <Wordmark size="hero" className="wordmark-map" />
           <p className="map-lede">每一件作品，都是一座懸浮的微縮箱庭。<br />點擊島嶼，鏡頭將帶你飛進它的領域。</p>
-          <div className="map-passport" aria-label="探索護照">
-            <Compass className="h-3.5 w-3.5" aria-hidden />
-            <span>已探索 <b>{seen}</b> / {projects.length} 座領域</span>
-            <span className="map-passport-bar" aria-hidden><i style={{ transform: `scaleX(${projects.length ? seen / projects.length : 0})` }} /></span>
+          <div className="map-badges">
+            <div className="map-passport" aria-label="探索護照">
+              <Compass className="h-3.5 w-3.5" aria-hidden />
+              <span>已探索 <b>{seen}</b> / {projects.length} 座領域</span>
+              <span className="map-passport-bar" aria-hidden><i style={{ transform: `scaleX(${projects.length ? seen / projects.length : 0})` }} /></span>
+            </div>
+            {/* 全站累計人次：雲端計數連不上時整個徽章不出現 */}
             {typeof views === 'number' && views > 0 && (
-              <span className="map-passport-views" title="全站累計探索人次"><Eye className="h-3 w-3" aria-hidden /> {fmtCount(views)}</span>
+              <div className="map-passport map-visitors" title="全站累計探索人次（每次造訪計一次）">
+                <Eye className="h-3.5 w-3.5" aria-hidden />
+                <span><b>{fmtCount(views)}</b> 位旅人造訪</span>
+              </div>
             )}
           </div>
         </div>
