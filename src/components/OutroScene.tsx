@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowUp, Check, Copy, Heart, LayoutGrid } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ArrowUp, Check, Copy, Eye, Heart, LayoutGrid } from 'lucide-react';
 import type { Project } from '../data/projects';
 import { Wordmark } from './Wordmark';
 import { GitHubIcon } from './icons';
-import { appreciate, getAppreciation, hasLiked, visited } from '../lib/footprint';
+import { useVisited } from '../lib/footprint';
+import { fmtCount, like as sendLike, liked as hasLiked, useCount } from '../lib/counter';
 import { play } from '../lib/sound';
 
 /** 創作者名片內容（只放公開資訊；聯絡方式用 GitHub 個人頁，不公開電子郵件） */
@@ -18,21 +19,16 @@ const PROFILE = {
 export function OutroScene({ projects, onTop, onIndex }: { projects: Project[]; onTop: () => void; onIndex: () => void }) {
   const count = projects.length;
   const [copied, setCopied] = useState(false);
-  const [likes, setLikes] = useState<number | null>(null);
-  const [liked, setLiked] = useState(hasLiked);
-  const [busy, setBusy] = useState(false);
-  const seen = useMemo(() => { const ids = new Set(projects.map((p) => p.id)); return visited().filter((id) => ids.has(id)).length; }, [projects]);
+  const likes = useCount('appreciation');
+  const views = useCount('site-views');
+  const [liked, setLiked] = useState(() => hasLiked('appreciation'));
+  const visitedIds = useVisited();
+  const seen = useMemo(() => { const ids = new Set(projects.map((p) => p.id)); return visitedIds.filter((id) => ids.has(id)).length; }, [projects, visitedIds]);
   const tech = useMemo(() => {
     const n = new Map<string, number>();
     projects.forEach((p) => p.tech.forEach((t) => n.set(t, (n.get(t) ?? 0) + 1)));
     return [...n.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([t]) => t);
   }, [projects]);
-
-  useEffect(() => {
-    let alive = true;
-    getAppreciation().then((v) => { if (alive) setLikes(v); });
-    return () => { alive = false; };
-  }, []);
 
   const copy = async () => {
     try {
@@ -48,14 +44,11 @@ export function OutroScene({ projects, onTop, onIndex }: { projects: Project[]; 
     setTimeout(() => setCopied(false), 1800);
   };
 
-  const like = async () => {
-    if (liked || busy) return;
-    setBusy(true); setLiked(true);
-    setLikes((v) => (v == null ? v : v + 1)); // 先樂觀更新
+  const like = () => {
+    if (liked) return;
+    setLiked(true);
     play('theme', 'brand');
-    const v = await appreciate();
-    if (v != null) setLikes(v);
-    setBusy(false);
+    sendLike('appreciation');
   };
 
   return (
@@ -91,8 +84,11 @@ export function OutroScene({ projects, onTop, onIndex }: { projects: Project[]; 
           <button className={`outro-like ${liked ? 'is-on' : ''}`} onClick={like} disabled={liked} aria-pressed={liked}>
             <Heart className="h-4 w-4" aria-hidden fill={liked ? 'currentColor' : 'none'} />
             <span>{liked ? '已留下足跡' : '留下讚賞'}</span>
-            <b>{likes == null ? '—' : likes.toLocaleString()}</b>
+            {typeof likes === 'number' && <b>{fmtCount(likes)}</b>}
           </button>
+          {typeof views === 'number' && views > 0 && (
+            <p className="outro-views"><Eye className="h-3.5 w-3.5" aria-hidden /> 全站累計探索 <b>{fmtCount(views)}</b> 人次</p>
+          )}
           <p className="outro-note">{liked ? '謝謝你走過這片群島 ✦' : '逛完群島，按一下讓創作者知道你來過'}</p>
         </article>
       </div>

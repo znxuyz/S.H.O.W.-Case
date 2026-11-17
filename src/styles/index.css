@@ -250,3 +250,12 @@ body {
 
 /* 音效開關 */
 .chrome-sound.is-on { border-color: color-mix(in srgb, var(--accent) 60%, transparent); color: color-mix(in srgb, var(--accent) 70%, var(--fg)); }
+
+/* 目錄：探索護照 */
+.index-passport { margin-top: 0.6rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.78rem; letter-spacing: 0.08em; color: #f3ead6aa; }
+.index-passport b { color: #ecd6a0; font-family: var(--font-mono); }
+.index-passport > span { width: 5rem; height: 3px; border-radius: 3px; background: #ffffff1a; overflow: hidden; }
+.index-passport > span i { display: block; height: 100%; background: linear-gradient(90deg, #b8935a, #ecd6a0); transform-origin: left; }
+.index-seen { flex: none; display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.12rem 0.45rem; border-radius: 999px; font-size: 0.62rem; letter-spacing: 0.08em; color: #1a140b; background: #c8a869; }
+.outro-views { margin-top: 0.7rem; display: flex; align-items: center; gap: 0.35rem; font-size: 0.74rem; color: #f3ead6b3; }
+.outro-views b { font-family: var(--font-mono); color: #ecd6a0; }

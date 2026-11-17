@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { X, ArrowUpRight } from 'lucide-react';
+import { X, ArrowUpRight, Check } from 'lucide-react';
+import { useVisited } from '../lib/footprint';
 import type { Project } from '../data/projects';
 import { themes } from '../themes';
 
@@ -20,6 +21,8 @@ export function IndexOverlay({ projects, current, onPick, onClose }: { projects:
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  const visitedIds = useVisited();
+  const seen = projects.filter((p) => visitedIds.includes(p.id)).length;
   let n = 0;
   return (
     <motion.div
@@ -44,6 +47,9 @@ export function IndexOverlay({ projects, current, onPick, onClose }: { projects:
           <div>
             <p className="text-xs tracking-[0.4em] text-[#c8a869]">INDEX</p>
             <h2 className="mt-2 font-display text-3xl text-[#f3ead6] sm:text-4xl">作品目錄</h2>
+            <p className="index-passport">探索護照：已探索 <b>{seen}</b> / {projects.length} 座領域
+              <span aria-hidden><i style={{ transform: `scaleX(${projects.length ? seen / projects.length : 0})` }} /></span>
+            </p>
           </div>
           <button ref={closeBtn} onClick={onClose} className="index-close" aria-label="關閉目錄"><X className="h-5 w-5" /></button>
         </div>
@@ -66,6 +72,7 @@ export function IndexOverlay({ projects, current, onPick, onClose }: { projects:
                           <span className="block truncate text-[0.95rem] text-[#f3ead6]">{p.title}</span>
                           <span className="block truncate text-xs text-[#f3ead6]/50">{themes[p.theme].label} · {STATUS_LABEL[p.status]}</span>
                         </span>
+                        {visitedIds.includes(p.id) && <span className="index-seen" title="已探索"><Check className="h-3 w-3" aria-hidden /> 已探索</span>}
                         <ArrowUpRight className="h-4 w-4 shrink-0 text-[#c8a869]/70" aria-hidden />
                       </button>
                     </li>

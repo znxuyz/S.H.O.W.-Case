@@ -309,3 +309,23 @@
   .video-modal-head { display: grid; grid-template-columns: 1fr auto; row-gap: 0.5rem; }
   .video-modal-tabs { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
 }
+
+/* ═════════ 單島探索次數＋❤ 喜歡 ═════════ */
+.tour-title .sc-views { margin-top: 0.35rem; display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.12em; opacity: 0.7; }
+.sc-btn-like .sc-heart { position: relative; display: inline-grid; place-items: center; }
+.sc-btn-like.is-on { color: #ff6b81; border-color: color-mix(in srgb, #ff6b81 55%, transparent); }
+.sc-btn-like.is-on > span:not(.sc-heart) { color: var(--fg); }
+.sc-heart.is-pop svg { animation: sc-heart-pop 0.55s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes sc-heart-pop { 0% { transform: scale(1); } 35% { transform: scale(1.55) rotate(-8deg); } 100% { transform: scale(1); } }
+.sc-heart i { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: #ff6b81; opacity: 0; pointer-events: none; }
+.sc-heart.is-pop i { animation: sc-heart-spark 0.6s ease-out forwards; }
+.sc-heart i:nth-child(2) { --a: 0deg; } .sc-heart i:nth-child(3) { --a: 60deg; } .sc-heart i:nth-child(4) { --a: 120deg; }
+.sc-heart i:nth-child(5) { --a: 180deg; } .sc-heart i:nth-child(6) { --a: 240deg; } .sc-heart i:nth-child(7) { --a: 300deg; }
+@keyframes sc-heart-spark { 0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1); } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-16px) scale(0.3); } }
+.sc-like-n { font-family: var(--font-mono); font-size: 0.78em; font-weight: 600; opacity: 0.85; }
+@media (max-width: 767px) {
+  .tour-title .sc-views { font-size: 0.6rem; margin-top: 0.15rem; }
+  .sc-btn-like > span:not(.sc-heart) { display: none; }
+  .tour.is-focused .tour-title .sc-views { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .sc-heart.is-pop svg, .sc-heart.is-pop i { animation: none; } }

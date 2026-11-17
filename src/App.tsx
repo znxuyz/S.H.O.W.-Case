@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ChevronDown, ChevronUp, LayoutGrid, Map as MapIcon, Volume2, VolumeX } from 'lucide-react';
 import { play, setSoundEnabled, useSoundEnabled } from './lib/sound';
 import { markVisited } from './lib/footprint';
+import { visit } from './lib/counter';
 import { visibleProjects, type Project } from './data/projects';
 import { themes, type ThemeKey } from './themes';
 import { useSceneNav } from './hooks/useSceneNav';
@@ -57,6 +58,8 @@ export default function App() {
     play('theme', scene.theme);
   }, [scene.id, scene.theme]);
   useEffect(() => { if (scene.kind === 'project') markVisited(scene.id); }, [scene]);
+  // 全站總瀏覽：每次造訪計一次（請求延後到頁面閒置才送）
+  useEffect(() => { visit('site-views'); }, []);
 
   const openIndex = useCallback(() => setIndexOpen(true), []);
   const closeIndex = useCallback(() => setIndexOpen(false), []);

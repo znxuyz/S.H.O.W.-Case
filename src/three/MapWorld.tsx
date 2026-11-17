@@ -39,6 +39,8 @@ export interface MapWorldProps {
   live?: boolean;
   /** 分類聚光燈篩選 */
   filter?: MapFilter;
+  /** 探索護照：已逛過的島（上方顯示小星標） */
+  visited?: string[];
 }
 
 /* ───────────────── 群島佈局：自然錯落的 3D 散佈 ───────────────── */
@@ -74,7 +76,12 @@ interface Body {
   dim: number; dimTo: number;   // 亮度（1 正常、退後的島變暗）
   glow: number; glowTo: number; // 選中光環強度
   rings: THREE.Mesh[];
+  mark: THREE.Object3D | null;
 }
+
+/* 已探索星標：共用幾何與材質（8 面），每座已逛過的島一個 */
+const MARK_GEO = new THREE.OctahedronGeometry(0.32, 0);
+const MARK_MAT = new THREE.MeshBasicMaterial({ color: '#ffd98a', toneMapped: false });
 
 /* 選中光環：共用幾何，每座島各一組加色材質；強度 0 時不繪製 */
 const RING_IN = new THREE.RingGeometry(3.25, 3.5, 72);
@@ -103,9 +110,9 @@ const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 
 function Island({
-  project, body, hovered, sigil, onOver, onOut, onDown,
+  project, body, hovered, sigil, seen, onOver, onOut, onDown,
 }: {
-  project: Project; body: Body; hovered: boolean; sigil: SigilKind;
+  project: Project; body: Body; hovered: boolean; sigil: SigilKind; seen: boolean;
   onOver: (id: string) => void; onOut: () => void; onDown: (id: string, e: ThreeEvent<PointerEvent>) => void;
 }) {
   const accent = project.accent ?? ACCENT[project.theme];
@@ -122,6 +129,9 @@ function Island({
       <group rotation={[0, body.yaw, 0]}>
         {project.model && <Diorama model={project.model} lod />}
       </group>
+      {seen && (
+        <mesh ref={(r) => { body.mark = r; }} geometry={MARK_GEO} material={MARK_MAT} position={[0, 4.7, 0]} scale={[1, 1.5, 1]} visible={!hovered} raycast={() => null} />
+      )}
       {mats.map((m, k) => (
         <mesh
           key={k}
@@ -142,6 +152,7 @@ function Island({
             <div className="island-tag" style={{ ['--c' as string]: accent }}>
               <b>{project.title}</b>
               <small>{theme.label}{project.status === 'dev' ? ' · 開發中' : project.status === 'maintenance' ? ' · 維修中' : ''}</small>
+              {seen && <span className="island-seen">✦ 已探索</span>}
             </div>
           </Html>
         </>
@@ -214,6 +225,7 @@ function Swarm({ bodies, drag, hovered, reduced }: { bodies: Body[]; drag: Mutab
         r.rotation.z = t * (k === 0 ? 0.25 : -0.12);
         r.scale.setScalar(1 + (k === 1 ? 0.04 * Math.sin(t * 1.6) : 0));
       });
+      if (b.mark) { b.mark.rotation.y = t * 1.2; b.mark.position.y = 4.7 + Math.sin(t * 2 + b.phase[0]) * 0.15; }
       const isHover = hovered !== null && g.userData.id === hovered;
       b.lift += ((isHover || dragging ? 0.7 : 0) - b.lift) * Math.min(1, dt * 7);
       const m = reduced ? 0 : 1;
@@ -307,7 +319,7 @@ function DragController({ drag, bodies, controls, onTap, onRelease }: {
   return null;
 }
 
-export default function MapWorld({ projects, portrait, reducedMotion, onEnter, onMeasure, live = true, filter = 'all' }: MapWorldProps) {
+export default function MapWorld({ projects, portrait, reducedMotion, onEnter, onMeasure, live = true, filter = 'all', visited = [] }: MapWorldProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   // 首頁一開就把所有島嶼的輕量版一起下載解析（各 100–300KB）；滑過某座島時預載它的精細模型與環境，點進去幾乎秒開
   useMemo(() => preloadModels(...projects.map((p) => p.model && mapModel(p.model))), [projects]);
@@ -325,7 +337,7 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
     const rnd = mulberry32(77);
     return scatter(projects.length, portrait).map((p) => ({
       anchor: p, vel: new THREE.Vector3(), group: null, lift: 0,
-      home: p.clone(), goal: null, goalUntil: 0, dim: 1, dimTo: 1, glow: 0, glowTo: 0, rings: [],
+      home: p.clone(), goal: null, goalUntil: 0, dim: 1, dimTo: 1, glow: 0, glowTo: 0, rings: [], mark: null,
       freq: [0.18 + rnd() * 0.22, 0.35 + rnd() * 0.3, 0.15 + rnd() * 0.2],
       phase: [rnd() * 6.28, rnd() * 6.28, rnd() * 6.28],
       amp: [0.35 + rnd() * 0.45, 0.25 + rnd() * 0.3, 0.35 + rnd() * 0.45],
@@ -446,6 +458,7 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
           body={bodies[i]}
           hovered={showAll || hovered === p.id}
           sigil={SIGIL_FOR_THEME[p.theme]}
+          seen={visited.includes(p.id)}
           onOver={(id) => { if (!flying && !drag.current?.dragging) { if (hovered !== id) play('hover', p.theme); setHovered(id); } }}
           onOut={() => { if (!drag.current?.dragging) setHovered(null); }}
           onDown={down}

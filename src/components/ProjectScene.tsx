@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Hammer, Wrench, Archive, ChevronLeft, ChevronRight, X, Info, MonitorSmartphone, Maximize2, Play, Pause, Clapperboard } from 'lucide-react';
+import { ArrowUpRight, Hammer, Wrench, Archive, ChevronLeft, ChevronRight, X, Info, Eye, Heart, MonitorSmartphone, Maximize2, Play, Pause, Clapperboard } from 'lucide-react';
 import type { Project } from '../data/projects';
 import { themes } from '../themes';
 import { playSceneIntro } from '../lib/titleFx';
@@ -8,6 +8,7 @@ import type { CardRefs } from '../three/Hotspots';
 import { Showcase } from './Showcase';
 import { GitHubIcon } from './icons';
 import { play } from '../lib/sound';
+import { fmtCount, like, liked as hasLiked, useCount } from '../lib/counter';
 
 // 影片燈箱延遲載入：連播放器程式碼都等使用者按下按鈕才下載
 const VideoModal = lazy(() => import('./VideoModal').then((m) => ({ default: m.VideoModal })));
@@ -34,6 +35,18 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
   const markers = useRef<(HTMLElement | null)[]>([]);
   const cardRefs = useRef<CardRefs>({ card: null, line: null });
   const [pulse, setPulse] = useState(0);
+  // 雲端計數：單島探索次數（本次造訪只計一次）、❤ 喜歡（每個瀏覽器一次）；連不上就隱藏數字
+  const views = useCount(`island-${project.id}`, 'visit');
+  const likes = useCount(`like-${project.id}`);
+  const [loved, setLoved] = useState(() => hasLiked(`like-${project.id}`));
+  const [burst, setBurst] = useState(0);
+  const love = () => {
+    setBurst((b) => b + 1);
+    if (loved) return;
+    setLoved(true);
+    play('select', project.theme);
+    like(`like-${project.id}`);
+  };
   // 3D 島嶼預熱完成前不顯示熱點標記（避免標籤浮在空中、壓住載入遮罩）
   const [stageReady, setStageReady] = useState(false);
   const onStageReady = useCallback(() => setStageReady(true), []);
@@ -131,6 +144,9 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
             </span>
           </div>
           <h2 className="sc-title">{project.title}</h2>
+          {typeof views === 'number' && views > 0 && (
+            <p className="sc-views reveal" title="此島累計探索次數"><Eye className="h-3.5 w-3.5" aria-hidden /> {fmtCount(views)} 次探索</p>
+          )}
           <p className="sc-tagline reveal">{project.tagline}</p>
           <div className="sc-actions reveal">
             {project.links.demo ? (
@@ -144,6 +160,19 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
             <a className="sc-btn sc-btn-secondary" href={project.links.repo} target="_blank" rel="noopener noreferrer">
               <GitHubIcon /><span>Source Code</span>
             </a>
+            <button
+              className={`sc-btn sc-btn-secondary sc-btn-like ${loved ? 'is-on' : ''}`}
+              onClick={love}
+              aria-pressed={loved}
+              aria-label={loved ? '已喜歡此作品' : '喜歡此作品'}
+            >
+              <span key={burst} className={`sc-heart ${burst ? 'is-pop' : ''}`} aria-hidden>
+                <Heart className="h-4 w-4" fill={loved ? 'currentColor' : 'none'} />
+                {burst > 0 && <><i /><i /><i /><i /><i /><i /></>}
+              </span>
+              <span>{loved ? '已喜歡' : '喜歡'}</span>
+              {typeof likes === 'number' && <b className="sc-like-n">{fmtCount(likes)}</b>}
+            </button>
             {project.videoUrl && (
               <button className="sc-btn sc-btn-secondary sc-btn-video" onClick={() => setVideo(true)}>
                 <Clapperboard className="h-4 w-4" aria-hidden /><span>觀看演示影片</span>
