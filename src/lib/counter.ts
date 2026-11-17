@@ -1,6 +1,7 @@
 /**
  * 雲端計數（免註冊、免金鑰的公開計數端點）
- * - 主要：api.counterapi.dev（v1）；連不上時本次造訪自動改用備援 abacus.jasoncameron.dev
+ * - 主要：abacus.jasoncameron.dev；連不上時本次造訪自動改用備援 countapi.mileshilliard.com
+ *   （兩者皆以 GitHub Actions 實測可連線且允許跨網域；原本的 api.counterapi.dev v1 已停用，回傳 410）
  * - 計數名稱空間 znxuyz-show-case；只送出計數名稱，不含任何個人資料
  *     site-views        全站總瀏覽（每次造訪 sessionStorage 只計一次）
  *     island-<id>       單島探索次數（同一次造訪每座島只計一次）
@@ -17,15 +18,15 @@ interface Provider { name: string; get: (k: string) => string; up: (k: string) =
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const PROVIDERS: Provider[] = [
   {
-    name: 'counterapi',
-    get: (k) => `https://api.counterapi.dev/v1/${NS}/${k}`,
-    up: (k) => `https://api.counterapi.dev/v1/${NS}/${k}/up`,
-    read: (j) => num((j as { count?: unknown })?.count),
-  },
-  {
     name: 'abacus',
     get: (k) => `https://abacus.jasoncameron.dev/get/${NS}/${k}`,
     up: (k) => `https://abacus.jasoncameron.dev/hit/${NS}/${k}`,
+    read: (j) => num((j as { value?: unknown })?.value),
+  },
+  {
+    name: 'countapi-mileshilliard',
+    get: (k) => `https://countapi.mileshilliard.com/api/v1/get/${NS}-${k}`,
+    up: (k) => `https://countapi.mileshilliard.com/api/v1/hit/${NS}-${k}`,
     read: (j) => num((j as { value?: unknown })?.value),
   },
 ];
@@ -40,7 +41,7 @@ const ls = {
 };
 
 /** 本次造訪改用第幾個端點（主端點失敗後記在 sessionStorage，不再反覆嘗試） */
-let pi = Number(ss.get('show-counter-p') ?? 0) || 0;
+let pi = Number(ss.get('show-counter-p2') ?? 0) || 0;
 
 /** 頁面閒置後才發送（首屏與 3D 預熱優先） */
 let idle: Promise<void> | null = null;
@@ -80,7 +81,7 @@ async function request(kind: 'get' | 'up', key: string): Promise<number | null> 
       clearTimeout(timer);
     }
     // 同時失敗的多個請求只往下換一次端點
-    if (pi === used) { pi += 1; ss.set('show-counter-p', String(pi)); }
+    if (pi === used) { pi += 1; ss.set('show-counter-p2', String(pi)); }
   }
   return null;
 }
@@ -92,7 +93,7 @@ const subs = new Set<() => void>();
 const emit = () => subs.forEach((f) => f());
 function settle(key: string, job: Promise<number | null>) {
   pending.set(key, job);
-  job.then((v) => { values.set(key, v); pending.delete(key); emit(); });
+  job.then((v) => { if (pending.get(key) === job) { values.set(key, v); pending.delete(key); emit(); } });
   return job;
 }
 
@@ -103,12 +104,16 @@ export function load(key: string) {
 }
 
 /** 本次造訪第一次看到 → +1，其後只讀取 */
+const visited = new Set<string>();
 export function visit(key: string) {
-  if (values.has(key) || pending.has(key)) return;
+  if (visited.has(key)) return;
+  visited.add(key);
   const flag = `show-seen-${key}`;
   if (ss.get(flag)) { load(key); return; }
-  ss.set(flag, '1');
-  settle(key, request('up', key));
+  // 若其他元件已先送出「讀取」，等它回來再 +1（不能因為已有請求就略過計數）；
+  // 成功送達才記下「本次造訪已計」，失敗的話重新整理還會再試
+  const prev = pending.get(key) ?? Promise.resolve(null);
+  settle(key, prev.then(() => request('up', key)).then((v) => { if (v !== null) ss.set(flag, '1'); return v; }));
 }
 
 export const liked = (key: string) => ls.get(`show-liked-${key}`) === '1' || (key === 'appreciation' && ls.get('show-liked') === '1');

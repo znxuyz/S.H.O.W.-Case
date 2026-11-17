@@ -59,7 +59,7 @@ export default function App() {
   }, [scene.id, scene.theme]);
   useEffect(() => { if (scene.kind === 'project') markVisited(scene.id); }, [scene]);
   // 全站總瀏覽：每次造訪計一次（請求延後到頁面閒置才送）
-  useEffect(() => { visit('site-views'); }, []);
+  useState(() => visit('site-views')); // 在子元件讀取前就登記「本次造訪 +1」
 
   const openIndex = useCallback(() => setIndexOpen(true), []);
   const closeIndex = useCallback(() => setIndexOpen(false), []);
