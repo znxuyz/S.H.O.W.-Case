@@ -248,6 +248,9 @@ for k in range(3):
     leaf.parent = piv
 
 # ── 合併、樞紐、匯出 ──
+# 精緻度升級：建築腰線／簷口，與依主題自動布置的微縮生活小道具（共用網格）
+kit.articulate()
+kit.dress('mythic', 12, seed=63)
 kit.merge_group('static', 'altar')
 kit.pivot(kit.merge_group('Bob0', 'card'), 'Bob0', (0, -0.05, TOP + 0.42))
 for k, (bx, by) in enumerate([(-1.6, 1.25), (1.25, 1.6)]):

@@ -199,6 +199,9 @@ kit.sphere('care_glow', 0.12, (CX - 0.12, CY - 0.45, 0.62), 'cross', seg=14, rin
 kit.fx_node('FxHide_care', (CX - 0.12, CY - 0.45, 0.62))
 
 # ── 合併、樞紐、匯出 ──
+# 精緻度升級：建築腰線／簷口，與依主題自動布置的微縮生活小道具（共用網格）
+kit.articulate()
+kit.dress('forest', 16, seed=56)
 kit.merge_group('static', 'forest')
 for i, (x, y, ph) in enumerate(SPOTS):
     kit.pivot(kit.merge_group(f'Billboard{i}', f'stage{i}'), f'Billboard{i}', (x, y, ph + 0.06))

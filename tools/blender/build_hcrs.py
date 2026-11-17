@@ -253,6 +253,9 @@ kit.fx_node('Fx_mlid', (MBX, MBY + 0.13, 0.77))
 kit.fx_node('Fx_letter', (MBX, MBY, 0.6))
 
 # ── 合併、樞紐、匯出 ──
+# 精緻度升級：建築腰線／簷口，與依主題自動布置的微縮生活小道具（共用網格）
+kit.articulate()
+kit.dress('campus', 14, seed=28)
 kit.merge_group('static', 'school')
 for idx in range(8):
     kit.pivot(kit.merge_group(f'Lit_{idx}', f'room{idx}'), f'Lit_{idx}', (0, 0, 0))

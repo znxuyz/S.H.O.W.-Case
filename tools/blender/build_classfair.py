@@ -194,5 +194,8 @@ kit.fx_node('Fx_arm', (TX + 0.32, TY + 0.22, 0.19))
 kit.fx_node('FxHide_notes', (TX, TY, 0.45))
 
 # ── 合併、匯出 ──
+# 精緻度升級：建築腰線／簷口，與依主題自動布置的微縮生活小道具（共用網格）
+kit.articulate()
+kit.dress('campus', 10, seed=63)
 kit.merge_group('static', 'classfair')
 kit.export(OUT)

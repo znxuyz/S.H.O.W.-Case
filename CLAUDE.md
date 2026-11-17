@@ -17,13 +17,13 @@
   - R3F `<Canvas>` 一律加 `resize={{ offsetSize: true }}`：轉場會對外層做 CSS scale，用 getBoundingClientRect 量測會讓畫布尺寸錯誤而黑屏
 - 精細模型：`public/models/<id>.glb`（`build_<id>.py`）、3D 環境 `env_<id>.glb`（`build_env_<id>.py`）、首頁輕量版 `models/map/<id>.glb`（`build_map_lod.sh`）；在 `projects.ts` 以 `model` / `env` 指定
 - 建模：`BLENDER_PY=.blender-venv/bin/python tools/blender/build.sh <名稱>`；改了主模型後記得重跑 `build_map_lod.sh <id>`
-- 模型管線：Blender 匯出 → `detail_maps.mjs`（主模型掛上共用細節貼圖：`tools/blender/detail/` 由 `bake_details.py` 以 Noise／ColorRamp／Bump 節點烘焙的石材／木紋／金屬拉絲／灰泥法線＋粗糙度，512px 無縫）→ 只套在純色、不透明、UV 完整的材質上，並以 MikkTSpace 預先計算切線（手機 GPU 不走導數推算，避免彩色雜點；不做「只有粗糙度」的半套組合以免多出著色器變體）→ gltf-transform **Draco** 壓縮＋WebP；網站用自架解碼器 `public/draco/`（`assets.ts` 的 `DRACO_PATH`）；倒角一律 1 段（`kit.box`／`label_block`），圓環／球體分段有上限；`node tools/qa/glbstats.cjs` 檢查預算（主模型 ≤ 15k 三角面、≤ 1.5MB；環境 ≤ 1.5MB；首頁版 ≤ 200KB）；`TRI_STATS` 會在建模輸出 `tris-top` 列出最吃面數的零件
+- 模型管線：Blender 匯出 → `detail_maps.mjs`（主模型掛上共用細節貼圖：`tools/blender/detail/` 由 `bake_details.py` 以 Noise／ColorRamp／Bump 節點烘焙的石材／木紋／金屬拉絲／灰泥法線＋粗糙度，512px 無縫）→ 只套在純色、不透明、UV 完整的材質上，並以 MikkTSpace 預先計算切線（手機 GPU 不走導數推算，避免彩色雜點；不做「只有粗糙度」的半套組合以免多出著色器變體）→ gltf-transform **Draco** 壓縮＋WebP；網站用自架解碼器 `public/draco/`（`assets.ts` 的 `DRACO_PATH`）；倒角一律 1 段（`kit.box`／`label_block`），圓環／球體分段有上限；`node tools/qa/glbstats.cjs` 檢查預算（主模型 ≤ 18k 三角面、≤ 1.5MB；環境 ≤ 1.5MB；首頁版 ≤ 200KB）；`TRI_STATS` 會在建模輸出 `tris-top` 列出最吃面數的零件
 - 演示影片（全部本站託管、只在開啟燈箱時載入）：原片由專案 README 擷取（`git show HEAD:<路徑>`）。`tools/make_fullvideo.sh <原片> <id>` → 完整介紹 `public/videos/<id>-full.mp4`（720p H.264＋AAC 96k、每 2 秒關鍵畫格、**faststart 索引在檔頭**，下載幾百 KB 即開播、其餘邊播邊載；原片若索引在檔尾必須整支下載完才能播）；`tools/make_highlight.sh <原片> <id>` → 20 秒精華 `<id>.mp4／.jpg`（無聲循環）。`projects.ts`：`videoUrl`＝完整介紹、`videoHighlightUrl`＝精華、`videoPoster`、`videoOriginalUrl`＝外部原始檔；螢幕類熱點加 `video: true`；`VideoModal` 預設播完整介紹（有聲，被擋時靜音＋「開啟聲音」），可切換精華，第一幀前顯示讀取動畫與進度；QA：`node tools/qa/video.cjs <id>`（量測按下到開播時間）
 - 點擊動畫：熱點的 `fx` 指定模型節點與「結構動作」（hinge/slide/stretch/flap/whirl/reveal/sweep/stamp/press/pulse/flash，定義見 `projects.ts` 的 FxKind；軸向為網站座標）；不要用整塊發光＋跳動的通用動畫，每個物件拆出子網格各自動
 - Blender 端：`group='Fx_<名稱>'` 收集零件後 `kit.fx_node(名稱, 樞紐)`（樞紐＝轉軸/鉸鏈位置）；`FxHide_*` 節點平常隱藏、只在 reveal 時出現；掛在會動的節點下用 `kit.reparent`；檢查：`node tools/qa/fx.cjs <id>`（加索引會以 ?fxslow 放慢截圖）
 - 主島底座：各 `build_env_<id>.py` 呼叫 `env.cradle(...)`（mound / tiers / tower / books / cloud）
 - 鏡頭環繞淨空：各 `build_env_<id>.py` 在合併前呼叫 `env.clear_orbit()`，把會擋住自動環繞視線（桌機與手機直式兩種鏡頭距離）的高大物件連同同處零件推到環繞圈外（微小粒子除外、最多檢查 4 輪）；QA：`node tools/qa/orbit.cjs [id]`（每 10° 射線檢查，必須全部「無遮擋」）
-- 精緻度：`kit.plinth(rich=True)` 自動加分段壓頂石、四角柱墩、土層岩線、草叢（草地頂面）、垂吊岩錐；`kit.tree` 為三層樹冠＋枝幹＋樹根；要加細節優先用低面數結構配件（小零件 `bevel=0` 只有 12 面），不要提高曲面細分；面數不夠時拿看不出差別的小球體／小方塊減面換取
+- 精緻度（2026-11-17 微縮沙盤升級）：`kit.plinth(rich=True)` 自動加分段壓頂石、四角柱墩、三層不規則凸出的裸露岩層切面、崖邊岩塊與嵌入式石階（岩石底座）、草叢、垂吊岩錐；`kit.articulate()` 替方盒牆體加勒腳／腰線／出挑簷口；`kit.dress(style, n)` 依主題（campus／desk／oriental／mythic／forest／tech）在地表空位自動布置微縮道具（長椅、路燈、告示牌、盆栽、書堆、車架、石燈籠、燈籠串、水槽、符文柱、浮石、蘑菇、原木、管線、天線、全息底座、散熱格柵），道具以射線檢查地表空位（穿過半透明光束；科技風可放在平坦屋頂；地表全滿時用 `kit.place` 沿壓頂石布置），零件以 `kit.inst` 共用網格（Linked Duplicates），匯出時非發光零件改用同一張色票貼圖 `props_palette`（整組道具約 1–3 次繪製），放在 `Props` 節點、首頁輕量版會整組刪掉；各 build 腳本在合併前呼叫 articulate／dress；樹冠為 7 顆低面數多面體（深→淺三色）＋彎曲樹幹（比舊版細分球更省面）；`kit.tree` 為三層樹冠＋枝幹＋樹根；要加細節優先用低面數結構配件（小零件 `bevel=0` 只有 12 面），不要提高曲面細分；面數不夠時拿看不出差別的小球體／小方塊減面換取
 - 空間導覽熱點：`projects.ts` 的 `hotspots`（座標為網站場景座標，Y 朝上；Blender 座標 (x, y, z) → 網站 (x, z - 0.4, -y)）
 - 自動導覽：`ProjectScene` 的 `auto` 狀態（底部導覽列最前面的播放鈕），每站停留 6–11 秒（依說明字數）；使用者拖曳、滾輪、點按鈕或按鍵即暫停；QA：`node tools/qa/autotour.cjs <id>`
 - 品牌素材：`public/favicon.svg`（浮島圖示）、`apple-touch-icon.png`、社群分享封面 `og-cover.jpg`／`.webp`（1200×630，由 `node tools/qa/og.cjs` 從首頁渲染後以 Python 加字）；`index.html` 的 OG／Twitter 標籤用絕對網址
@@ -51,7 +51,7 @@
 5. **寫入 `src/data/projects.ts`**：依現有作品的欄位格式新增一筆（`model`、`env`、`links.repo`、`links.demo`、`showcase`、`hotspots`）。
    熱點座標＝Blender 座標 (x, y, z) → 網站 (x, z − 0.4, −y)；每個熱點的 `fx` 指向步驟 4 的節點，軸向為網站座標。
 6. **檢測**：`tools/new_project.sh <id>`（不加 `--skip-qa`）會檢查檔案大小／面數並跑 `probe.cjs`（BUDGET=1）與 `fx.cjs`：
-   - 預算：主模型 ≤ 15k 三角面、≤ 1.5MB；環境 ≤ 1.5MB；首頁輕量版 ≤ 200KB；全部 Draco（`node tools/qa/glbstats.cjs <id>`）
+   - 預算：主模型 ≤ 18k 三角面、≤ 1.5MB；環境 ≤ 1.5MB；首頁輕量版 ≤ 200KB；全部 Draco（`node tools/qa/glbstats.cjs <id>`）
    - 介紹頁：繪製呼叫 ≤ 160、著色器 ≤ 20、三角面 ≤ 60k、載入長任務總和 ≤ 800ms
    - `fx.cjs`：所有熱點節點都找得到（missing nodes 0）、沒有錯誤
    - `node tools/qa/orbit.cjs <id>`：自動環繞一圈桌機與手機都「無遮擋」

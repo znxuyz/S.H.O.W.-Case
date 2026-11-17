@@ -257,6 +257,9 @@ for k in range(3):
     kit.ico('steam', 0.05 + k * 0.025, (ex + math.cos(ang0) * 0.12, ey + math.sin(ang0) * 0.12, 0.46 + k * 0.1), 'steam', sub=1, group='FxHide_steam')
 
 # ── 合併、樞紐、匯出 ──
+# 精緻度升級：建築腰線／簷口，與依主題自動布置的微縮生活小道具（共用網格）
+kit.articulate()
+kit.dress('desk', 12, seed=35)
 kit.merge_group('static', 'desk')
 sp = kit.pivot(kit.merge_group('Spin0', 'train'), 'Spin0', (0, 0, 0))
 kit.reparent(kit.fx_node('FxHide_steam', (ex + math.cos(ang0) * 0.12, ey + math.sin(ang0) * 0.12, 0.4)), sp)

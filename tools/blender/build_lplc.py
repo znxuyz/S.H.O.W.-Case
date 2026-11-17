@@ -242,6 +242,13 @@ kit.torus('laser_ring', 1.7, 0.012, (EX, EY, 0.3), 'neon_m', group='FxHide_laser
 kit.fx_node('FxHide_laser', (EX, EY, 0.3))
 
 # ── 合併、樞紐、匯出 ──
+# 精緻度升級：建築腰線／簷口，與依主題自動布置的微縮生活小道具（共用網格）
+kit.articulate()
+kit.dress('tech', 12, seed=28)
+# 地表全是會動的熱力圖街區：設備改沿後方與左側壓頂石布置（遠離鏡頭）
+for i, (kind, x, y, rot) in enumerate([('antenna', -1.2, 1.92, 0), ('pipes', -0.45, 1.92, 0), ('vent', 0.35, 1.92, 0), ('antenna', 1.1, 1.92, 0),
+                                        ('pipes', -1.92, 0.6, math.pi / 2), ('vent', -1.92, -0.3, math.pi / 2), ('antenna', -1.92, -1.2, 0)]):
+    kit.place(kind, (x, y, 0.05), rot)
 kit.merge_group('static', 'terrain')
 kit.pivot(kit.merge_group('Pulse0', 'eye'), 'Pulse0', (EX, EY, EZ))
 kit.pivot(kit.merge_group('Billboard0', 'iris'), 'Billboard0', (EX, EY, EZ))

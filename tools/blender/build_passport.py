@@ -215,6 +215,8 @@ label_block('live', (0.32, 0.015, 0.14), (GCX, GCY - 0.1, GCZ + 0.42), 'live_tag
 kit.fx_node('FxHide_live', (GCX, GCY - 0.1, GCZ + 0.3))
 
 # ── 合併、樞紐、匯出 ──
+# 精緻度升級：建築腰線／簷口，與依主題自動布置的微縮生活小道具（共用網格）
+kit.articulate()
 kit.merge_group('static', 'book')
 for i, (x, y) in enumerate(SPOTS):
     bb = kit.pivot(kit.merge_group(f'Billboard{i}', f'stamp{i}'), f'Billboard{i}', (x - 0.05, y, 0.42))

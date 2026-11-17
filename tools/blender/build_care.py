@@ -220,6 +220,9 @@ kit.fx_extract('Fx_screen', (DX - 0.15, DY + 0.05, 0.4), (DX + 0.15, DY + 0.15, 
 kit.fx_node('Fx_screen', (DX, DY + 0.09, 0.395))
 
 # ── 合併、樞紐、匯出 ──
+# 精緻度升級：建築腰線／簷口，與依主題自動布置的微縮生活小道具（共用網格）
+kit.articulate()
+kit.dress('campus', 14, seed=28)
 kit.merge_group('static', 'garden')
 for i in range(15):
     a = math.pi / 2 - i * math.tau / 15

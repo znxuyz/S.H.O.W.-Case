@@ -136,6 +136,9 @@ label_block('new_line', (1.0, 0.17, 0.008), (TX + 0.55, TY - 0.6, 0.12), 'newlin
 kit.fx_node('FxHide_line', (TX + 0.05, TY - 0.6, 0.12))
 
 # ── 合併、樞紐、匯出 ──
+# 精緻度升級：建築腰線／簷口，與依主題自動布置的微縮生活小道具（共用網格）
+kit.articulate()
+kit.dress('desk', 10, seed=42)
 kit.merge_group('static', 'desk')
 for i, (x, y, z) in enumerate(SHELVES):
     bi = kit.pivot(kit.merge_group(f'Bob{i}', f'shelf{i}'), f'Bob{i}', (x, y, z))

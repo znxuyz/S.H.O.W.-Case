@@ -348,6 +348,14 @@ def pivot(objs, name, piv):
 
 
 def export(path):
+    # 微縮小道具：依材質合併後放進 Props 節點（首頁輕量版會整組刪掉）
+    if GROUPS.get('props'):
+        _palettize(GROUPS['props'])
+        for o in GROUPS['props']:
+            if o.data.users > 1:
+                o.data = o.data.copy()   # 合併前轉成單一使用者，避免合併時改到共用的原型網格
+        pivot(merge_group('props', 'props'), 'Props', (0, 0, 0))
+        GROUPS['props'] = []
     tris = sum(len(o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
     print(f'objects={len([o for o in bpy.data.objects if o.type == "MESH"])} faces={tris}')
     top = sorted(TRI_STATS.items(), key=lambda kv: -kv[1])[:10]
@@ -516,10 +524,32 @@ def plinth(top_mat, soil_mat='soil', rock_mat='rock', rim_mat='concrete', size=4
             for sy in (-1, 1):
                 box('corner_post', (0.24, 0.24, 0.16), (sx * (h - 0.12), sy * (h - 0.12), 0.06), rim_mat, bevel=0.015)
                 cone('corner_cap', 0.17, 0.0, 0.08, (sx * (h - 0.12), sy * (h - 0.12), 0.18), rim_mat, verts=4, rot=(0, 0, math.pi / 4))
-        # 土層岩線（兩條深色分層帶，讓側面不再是一整片）
-        for z in (-0.42, -0.66):
-            for (sx, sy, x, y) in [(size - 0.02, 0.02, 0, h - 0.02), (size - 0.02, 0.02, 0, -h + 0.02), (0.02, size - 0.02, h - 0.02, 0), (0.02, size - 0.02, -h + 0.02, 0)]:
-                box('strata', (sx, sy, 0.035), (x, y, z), rock_mat, bevel=0)
+        # 裸露岩層切面：每邊三層不規則凸出的岩板（深淺交錯、厚薄不一），側面像真實的地層剖面
+        natural = rock_mat == 'rock'
+        for side in range(4):
+            for li, (z0, mat) in enumerate([(-0.36, soil_mat), (-0.6, rock_mat), (-0.86, rock_mat)]):
+                t = -h + 0.05
+                while t < h - 0.12:
+                    L = min(h - 0.05 - t, 0.32 + rng.random() * 0.5)
+                    out = 0.02 + rng.random() * (0.05 if natural else 0.02)
+                    th = 0.06 + rng.random() * 0.07
+                    c = t + L / 2
+                    zz = z0 + (rng.random() - 0.5) * 0.06
+                    d = h + out / 2 - 0.01
+                    x, y, sz = [(c, d, (L, out + 0.02, th)), (c, -d, (L, out + 0.02, th)), (d, c, (out + 0.02, L, th)), (-d, c, (out + 0.02, L, th))][side]
+                    box('strata', sz, (x, y, zz), mat, bevel=0)
+                    t += L + 0.02 + rng.random() * 0.06
+        if natural:
+            # 不規則懸崖稜角：從土層側面突出的岩塊
+            for k in range(10):
+                side = k % 4
+                tt = -h + 0.3 + rng.random() * (size - 0.6)
+                d = h + 0.02
+                x, y = [(tt, d), (tt, -d), (d, tt), (-d, tt)][side]
+                ico('cliff_chunk', 0.09 + rng.random() * 0.08, (x, y, -0.45 - rng.random() * 0.45), rock_mat, sub=0, scale=(1.2, 1.2, 0.8))
+            # 嵌入式石階：從右前方的崖邊切進土層、往下走的小階梯
+            for k in range(4):
+                box('cut_step', (0.34, 0.16, 0.06), (1.35, -h - 0.06 - k * 0.07, -0.08 - k * 0.12), rim_mat, bevel=0.01)
         # 草地類頂面：沿邊緣內側散佈小草叢
         if top_mat in NATURAL_TOPS:
             for i in range(22):
@@ -552,14 +582,28 @@ def tree(loc, s=1.0, kind='round', leaf='leaf', leaf2='leaf_dark', trunk='bark',
     """detail：樹冠細分等級（遠景用 0–1 以節省面數）"""
     x, y, z = loc
     cyl('trunk', 0.06 * s, 0.6 * s, (x, y, z + 0.3 * s), trunk, verts=8 if detail > 1 else 5, group=group)
-    if kind == 'round':
-        # 多層次樹冠：寬扁的底層＋中層＋頂層，加兩團側枝葉；底部有樹根、兩根分枝
+    if kind == 'round' and detail >= 1:
+        # 蓬鬆樹冠：7 顆大小不一的低面數多面體錯落堆疊，由下而上深→淺三層色；彎曲的兩段樹幹、樹根與根部草叢
+        light = 'leaf_light' if leaf == 'leaf' and 'leaf_light' in MATS else leaf
         cone('root_flare', 0.12 * s, 0.05 * s, 0.1 * s, (x, y, z + 0.05 * s), trunk, verts=6, group=group)
-        for (bx, by, bz) in [(0.14, 0.04, 0.78), (-0.12, -0.06, 0.74)]:
+        bend = (rng.random() - 0.5) * 0.16
+        beam('trunk_bend', (x, y, z + 0.45 * s), (x + bend * s, y + bend * 0.5 * s, z + 0.75 * s), 0.07 * s, trunk, group=group)
+        for (bx, by, bz) in [(0.16, 0.04, 0.8), (-0.14, -0.06, 0.76)]:
             beam('branch', (x, y, z + 0.5 * s), (x + bx * s, y + by * s, z + bz * s), 0.035 * s, trunk, group=group)
-        for (dx, dy, dz, r, m, sq) in [(0, 0, 0.78, 0.36, leaf2, 0.62), (0.02, 0.02, 1.0, 0.28, leaf, 0.7), (0, 0, 1.2, 0.18, leaf, 0.85),
-                                       (-0.2, 0.06, 0.86, 0.17, leaf, 0.8), (0.19, -0.07, 0.9, 0.16, leaf2, 0.8)]:
-            ico('crown', r * s, (x + dx * s, y + dy * s, z + dz * s), m, sub=max(0, detail - 1) if r < 0.2 else detail, scale=(1, 1, sq), group=group)
+        cx, cy = x + bend * s, y + bend * 0.5 * s
+        for k, (dx, dy, dz, r, m, sq) in enumerate([(0, 0, 0.8, 0.34, leaf2, 0.65), (-0.2, 0.08, 0.86, 0.2, leaf2, 0.8), (0.21, -0.06, 0.9, 0.19, leaf, 0.8),
+                                                    (0.05, 0.18, 0.94, 0.17, leaf, 0.85), (0.02, 0.0, 1.03, 0.27, leaf, 0.72),
+                                                    (-0.08, -0.08, 1.2, 0.17, light, 0.85), (0.1, 0.06, 1.25, 0.12, light, 0.9)]):
+            j = 0.03 * (rng.random() - 0.5)
+            ico('crown', r * s, (cx + (dx + j) * s, cy + (dy - j) * s, z + dz * s), m, sub=1 if (r >= 0.15 or detail > 1) else 0, scale=(1, 1, sq), group=group)
+        if detail > 1:
+            for k in range(3):
+                a = k * 2.1 + rng.random()
+                cone('tree_tuft', 0.03 * s, 0.0, 0.1 * s, (x + math.cos(a) * 0.12 * s, y + math.sin(a) * 0.12 * s, z + 0.04 * s), 'leaf_dark' if k % 2 else 'leaf', verts=3, group=group)
+    elif kind == 'round':
+        cone('root_flare', 0.12 * s, 0.05 * s, 0.1 * s, (x, y, z + 0.05 * s), trunk, verts=6, group=group)
+        for (dx, dy, dz, r, m, sq) in [(0, 0, 0.78, 0.36, leaf2, 0.62), (0.02, 0.02, 1.0, 0.28, leaf, 0.7), (0, 0, 1.2, 0.18, leaf, 0.85)]:
+            ico('crown', r * s, (x + dx * s, y + dy * s, z + dz * s), m, sub=0, scale=(1, 1, sq), group=group)
     else:
         for i, (r, h, dz) in enumerate([(0.38, 0.5, 0.55), (0.3, 0.45, 0.85), (0.21, 0.4, 1.12), (0.12, 0.34, 1.35)]):
             cone('pine', r * s, 0.0, h * s, (x, y, z + dz * s), leaf2 if i % 2 == 0 else leaf, verts=9, group=group)
@@ -568,6 +612,7 @@ def tree(loc, s=1.0, kind='round', leaf='leaf', leaf2='leaf_dark', trunk='bark',
 def nature_materials():
     material('leaf', srgb('#4fbf73'), rough=0.85)
     material('leaf_dark', srgb('#2f8f5b'), rough=0.9)
+    material('leaf_light', srgb('#8fd66f'), rough=0.8)
     material('bark', srgb('#6b4423'), rough=0.95)
     material('grass', rough=1.0, tex=save('grass', tint(noise(512, 8, 5, 21), (86, 150, 70), (130, 190, 96))))
 
@@ -684,3 +729,382 @@ def reparent(child, parent):
     child.parent = parent
     child.matrix_parent_inverse = parent.matrix_world.inverted()
     return child
+
+
+# ───────────────────────── 微縮生活感小道具（共用 Mesh Data 的 Linked Duplicates） ─────────────────────────
+# 每種零件只建立一份網格（PROTO 快取），之後的複本都是指向同一份 Mesh Data 的物件；
+# 匯出前 merge_group 依材質合併（WebGL 上合併比多個實例更省繪製呼叫），Draco 再壓縮重複的頂點資料。
+PROTO = {}
+
+
+def ensure(name, color, rough=0.8, metal=0.0, emit=None, emit_strength=0.0):
+    """道具用材質：專案已有同名材質就沿用（不額外增加材質種類）"""
+    if name not in MATS:
+        material(name, srgb(color), rough=rough, metal=metal, emit=srgb(emit) if emit else None, emit_strength=emit_strength)
+    return name
+
+
+def prop_materials():
+    ensure('wood', '#9a6b43', 0.75)
+    ensure('black', '#24272c', 0.6)
+    ensure('steel', '#a7b0ba', 0.32, 0.85)
+    ensure('white', '#f2f0ea', 0.6)
+    ensure('brick', '#b5653d', 0.9)
+    ensure('concrete', '#bdbab2', 0.9)
+    ensure('rock', '#8a8478', 1.0)
+    ensure('leaf', '#4fbf73', 0.85)
+    ensure('leaf_dark', '#2f8f5b', 0.9)
+    ensure('lamp', '#ffe2a0', 0.5, emit='#ffd27a', emit_strength=6)
+    ensure('flower_r', '#ff6b6b', 0.7)
+    ensure('flower_y', '#ffd35a', 0.7)
+    ensure('flower_p', '#ff9ec4', 0.7)
+
+
+def _proto(key, make):
+    """make() 在原點建立一個零件並回傳物件；取出它的網格當原型，物件本身刪掉"""
+    if key not in PROTO:
+        tmp = make()
+        if tmp in GROUPS.get('static', []):
+            GROUPS['static'].remove(tmp)
+        me = tmp.data
+        me.transform(tmp.matrix_world)   # 把零件在道具內的位置烘進網格，複本只需整組平移旋轉
+        tris = sum(len(p.vertices) - 2 for p in me.polygons)
+        bpy.data.objects.remove(tmp)
+        PROTO[key] = (me, tris)
+    return PROTO[key]
+
+
+def inst(key, make, loc, rot=0.0, scale=1.0, group='static'):
+    """放一個共用網格的複本（Linked Duplicate）"""
+    me, tris = _proto(key, make)
+    o = bpy.data.objects.new(key, me)
+    bpy.context.scene.collection.objects.link(o)
+    o.location = loc
+    o.rotation_euler = (0, 0, rot)
+    o.scale = (scale, scale, scale)
+    GROUPS.setdefault(group, []).append(o)
+    k = 'prop_' + key.split(':')[0]
+    TRI_STATS[k] = TRI_STATS.get(k, 0) + tris
+    return o
+
+
+def _b(size, z, mat, x=0.0, y=0.0, bevel=0.0, rot=(0, 0, 0)):
+    return lambda: box('p', size, (x, y, z), mat, bevel=bevel, rot=rot)
+
+
+def _c(r, h, z, mat, verts=8, x=0.0, y=0.0, rot=(0, 0, 0)):
+    return lambda: cyl('p', r, h, (x, y, z), mat, verts=verts, rot=rot)
+
+
+# 每個道具＝數個（原型鍵, 建立函式）零件，在原點建好，放置時整組平移旋轉
+def _parts_bench():
+    return [('bench_seat', _b((0.34, 0.1, 0.022), 0.1, 'wood', bevel=0.004)), ('bench_back', _b((0.34, 0.018, 0.08), 0.16, 'wood', y=0.05, bevel=0.003)),
+            ('bench_leg', _b((0.02, 0.1, 0.1), 0.05, 'black', x=-0.14)), ('bench_leg', _b((0.02, 0.1, 0.1), 0.05, 'black', x=0.14))]
+
+
+def _parts_lamp():
+    return [('lamp_pole', _c(0.014, 0.5, 0.25, 'black', 6)), ('lamp_base', _c(0.035, 0.03, 0.015, 'black', 8)),
+            ('lamp_head', _b((0.06, 0.06, 0.03), 0.52, 'black', bevel=0.006)), ('lamp_bulb', lambda: ico('p', 0.026, (0, 0, 0.49), 'lamp', sub=1))]
+
+
+def _parts_sign():
+    return [('sign_post', _c(0.012, 0.3, 0.15, 'wood', 6)), ('sign_board', _b((0.2, 0.02, 0.12), 0.27, 'white', bevel=0.004)),
+            ('sign_frame', _b((0.22, 0.016, 0.14), 0.27, 'wood', y=0.006))]
+
+
+def _parts_plant():
+    return [('pot', lambda: cone('p', 0.05, 0.065, 0.09, (0, 0, 0.045), 'brick', verts=8)),
+            ('pot_bush', lambda: ico('p', 0.08, (0, 0, 0.14), 'leaf', sub=1, scale=(1, 1, 0.9))),
+            ('pot_bush2', lambda: ico('p', 0.05, (0.03, 0.02, 0.2), 'leaf_dark', sub=0))]
+
+
+def _parts_books():
+    return [('book_a', _b((0.16, 0.11, 0.025), 0.0125, 'flower_r', bevel=0.003)), ('book_b', _b((0.15, 0.1, 0.022), 0.036, 'white', x=0.006, bevel=0.003, rot=(0, 0, 0.12))),
+            ('book_c', _b((0.14, 0.1, 0.024), 0.059, 'flower_y', x=-0.004, bevel=0.003, rot=(0, 0, -0.08)))]
+
+
+def _parts_bikerack():
+    parts = [('rack_rail', _b((0.32, 0.018, 0.018), 0.012, 'steel'))]
+    for i, x in enumerate((-0.11, 0.0, 0.11)):
+        parts.append((f'rack_loop', lambda x=x: torus('p', 0.06, 0.008, (x, 0, 0.06), 'steel', rot=(math.pi / 2, 0, 0), major=10, minor=4)))
+    return parts
+
+
+def _parts_crate():
+    return [('crate', _b((0.14, 0.14, 0.12), 0.06, 'wood', bevel=0.008)), ('crate_band', _b((0.145, 0.145, 0.016), 0.06, 'black'))]
+
+
+def _parts_folders():
+    return [('folder_a', _b((0.12, 0.03, 0.16), 0.08, 'flower_r', bevel=0.003)), ('folder_b', _b((0.12, 0.03, 0.15), 0.075, 'flower_y', y=0.035, bevel=0.003)),
+            ('folder_c', _b((0.12, 0.03, 0.17), 0.085, 'steel', y=0.07, bevel=0.003))]
+
+
+def _parts_tuft():
+    return [('tuft_a', lambda: cone('p', 0.03, 0.0, 0.1, (0, 0, 0.05), 'leaf', verts=3)), ('tuft_b', lambda: cone('p', 0.025, 0.0, 0.08, (0.035, 0.02, 0.04), 'leaf_dark', verts=3)),
+            ('tuft_c', lambda: cone('p', 0.025, 0.0, 0.07, (-0.03, 0.025, 0.035), 'leaf', verts=3))]
+
+
+def _parts_stone_lantern():
+    return [('sl_base', _b((0.1, 0.1, 0.03), 0.015, 'concrete', bevel=0.006)), ('sl_post', _c(0.022, 0.12, 0.09, 'concrete', 6)),
+            ('sl_box', _b((0.08, 0.08, 0.06), 0.18, 'lamp', bevel=0.004)), ('sl_frame', _b((0.09, 0.09, 0.012), 0.215, 'concrete')),
+            ('sl_roof', lambda: cone('p', 0.08, 0.0, 0.06, (0, 0, 0.25), 'concrete', verts=4, rot=(0, 0, math.pi / 4)))]
+
+
+def _parts_lantern_string():
+    parts = [('ls_post', _c(0.01, 0.42, 0.21, 'wood', 5, x=-0.2)), ('ls_post', _c(0.01, 0.42, 0.21, 'wood', 5, x=0.2)),
+             ('ls_rope', _b((0.4, 0.006, 0.006), 0.4, 'black'))]
+    for i, x in enumerate((-0.12, 0.0, 0.12)):
+        parts.append(('ls_lantern', lambda x=x: sphere('p', 0.03, (x, 0, 0.36), 'lantern_red', seg=8, rings=5, scale=(1, 1, 1.25))))
+    return parts
+
+
+def _parts_trough():
+    return [('tr_basin', _b((0.26, 0.12, 0.06), 0.03, 'concrete', bevel=0.008)), ('tr_water', _b((0.22, 0.08, 0.005), 0.058, 'water_prop')),
+            ('tr_spout', _b((0.03, 0.03, 0.14), 0.07, 'wood', x=0.14))]
+
+
+def _parts_rune_pillar():
+    return [('rp_base', _b((0.1, 0.1, 0.03), 0.015, 'rock', bevel=0.006)), ('rp_shaft', _c(0.035, 0.3, 0.18, 'rock', 6)),
+            ('rp_band', _c(0.038, 0.03, 0.22, 'rune', 6)), ('rp_cap', lambda: cone('p', 0.05, 0.0, 0.06, (0, 0, 0.36), 'rock', verts=6))]
+
+
+def _parts_floating_rocks():
+    return [('fr_a', lambda: ico('p', 0.04, (0, 0, 0.28), 'rock', sub=0)), ('fr_b', lambda: ico('p', 0.028, (0.07, 0.03, 0.36), 'rock', sub=0)),
+            ('fr_c', lambda: ico('p', 0.022, (-0.05, -0.02, 0.42), 'rock', sub=0)), ('fr_glow', lambda: ico('p', 0.012, (0.0, 0.0, 0.33), 'rune', sub=0))]
+
+
+def _parts_mushrooms():
+    return [('mu_stem', _c(0.012, 0.05, 0.025, 'white', 5)), ('mu_cap', lambda: cone('p', 0.035, 0.0, 0.03, (0, 0, 0.06), 'flower_r', verts=6)),
+            ('mu_stem', _c(0.012, 0.05, 0.025, 'white', 5, x=0.05, y=0.02)), ('mu_cap2', lambda: cone('p', 0.028, 0.0, 0.025, (0.05, 0.02, 0.055), 'flower_y', verts=6))]
+
+
+def _parts_log():
+    return [('log', _c(0.04, 0.22, 0.04, 'bark_prop', 7, rot=(0, math.pi / 2, 0))), ('log_end', _c(0.034, 0.226, 0.04, 'wood', 7, rot=(0, math.pi / 2, 0)))]
+
+
+def _parts_pipes():
+    return [('pp_pipe', _c(0.018, 0.4, 0.05, 'steel', 6, rot=(0, math.pi / 2, 0))), ('pp_pipe2', _c(0.012, 0.4, 0.09, 'steel', 6, y=0.04, rot=(0, math.pi / 2, 0))),
+            ('pp_joint', _c(0.026, 0.03, 0.05, 'black', 6, x=-0.1, rot=(0, math.pi / 2, 0))), ('pp_joint', _c(0.026, 0.03, 0.05, 'black', 6, x=0.12, rot=(0, math.pi / 2, 0))),
+            ('pp_stand', _b((0.02, 0.06, 0.04), 0.02, 'black', x=-0.15)), ('pp_stand', _b((0.02, 0.06, 0.04), 0.02, 'black', x=0.15)),
+            ('pp_glow', _c(0.008, 0.36, 0.115, 'holo', 4, y=-0.025, rot=(0, math.pi / 2, 0)))]
+
+
+def _parts_antenna():
+    return [('an_base', _b((0.08, 0.08, 0.04), 0.02, 'black', bevel=0.006)), ('an_mast', _c(0.008, 0.36, 0.2, 'steel', 5)),
+            ('an_dish', lambda: cone('p', 0.07, 0.01, 0.03, (0.03, 0, 0.3), 'white', verts=10, rot=(0, -0.9, 0))),
+            ('an_rod', _b((0.12, 0.006, 0.006), 0.36, 'steel')), ('an_rod', _b((0.08, 0.006, 0.006), 0.32, 'steel')), ('an_tip', lambda: ico('p', 0.012, (0, 0, 0.385), 'beacon_prop', sub=0))]
+
+
+def _parts_holo():
+    return [('hb_disc', _c(0.09, 0.03, 0.015, 'black', 12)), ('hb_ring', lambda: torus('p', 0.075, 0.006, (0, 0, 0.034), 'holo', major=16, minor=3)),
+            ('hb_core', lambda: ico('p', 0.03, (0, 0, 0.13), 'holo', sub=1, scale=(1, 1, 1.6)))]
+
+
+def _parts_vent():
+    parts = [('vt_box', _b((0.18, 0.12, 0.1), 0.05, 'steel', bevel=0.006))]
+    for k in range(4):
+        parts.append(('vt_slat', lambda k=k: box('p', (0.16, 0.012, 0.012), (0, -0.064, 0.025 + k * 0.022), 'black', bevel=0)))
+    parts.append(('vt_fan', _c(0.04, 0.012, 0.106, 'black', 10)))
+    return parts
+
+
+PROPS = {
+    'bench': _parts_bench, 'lamp': _parts_lamp, 'sign': _parts_sign, 'plant': _parts_plant, 'books': _parts_books, 'bikerack': _parts_bikerack,
+    'crate': _parts_crate, 'folders': _parts_folders, 'tuft': _parts_tuft, 'stone_lantern': _parts_stone_lantern, 'lantern_string': _parts_lantern_string,
+    'trough': _parts_trough, 'rune_pillar': _parts_rune_pillar, 'floating_rocks': _parts_floating_rocks, 'mushrooms': _parts_mushrooms, 'log': _parts_log,
+    'pipes': _parts_pipes, 'antenna': _parts_antenna, 'holo': _parts_holo, 'vent': _parts_vent,
+}
+# 各道具佔地（半寬 x、半深 y）
+FOOT = {'bench': (0.19, 0.08), 'lamp': (0.05, 0.05), 'sign': (0.12, 0.04), 'plant': (0.08, 0.08), 'books': (0.1, 0.08), 'bikerack': (0.18, 0.08),
+        'crate': (0.09, 0.09), 'folders': (0.08, 0.07), 'tuft': (0.06, 0.06), 'stone_lantern': (0.06, 0.06), 'lantern_string': (0.22, 0.04),
+        'trough': (0.17, 0.07), 'rune_pillar': (0.06, 0.06), 'floating_rocks': (0.07, 0.05), 'mushrooms': (0.07, 0.05), 'log': (0.13, 0.05),
+        'pipes': (0.2, 0.06), 'antenna': (0.06, 0.06), 'holo': (0.1, 0.1), 'vent': (0.1, 0.08)}
+# 主題 → 道具組合（重複＝出現機率較高）
+STYLES = {
+    'campus': ['bench', 'lamp', 'sign', 'plant', 'plant', 'books', 'bikerack', 'tuft', 'tuft', 'folders', 'crate'],
+    'desk': ['books', 'folders', 'plant', 'books', 'crate', 'folders'],
+    'oriental': ['stone_lantern', 'stone_lantern', 'lantern_string', 'trough', 'rune_pillar', 'floating_rocks', 'tuft', 'tuft', 'plant'],
+    'mythic': ['rune_pillar', 'rune_pillar', 'floating_rocks', 'floating_rocks', 'stone_lantern', 'lantern_string', 'tuft'],
+    'forest': ['mushrooms', 'mushrooms', 'log', 'tuft', 'tuft', 'tuft', 'stone_lantern', 'floating_rocks', 'plant'],
+    'tech': ['pipes', 'antenna', 'holo', 'vent', 'vent', 'crate', 'pipes', 'holo'],
+}
+PLINTH_PARTS = ('ground', 'rim', 'soil', 'rockl', 'capstone', 'corner_post', 'corner_cap', 'strata', 'tuft', 'cliff_chunk', 'cut_step', 'stalactite', 'pebble', 'float_rock', 'Cone')
+
+
+def _occupied(margin=0.05):
+    """地表上已被佔用的範圍（世界座標 XY 方盒）：所有零件、包含點擊動畫節點與隱藏的零件"""
+    bpy.context.view_layer.update()
+    boxes = []
+    for o in bpy.data.objects:
+        if o.type != 'MESH' or o.name.split('.')[0].startswith(PLINTH_PARTS):
+            continue
+        cs = [o.matrix_world @ Vector(c) for c in o.bound_box]
+        z0, z1 = min(c.z for c in cs), max(c.z for c in cs)
+        # 很薄的地面鋪面（步道、標線、草皮、地毯）可以踩上去，不算佔用；高空的零件也不擋地面
+        if z0 > 0.9 or z1 < 0.045:
+            continue
+        boxes.append((min(c.x for c in cs) - margin, max(c.x for c in cs) + margin, min(c.y for c in cs) - margin, max(c.y for c in cs) + margin))
+    return boxes
+
+
+def dress(style, count=14, seed=7, half=1.72, z=0.0, extra=(), roofs=None):
+    """依主題在地表空位自動布置微縮小道具（不碰到既有零件、彼此保持間距）；extra＝額外的道具名稱"""
+    prop_materials()
+    ensure('lantern_red', '#ff5a3c', 0.5, emit='#ff3a1a', emit_strength=3)
+    ensure('water_prop', '#7cc4e8', 0.08)
+    ensure('rune', '#9fe8ff', 0.4, emit='#6fd8ff', emit_strength=2.5)
+    ensure('holo', '#7ef0ff', 0.3, emit='#38d8ff', emit_strength=3)
+    ensure('bark_prop', '#6b4423', 0.95)
+    ensure('beacon_prop', '#ff4a2a', 0.5, emit='#ff3a1a', emit_strength=6)
+    r = random.Random(seed)
+    roofs = (style == 'tech') if roofs is None else roofs   # 科技風：設備也可以放在平坦的屋頂／平台上
+    top = 1.6 if roofs else 0.9
+    boxes = []   # 本次已放的道具（彼此避讓）
+    bpy.context.view_layer.update()
+    dg_ = bpy.context.evaluated_depsgraph_get()
+    scene = bpy.context.scene
+
+    def ground(px, py):
+        """從 0.9 高往下打射線：只有落在裸地（或很薄的步道鋪面）才算空位；回傳地面高度或 None"""
+        z0 = top
+        for _ in range(4):   # 半透明的光束、玻璃不算佔用：穿過去繼續往下找
+            hit, loc, _n, _i, obj, _m = scene.ray_cast(dg_, Vector((px, py, z0)), Vector((0, 0, -1)), distance=z0 + 0.3)
+            if not hit:
+                return None
+            mat = obj.data.materials[0] if obj.type == 'MESH' and obj.data.materials else None
+            if mat is None or getattr(mat, 'surface_render_method', '') != 'BLENDED':
+                break
+            z0 = loc.z - 0.002
+        nm = obj.name.split('.')[0]
+        if nm.lower().startswith('fx') or (loc.z > 0.004 and nm.startswith(('capstone', 'corner'))):
+            return None
+        if loc.z > (1.5 if roofs else 0.05) or (roofs and loc.z > 0.05 and _n.z < 0.95):
+            return None
+        return loc.z
+    pool = list(STYLES[style]) + list(extra)
+    placed = []
+    cand = [(x * 0.06, y * 0.06) for x in range(-int(half / 0.06), int(half / 0.06) + 1) for y in range(-int(half / 0.06), int(half / 0.06) + 1)]
+    r.shuffle(cand)
+    # 偏好靠近外圍（中央通常是主角與動線）
+    cand.sort(key=lambda p: -max(abs(p[0]), abs(p[1])) + r.random() * 0.9)
+    n = 0
+    for (x, y) in cand:
+        if n >= count:
+            break
+        kind = pool[n % len(pool)] if n < len(pool) else r.choice(pool)
+        rot = r.choice((0.0, math.pi / 2, math.pi, -math.pi / 2)) + (r.random() - 0.5) * 0.4
+        fx, fy = FOOT[kind]
+        ex = abs(math.cos(rot)) * fx + abs(math.sin(rot)) * fy
+        ey = abs(math.sin(rot)) * fx + abs(math.cos(rot)) * fy
+        if abs(x) + ex > half or abs(y) + ey > half:
+            continue
+        if any(x + ex > b[0] and x - ex < b[1] and y + ey > b[2] and y - ey < b[3] for b in boxes):
+            continue
+        pad = 0.04
+        hs = [ground(x + sx * (ex + pad), y + sy * (ey + pad)) for sx in (-1, 0, 1) for sy in (-1, 0, 1)]
+        if any(hv is None for hv in hs) or max(hs) - min(hs) > 0.03:
+            continue
+        gz = max(hs)
+        if any(math.hypot(x - px, y - py) < 0.42 for (px, py) in placed):
+            continue
+        c, sn = math.cos(rot), math.sin(rot)
+        for key, make in PROPS[kind]():
+            # 每個零件在原點建好當原型；複本以道具中心旋轉
+            o = inst(f'{key}', make, (x, y, z + gz), rot, group='props')
+        placed.append((x, y))
+        boxes.append((x - ex, x + ex, y - ey, y + ey))
+        n += 1
+    print(f'dress {style}: {n} props')
+    return n
+
+
+WALL_MATS = ('wall', 'wall_trim', 'house_wall', 'stone_soft', 'plaster', 'brick', 'stone', 'stone_light')
+
+
+def articulate(mats=WALL_MATS, trim=None):
+    """建築多層次拆解：替方盒狀的牆體自動加上勒腳（底座線腳）、腰線與出挑的簷口壓條，讓輪廓有凹凸陰影層次。
+    只處理未旋轉或僅繞 Z 旋轉、寬深高都夠大的簡單方盒（頂點 ≤ 64），不動點擊動畫零件"""
+    bpy.context.view_layer.update()
+    n = 0
+    for o in list(GROUPS.get('static', [])):
+        if o.type != 'MESH' or not o.data.materials or len(o.data.vertices) > 64:
+            continue
+        if o.data.materials[0].name not in mats:
+            continue
+        if abs(o.rotation_euler.x) > 1e-3 or abs(o.rotation_euler.y) > 1e-3:
+            continue
+        xs = [v.co.x for v in o.data.vertices]; ys = [v.co.y for v in o.data.vertices]; zs = [v.co.z for v in o.data.vertices]
+        dx, dy, dz = max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs)
+        if dx < 0.45 or dy < 0.45 or dz < 0.4:
+            continue
+        cx, cy = (max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2
+        wc = o.matrix_world @ Vector((cx, cy, min(zs)))
+        top = (o.matrix_world @ Vector((cx, cy, max(zs)))).z
+        rz = o.rotation_euler.z
+        tm = trim or ('wall_trim' if 'wall_trim' in MATS else 'white')
+        box('plinth_course', (dx + 0.04, dy + 0.04, 0.05), (wc.x, wc.y, wc.z + 0.025), tm, rot=(0, 0, rz), bevel=0.008)
+        box('cornice', (dx + 0.07, dy + 0.07, 0.04), (wc.x, wc.y, top - 0.01), tm, rot=(0, 0, rz), bevel=0.008)
+        if dz > 0.85:
+            box('belt', (dx + 0.03, dy + 0.03, 0.022), (wc.x, wc.y, wc.z + dz * 0.5), tm, rot=(0, 0, rz), bevel=0.004)
+        n += 1
+    print(f'articulate: {n} walls')
+    return n
+
+
+def place(kind, loc, rot=0.0):
+    """在指定位置放一個道具（地表擠滿時，用來沿地塊邊緣壓頂石布置）"""
+    prop_materials()
+    ensure('holo', '#7ef0ff', 0.3, emit='#38d8ff', emit_strength=3)
+    ensure('beacon_prop', '#ff4a2a', 0.5, emit='#ff3a1a', emit_strength=6)
+    ensure('lantern_red', '#ff5a3c', 0.5, emit='#ff3a1a', emit_strength=3)
+    ensure('rune', '#9fe8ff', 0.4, emit='#6fd8ff', emit_strength=2.5)
+    for key, make in PROPS[kind]():
+        inst(key, make, loc, rot, group='props')
+
+
+# 道具調色盤：非發光的道具零件全部改用同一張小色票貼圖（每色一格），整組道具只剩 1 個材質＝1 次繪製；
+# 發光零件（燈、燈籠、符文、全息）保留各自的發光材質。色票與既有貼圖材質同一種著色器，不增加著色器變體。
+TEX_FLAT = {'wood': '#9a6b43', 'brick': '#b5653d', 'concrete': '#bdbab2', 'rock': '#8a8478', 'bark_prop': '#6b4423', 'grass': '#6fae5c'}
+
+
+def _base_hex(m):
+    if m.name in TEX_FLAT:
+        return TEX_FLAT[m.name]
+    c = m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value
+    return '#' + ''.join(f'{int(round(min(1, max(0, v)) ** (1 / 2.2) * 255)):02x}' for v in c[:3])
+
+
+def _palettize(objs):
+    cells, seen = {}, set()
+    for o in objs:
+        m = o.data.materials[0]
+        bsdf = m.node_tree.nodes['Principled BSDF']
+        if bsdf.inputs['Emission Strength'].default_value > 0 or m.name.startswith('props_palette'):
+            continue
+        cells.setdefault(_base_hex(m), len(cells))
+    if not cells:
+        return
+    C = 16
+    img = Image.new('RGB', (C * len(cells), C))
+    d = ImageDraw.Draw(img)
+    for hx, i in cells.items():
+        d.rectangle([i * C, 0, i * C + C - 1, C - 1], fill=hexrgb(hx))
+    path = os.path.join(TEX_DIR, 'props_palette.png')
+    img.save(path)
+    if 'props_palette' not in MATS:
+        material('props_palette', rough=0.7, tex=path)
+    pal = MATS['props_palette']
+    for o in objs:
+        me = o.data
+        if me.name in seen:
+            continue
+        m = me.materials[0]
+        if m.node_tree.nodes['Principled BSDF'].inputs['Emission Strength'].default_value > 0 or m.name == 'props_palette':
+            continue
+        i = cells[_base_hex(m)]
+        u = (i + 0.5) / len(cells)
+        uvl = me.uv_layers.active or me.uv_layers.new()
+        for lp in uvl.data:
+            lp.uv = (u, 0.5)
+        me.materials[0] = pal
+        seen.add(me.name)

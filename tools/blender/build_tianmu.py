@@ -231,6 +231,9 @@ for k, (x, y) in enumerate(LANTS):
     kit.fx_node(f'Fx_lant{k}', (x, y, 0.8))
 
 # ── 合併、樞紐、匯出 ──
+# 精緻度升級：建築腰線／簷口，與依主題自動布置的微縮生活小道具（共用網格）
+kit.articulate()
+kit.dress('oriental', 14, seed=42)
 kit.merge_group('static', 'island')
 kit.pivot(kit.merge_group('Bob_0', 'capsule'), 'Bob_0', (CX, CY, CZ))
 s0 = kit.pivot(kit.merge_group('Spin_0', 'hours'), 'Spin_0', (CX, CY, CZ))

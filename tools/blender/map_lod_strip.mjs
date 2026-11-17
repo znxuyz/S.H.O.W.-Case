@@ -1,7 +1,8 @@
 // 首頁輕量版前處理：首頁不需要點擊動畫，所以
 //   1. 刪除 FxHide_*（平常隱藏的零件，首頁永遠不會顯示）
 //   2. 把 Fx_* 節點的子網格併回上一層（保留世界座標），讓它們能與同材質網格合併
-//   3. 同一層、同材質的網格合併成一個（大幅減少首頁的繪製呼叫）
+//   3. 刪除微縮小道具 Props_*（首頁島嶼很小看不出來，省下額外材質的繪製呼叫與檔案）
+//   4. 同一層、同材質的網格合併成一個（大幅減少首頁的繪製呼叫）
 // 用法：node tools/blender/map_lod_strip.mjs <輸入.glb> <輸出.glb>
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
@@ -31,7 +32,7 @@ scene.listChildren().forEach((n) => walk(n, null));
 
 let removed = 0, lifted = 0;
 for (const node of [...parentOf.keys()]) {
-  if (node.getName().startsWith('FxHide')) {
+  if (node.getName().startsWith('FxHide') || node.getName().startsWith('Props')) {
     const kill = (n) => { n.listChildren().forEach(kill); n.dispose(); };
     kill(node); removed++;
   }
