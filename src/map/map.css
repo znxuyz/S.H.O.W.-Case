@@ -59,3 +59,26 @@
 }
 @keyframes warp { 0% { opacity: 0; transform: scale(0.6); } 40% { opacity: 1; } 100% { opacity: 0; transform: scale(2.2); } }
 @media (prefers-reduced-motion: reduce) { .warp { animation: none; } }
+
+/* 分類聚光燈篩選膠囊（在操作提示上方；窄螢幕可橫向捲動） */
+.map-filter {
+  position: absolute; left: 50%; bottom: calc(max(1.1rem, env(safe-area-inset-bottom)) + 3.1rem); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 0.3rem; pointer-events: auto; max-width: calc(100vw - 2rem);
+  padding: 0.3rem; border-radius: 999px; background: rgba(20, 16, 11, 0.72); border: 1px solid #c8a86926;
+  overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-x;
+  animation: fade-in 1s 1.4s both;
+}
+.map-filter::-webkit-scrollbar { display: none; }
+.map-filter > i { flex: none; width: 1px; height: 1rem; margin: 0 0.25rem; background: #c8a86940; }
+.map-filter button {
+  flex: none; display: inline-flex; align-items: baseline; gap: 0.3rem; padding: 0.32rem 0.75rem; border-radius: 999px; cursor: pointer;
+  font-size: 0.72rem; letter-spacing: 0.1em; white-space: nowrap; color: #f3ead6b3; background: transparent; border: 1px solid transparent;
+  transition: color 0.25s, background 0.25s, border-color 0.25s;
+}
+.map-filter button small { font-family: var(--font-mono); font-size: 0.6rem; opacity: 0.55; }
+.map-filter button:hover { color: #f3ead6; background: #c8a8691a; }
+.map-filter button.is-on { color: #1a140b; background: linear-gradient(135deg, #ecd6a0, #b8935a); font-weight: 600; }
+.map-filter button.is-on small { opacity: 0.7; }
+@media (max-width: 640px) {
+  .map-filter { bottom: calc(max(1.1rem, env(safe-area-inset-bottom)) + 2.9rem); justify-content: flex-start; }
+}

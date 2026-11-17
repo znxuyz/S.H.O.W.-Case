@@ -1,6 +1,8 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ChevronDown, ChevronUp, LayoutGrid, Map as MapIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, LayoutGrid, Map as MapIcon, Volume2, VolumeX } from 'lucide-react';
+import { play, setSoundEnabled, useSoundEnabled } from './lib/sound';
+import { markVisited } from './lib/footprint';
 import { visibleProjects, type Project } from './data/projects';
 import { themes, type ThemeKey } from './themes';
 import { useSceneNav } from './hooks/useSceneNav';
@@ -46,6 +48,15 @@ export default function App() {
   useEffect(() => {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme.chrome);
   }, [theme]);
+
+  // 切換主題領域：播放該主題的進場音色（音效關閉時零成本）；記錄探索足跡
+  const sound = useSoundEnabled();
+  const firstScene = useRef(true);
+  useEffect(() => {
+    if (firstScene.current) { firstScene.current = false; return; }
+    play('theme', scene.theme);
+  }, [scene.id, scene.theme]);
+  useEffect(() => { if (scene.kind === 'project') markVisited(scene.id); }, [scene]);
 
   const openIndex = useCallback(() => setIndexOpen(true), []);
   const closeIndex = useCallback(() => setIndexOpen(false), []);
@@ -109,7 +120,7 @@ export default function App() {
             aria-label={scene.label}
           >
             {scene.kind === 'map' && <MapScene projects={visibleProjects} onEnter={enterProject} onIndex={openIndex} reducedMotion={reducedMotion} />}
-            {scene.kind === 'outro' && <OutroScene count={visibleProjects.length} onTop={() => go(0, true)} onIndex={openIndex} />}
+            {scene.kind === 'outro' && <OutroScene projects={visibleProjects} onTop={() => go(0, true)} onIndex={openIndex} />}
             {scene.kind === 'project' && <ProjectScene project={scene.project} index={scene.n} total={visibleProjects.length} reducedMotion={reducedMotion} />}
           </motion.section>
         </AnimatePresence>
@@ -127,6 +138,16 @@ export default function App() {
               <span className="hidden sm:inline">返回大地圖</span>
             </button>
           )}
+          <button
+            className={`chrome-pill chrome-sound ${sound ? 'is-on' : ''}`}
+            onClick={() => setSoundEnabled(!sound)}
+            aria-pressed={sound}
+            aria-label={sound ? '關閉互動音效' : '開啟互動音效'}
+            title={sound ? '關閉互動音效' : '開啟互動音效'}
+          >
+            {sound ? <Volume2 className="h-4 w-4" aria-hidden /> : <VolumeX className="h-4 w-4" aria-hidden />}
+            <span className="hidden sm:inline">{sound ? '音效開' : '音效'}</span>
+          </button>
           <button className="chrome-pill" onClick={openIndex}>
             <LayoutGrid className="h-4 w-4" aria-hidden />
             <span className="hidden sm:inline">目錄</span>

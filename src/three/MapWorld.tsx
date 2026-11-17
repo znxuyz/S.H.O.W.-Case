@@ -20,6 +20,12 @@ import { GL_OPTS } from './world';
 import { DustLayers, NebulaDome, WorldFragments } from './cosmos';
 import { Sigil, SIGIL_FOR_THEME, type SigilKind } from './sigils';
 import { mulberry32 } from '../lib/random';
+import { play } from '../lib/sound';
+
+/** 首頁分類聚光燈：'all'、'cat:personal'、'cat:campus' 或 'theme:<主題>' */
+export type MapFilter = string;
+export const matchFilter = (p: Project, f: MapFilter) =>
+  f === 'all' || f === `cat:${p.category}` || f === `theme:${p.theme}`;
 
 export interface MapWorldProps {
   projects: Project[];
@@ -31,6 +37,8 @@ export interface MapWorldProps {
   onMeasure: (id: string, screen: { x: number; y: number }) => void;
   /** 離場轉場中停止渲染（凍結最後一幀），把 GPU 讓給正在載入的介紹頁 */
   live?: boolean;
+  /** 分類聚光燈篩選 */
+  filter?: MapFilter;
 }
 
 /* ───────────────── 群島佈局：自然錯落的 3D 散佈 ───────────────── */
@@ -60,6 +68,31 @@ interface Body {
   yaw: number;
   group: THREE.Group | null;
   lift: number;
+  home: THREE.Vector3;          // 初始散佈位置（「全部」時緩緩回到這裡）
+  goal: THREE.Vector3 | null;   // 篩選時的聚攏 / 退後目標
+  goalUntil: number;            // 目標有效期限（秒，performance 時間）；篩選中為 Infinity
+  dim: number; dimTo: number;   // 亮度（1 正常、退後的島變暗）
+  glow: number; glowTo: number; // 選中光環強度
+  rings: THREE.Mesh[];
+}
+
+/* 選中光環：共用幾何，每座島各一組加色材質；強度 0 時不繪製 */
+const RING_IN = new THREE.RingGeometry(3.25, 3.5, 72);
+const RING_OUT = new THREE.RingGeometry(3.55, 4.7, 72);
+const ringMat = (color: string) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+
+/** 依亮度係數調整島上所有材質（保存原色，離開首頁時還原） */
+function shade(g: THREE.Object3D, k: number) {
+  g.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (!m || !(o as THREE.Mesh).isMesh || !m.color || m.userData.noDim) return;
+    const u = m.userData as { baseColor?: THREE.Color; baseEmissive?: THREE.Color; dimK?: number };
+    if (u.dimK === k) return;
+    if (!u.baseColor) { u.baseColor = m.color.clone(); if (m.emissive) u.baseEmissive = m.emissive.clone(); }
+    m.color.copy(u.baseColor).multiplyScalar(k);
+    if (u.baseEmissive) m.emissive.copy(u.baseEmissive).multiplyScalar(k);
+    u.dimK = k;
+  });
 }
 
 const tmp = new THREE.Vector3();
@@ -77,6 +110,8 @@ function Island({
 }) {
   const accent = project.accent ?? ACCENT[project.theme];
   const theme = themes[project.theme];
+  const mats = useMemo(() => { const a = ringMat(accent), b = ringMat(accent); a.userData.noDim = b.userData.noDim = true; return [a, b]; }, [accent]);
+  useEffect(() => () => mats.forEach((m) => m.dispose()), [mats]);
   return (
     <group
       ref={(g) => { if (g && !body.group) g.position.copy(body.anchor); body.group = g; }}
@@ -87,6 +122,19 @@ function Island({
       <group rotation={[0, body.yaw, 0]}>
         {project.model && <Diorama model={project.model} lod />}
       </group>
+      {mats.map((m, k) => (
+        <mesh
+          key={k}
+          ref={(r) => { if (r) body.rings[k] = r; }}
+          geometry={k === 0 ? RING_IN : RING_OUT}
+          material={m}
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, k === 0 ? -0.25 : -0.3, 0]}
+          visible={false}
+          renderOrder={3}
+          raycast={() => null}
+        />
+      ))}
       {hovered && (
         <>
           <Sigil kind={sigil} color={accent} />
@@ -107,6 +155,7 @@ function Swarm({ bodies, drag, hovered, reduced }: { bodies: Body[]; drag: Mutab
   useFrame(({ clock }, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
     const t = clock.elapsedTime;
+    const now = performance.now() / 1000;
     const d = drag.current;
     bodies.forEach((b, i) => {
       const dragging = d?.dragging && d.index === i;
@@ -118,10 +167,16 @@ function Swarm({ bodies, drag, hovered, reduced }: { bodies: Body[]; drag: Mutab
       } else {
         b.anchor.addScaledVector(b.vel, dt);
         b.vel.multiplyScalar(Math.exp(-1.6 * dt));
-        // 柔性邊界：太遠會被慢慢拉回
-        const r = Math.hypot(b.anchor.x, b.anchor.z);
-        if (r > 24) b.vel.addScaledVector(tmp.set(b.anchor.x, 0, b.anchor.z).normalize(), -(r - 24) * dt * 2);
-        b.vel.y += (0 - b.anchor.y) * dt * 0.15;
+        if (b.goal && now < b.goalUntil) {
+          // 篩選：緩緩聚攏到畫面中央 / 退到外圈（指數趨近，不會過衝）
+          b.anchor.lerp(b.goal, 1 - Math.exp(-1.25 * dt));
+        } else {
+          b.goal = null;
+          // 柔性邊界：太遠會被慢慢拉回
+          const r = Math.hypot(b.anchor.x, b.anchor.z);
+          if (r > 24) b.vel.addScaledVector(tmp.set(b.anchor.x, 0, b.anchor.z).normalize(), -(r - 24) * dt * 2);
+          b.vel.y += (0 - b.anchor.y) * dt * 0.15;
+        }
       }
       // 柔性推開：避免島嶼重疊
       for (let j = i + 1; j < bodies.length; j++) {
@@ -138,6 +193,27 @@ function Swarm({ bodies, drag, hovered, reduced }: { bodies: Body[]; drag: Mutab
       }
       const g = b.group;
       if (!g) return;
+      // 聚光燈：亮度、縮放與光環
+      const ease = Math.min(1, dt * 2.4);
+      b.dim += (b.dimTo - b.dim) * ease;
+      b.glow += (b.glowTo - b.glow) * ease;
+      if (Math.abs(b.dim - b.dimTo) < 0.004) b.dim = b.dimTo;
+      if (Math.abs(b.glow - b.glowTo) < 0.004) b.glow = b.glowTo;
+      if (b.dim !== 1 || g.userData.shaded) {
+        // 量化到 1/50：材質數值不變時 shade 直接略過；模型晚到時也會補上
+        const k = Math.round(b.dim * 50) / 50;
+        shade(g, k);
+        g.userData.shaded = k !== 1;
+      }
+      g.scale.setScalar(0.82 + 0.18 * b.dim);
+      b.rings.forEach((r, k) => {
+        r.visible = b.glow > 0.01;
+        if (!r.visible) return;
+        const m = r.material as THREE.MeshBasicMaterial;
+        m.opacity = b.glow * (k === 0 ? 0.95 : 0.14) * (k === 0 ? 0.75 + 0.25 * Math.sin(t * 2.4) : 1);
+        r.rotation.z = t * (k === 0 ? 0.25 : -0.12);
+        r.scale.setScalar(1 + (k === 1 ? 0.04 * Math.sin(t * 1.6) : 0));
+      });
       const isHover = hovered !== null && g.userData.id === hovered;
       b.lift += ((isHover || dragging ? 0.7 : 0) - b.lift) * Math.min(1, dt * 7);
       const m = reduced ? 0 : 1;
@@ -150,6 +226,8 @@ function Swarm({ bodies, drag, hovered, reduced }: { bodies: Body[]; drag: Mutab
       g.rotation.z = Math.sin(t * b.freq[1] * 0.7 + b.phase[0]) * 0.03 * m;
     });
   });
+  // 離開首頁：把變暗的材質還原（材質由模型快取共用）
+  useEffect(() => () => bodies.forEach((b) => b.group && shade(b.group, 1)), [bodies]);
   return null;
 }
 
@@ -229,7 +307,7 @@ function DragController({ drag, bodies, controls, onTap, onRelease }: {
   return null;
 }
 
-export default function MapWorld({ projects, portrait, reducedMotion, onEnter, onMeasure, live = true }: MapWorldProps) {
+export default function MapWorld({ projects, portrait, reducedMotion, onEnter, onMeasure, live = true, filter = 'all' }: MapWorldProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   // 首頁一開就把所有島嶼的輕量版一起下載解析（各 100–300KB）；滑過某座島時預載它的精細模型與環境，點進去幾乎秒開
   useMemo(() => preloadModels(...projects.map((p) => p.model && mapModel(p.model))), [projects]);
@@ -247,6 +325,7 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
     const rnd = mulberry32(77);
     return scatter(projects.length, portrait).map((p) => ({
       anchor: p, vel: new THREE.Vector3(), group: null, lift: 0,
+      home: p.clone(), goal: null, goalUntil: 0, dim: 1, dimTo: 1, glow: 0, glowTo: 0, rings: [],
       freq: [0.18 + rnd() * 0.22, 0.35 + rnd() * 0.3, 0.15 + rnd() * 0.2],
       phase: [rnd() * 6.28, rnd() * 6.28, rnd() * 6.28],
       amp: [0.35 + rnd() * 0.45, 0.25 + rnd() * 0.3, 0.35 + rnd() * 0.45],
@@ -255,11 +334,47 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
   }, [projects.length, portrait]);
   const ids = useMemo(() => projects.map((p) => p.id), [projects]);
 
+  // 分類聚光燈：符合的島亮起光環並聚到中央小圓上，其餘退到外圈、下沉變暗；回到「全部」時各自回原位
+  const firstFilter = useRef(true);
+  useEffect(() => {
+    const now = performance.now() / 1000;
+    if (filter === 'all') {
+      if (firstFilter.current) { firstFilter.current = false; return; }
+      bodies.forEach((b) => { b.goal = b.home.clone(); b.goalUntil = now + 4; b.dimTo = 1; b.glowTo = 0; b.vel.set(0, 0, 0); });
+      return;
+    }
+    firstFilter.current = false;
+    const hit = projects.map((p) => matchFilter(p, filter));
+    const n = hit.filter(Boolean).length;
+    const r = n <= 1 ? 0 : Math.max(3.8, 7.4 / (2 * Math.sin(Math.PI / n)));
+    let k = 0;
+    // 依目前方位角排序，聚攏時不會交錯穿過彼此
+    const order = bodies.map((b, i) => ({ i, a: Math.atan2(b.anchor.z, b.anchor.x) })).sort((x, y) => x.a - y.a);
+    const start = order.find((o) => hit[o.i])?.a ?? 0;
+    order.forEach(({ i }) => {
+      const b = bodies[i];
+      b.vel.set(0, 0, 0);
+      b.goalUntil = Infinity;
+      if (hit[i]) {
+        const a = start + (k++ / Math.max(1, n)) * Math.PI * 2;
+        b.goal = new THREE.Vector3(Math.cos(a) * r * (portrait ? 0.62 : 1), 0.6, Math.sin(a) * r * (portrait ? 1.5 : 0.8));
+        b.dimTo = 1; b.glowTo = 1;
+      } else {
+        const h = tmp.set(b.home.x, 0, b.home.z);
+        const len = Math.max(h.length(), 0.001);
+        const out = Math.max(len, 9) + 13;
+        b.goal = new THREE.Vector3((h.x / len) * out, -3.2, (h.z / len) * out * (portrait ? 1 : 0.75));
+        b.dimTo = 0.3; b.glowTo = 0;
+      }
+    });
+  }, [filter, bodies, projects, portrait]);
+
   const enter = useCallback((id: string) => {
     if (flight.current) return;
     const b = bodies[ids.indexOf(id)];
     if (!b?.group) return;
     const world = b.group.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+    play('select', projects[ids.indexOf(id)]?.theme);
     setHovered(null);
     setFlying(true);
     const send = () => {
@@ -268,7 +383,7 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
     };
     if (reducedMotion) { send(); return; }
     flight.current = { target: world, t: 0, done: send };
-  }, [bodies, ids, onEnter, reducedMotion]);
+  }, [bodies, ids, onEnter, reducedMotion, projects]);
 
   const release = useCallback(() => setHovered(null), []);
   // QA：網址加 ?sigils 會讓所有島同時顯示選取法陣
@@ -331,7 +446,7 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
           body={bodies[i]}
           hovered={showAll || hovered === p.id}
           sigil={SIGIL_FOR_THEME[p.theme]}
-          onOver={(id) => { if (!flying && !drag.current?.dragging) setHovered(id); }}
+          onOver={(id) => { if (!flying && !drag.current?.dragging) { if (hovered !== id) play('hover', p.theme); setHovered(id); } }}
           onOut={() => { if (!drag.current?.dragging) setHovered(null); }}
           onDown={down}
         />
@@ -364,6 +479,7 @@ export default function MapWorld({ projects, portrait, reducedMotion, onEnter, o
  * 選取法陣預熱：首頁載入約 3 秒後，在背景把每座島的法陣貼圖畫好、著色器編譯好並上傳 GPU，
  * 第一次滑過島嶼時就不會因為同步編譯或繪製 512px 貼圖而卡一下。完成後卸載。
  */
+const warmRing = ringMat('#ffffff');
 function SigilWarmup({ items }: { items: { kind: SigilKind; color: string }[] }) {
   const { gl, camera, scene } = useThree();
   const ref = useRef<THREE.Group>(null);
@@ -390,6 +506,7 @@ function SigilWarmup({ items }: { items: { kind: SigilKind; color: string }[] })
   return (
     <group ref={ref} visible={false}>
       {items.filter((it) => { const k = it.kind + it.color; if (seen.has(k)) return false; seen.add(k); return true; }).map((it) => <Sigil key={it.kind + it.color} kind={it.kind} color={it.color} />)}
+      <mesh geometry={RING_IN} material={warmRing} />
     </group>
   );
 }

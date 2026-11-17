@@ -29,6 +29,7 @@
 - 品牌素材：`public/favicon.svg`（浮島圖示）、`apple-touch-icon.png`、社群分享封面 `og-cover.jpg`／`.webp`（1200×630，由 `node tools/qa/og.cjs` 從首頁渲染後以 Python 加字）；`index.html` 的 OG／Twitter 標籤用絕對網址
 - 長任務進度：`UPGRADE_ROADMAP.md`（中斷後從未打勾項目續做）；QA 腳本在 `tools/qa/`（需先 `npx vite preview --port 4173`）
 - 手機版（< 768px，CSS `max-width: 767px`、JS `>= 768` 為桌機）：標題卡 `pointer-events: none`（只有按鈕可點）以免攔截 3D 手勢；模型上平常不顯示任何熱點圓點，只有選中的那一顆（`.hs-anchor.is-active`）以高亮標記出現；直接點模型會選取螢幕上 70px 內最近的熱點（`DomainStage` 的 `pickNearest`）；隱藏右側 `.dotnav`；聚焦時 `.tour.is-focused` 收起標語與按鈕；桌機維持全部帶標題的標籤
+- 互動音效：`src/lib/sound.ts`（純 Web Audio 合成、預設靜音、`play(event, theme)`；事件 hover／select／theme／toggle）；首頁分類聚光燈：`MapScene` 的篩選膠囊 → `MapWorld` 的 `filter`（`Body.goal`／`dim`／`glow`，變暗靠改材質顏色、離開首頁還原）；終章名片與讚賞計數：`OutroScene.tsx`、`src/lib/footprint.ts`（不得公開電子郵件）
 - 首頁 2D 疊層：`src/map/`；終章背景：`src/components/OutroBackground.tsx`（唯一的 2D 背景插畫）
 - 載入流程：`ModelDiorama` 先 `compileAsync` 編譯著色器、分批上傳貼圖，完成後才放進場景並浮上淡入；`DomainStage` 的 `StageLoader` 顯示進度，主模型與環境都就緒才收起並顯示熱點；就緒後在空檔預載前後作品，首頁預載所有輕量版、滑過島嶼時預載精細版
 - 效能（2026-11-16 徹查後的原則，量測工具 `node tools/qa/probe.cjs [hash]`；WebGL 一律 `GL_OPTS`：highp＋抗鋸齒，自訂著色器開頭加 `precision highp float;`；**不要用 Canvas 2D 漸層（createRadialGradient／createLinearGradient）做 3D 貼圖**——iOS Safari 會對漸層加逐像素彩色抖動，放大後變成彩色雜點，柔光改用著色器計算，見 `world.tsx` 的 `HaloLayer`）：不使用後製（EffectComposer）；不要加點光源（每個 PBR 像素都要多算）；3D 環境用 Lambert 材質；首頁不開陰影、介紹頁陰影按需更新（`ShadowOnDemand`）；抗鋸齒只在 dpr < 1.5 的桌機開；新增會動態出現的材質要納入預熱（`compileAsync`＋`finishPrograms`），否則第一次出現時會卡頓；`gl.debug.checkShaderErrors` 只在開發模式開；首頁輕量版由 `map_lod_strip.mjs` 去掉 Fx 節點並合併網格；

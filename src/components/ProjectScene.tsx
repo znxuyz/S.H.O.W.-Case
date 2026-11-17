@@ -7,6 +7,7 @@ import { ProjectStage } from './MediaPanel';
 import type { CardRefs } from '../three/Hotspots';
 import { Showcase } from './Showcase';
 import { GitHubIcon } from './icons';
+import { play } from '../lib/sound';
 
 // 影片燈箱延遲載入：連播放器程式碼都等使用者按下按鈕才下載
 const VideoModal = lazy(() => import('./VideoModal').then((m) => ({ default: m.VideoModal })));
@@ -67,6 +68,8 @@ export function ProjectScene({ project, index, total, reducedMotion }: { project
     return () => ['pointerdown', 'wheel', 'keydown', 'touchstart'].forEach((n) => window.removeEventListener(n, stop, opts));
   }, [auto]);
   const accent = project.accent ?? 'var(--accent)';
+  // 熱點觸發動畫時的主題音效（音效關閉時零成本）
+  useEffect(() => { if (active !== null) play('select', project.theme); }, [active, pulse, project.theme]);
 
   useLayoutEffect(() => {
     if (!root.current) return;
